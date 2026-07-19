@@ -28,11 +28,6 @@ music_library_mp3_source_sqlite_api_v2_4_playback_modes.zip
 - TSOT／TSOP／TSOA
 - 静的公開禁止対象
 
-## 公開前に確認したい点
-
-アプリ同梱の`SQLITE-SCHEMA.txt`は見出しが`version 3`のままですが、実装コード上のスキーマはversion 4です。GitHubへ公開する際は、同梱文書の見出しをversion 4へ統一することを推奨します。
-
-
 ## 開発前史の確認資料
 
 現行チャット開始以前の作業記録として、利用者提供の`cloudeで実装.txt`を確認しました。
