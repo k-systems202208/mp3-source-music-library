@@ -1,0 +1,67 @@
+﻿SQLite schema summary - version 4
+=================================
+
+schema_info
+  DBスキーマのバージョン情報。v4へ自動更新します。
+
+artists
+  正規化アーティスト名、ID3並べ替え名、表示名補正を一意管理します。
+
+albums
+  アルバム名、アルバムアーティスト、ID3並べ替え名を管理します。
+
+artworks
+  埋め込み抽出画像・外部画像の場所と種類を管理します。
+
+tracks
+  物理MP3ファイル1つにつき1行です。
+  ファイル状態、タグ情報、再生回数、利用可否、補正値を保持します。
+
+scan_runs
+  起動ごとのスキャン結果を保持します。
+
+scan_errors
+  スキャン中に発生した警告・エラーを保持します。
+
+主なインデックス
+- is_available
+- normalized_title
+- artist_id
+- album_id
+- アルバム内順序
+- 内容署名
+- 更新日時
+- is_available + normalized_title
+- is_available + artist_id
+- is_available + album_id
+
+API v2.4
+- GET /api/browse
+  view=songs / artists / artist_albums / artist_tracks / albums / album_tracks
+  q、limit、offset、sort、latinOnly、correctedOnly、indexKey等を受け取り、
+  SQLiteで検索・集計・並べ替え・ページ取得を行います。
+
+- GET /api/stats
+  利用可能曲数、アートワーク曲数、総再生回数、最新スキャンを返します。
+
+- POST /api/tracks/{id}/played
+  再生回数と最終再生日時を更新します。
+
+- POST /api/tracks/{id}/title-correction
+  曲名補正を保存します。
+
+- POST /api/artists/{id}/correction
+  アーティスト表示名補正を保存します。
+
+
+頭文字索引
+- artists / albumsのトップ一覧でindexKeyを指定できます。
+- indexKey: 0-9、A～Z、あ・か・さ・た・な・は・ま・や・ら・わ、他
+- 応答のindexCountsには、現在の検索条件に対する各索引の件数が入ります。
+- 英語冠詞The / A / Anを除外して分類します。
+- TSOP / TSOAがある場合は表示名より並べ替えタグを優先します。
+
+v2.3で追加した曲名索引列
+- tracks.sort_titleを追加
+- 曲名索引はtitle_override → sort_title（TSOT）→ titleの順に分類値を選択
+- 検索・アーティスト・アルバムの絞り込み範囲内で索引件数を集計

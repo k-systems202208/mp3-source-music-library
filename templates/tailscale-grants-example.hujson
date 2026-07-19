@@ -1,0 +1,31 @@
+// Example only.
+// Replace email addresses and the Tailscale IPv4.
+// Remove or redesign an existing allow-all grant, otherwise it still allows broad access.
+{
+  "groups": {
+    "group:music-users": [
+      "family1@example.com",
+      "family2@example.com",
+    ],
+  },
+
+  "hosts": {
+    "music-server": "100.100.100.100",
+  },
+
+  "grants": [
+    // Owner example. Narrow this further if possible.
+    {
+      "src": ["owner@example.com"],
+      "dst": ["*"],
+      "ip": ["*"],
+    },
+
+    // Invited family members can access only Tailscale Serve HTTPS.
+    {
+      "src": ["group:music-users"],
+      "dst": ["music-server"],
+      "ip": ["tcp:443"],
+    },
+  ],
+}

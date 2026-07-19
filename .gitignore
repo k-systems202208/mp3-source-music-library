@@ -1,0 +1,46 @@
+# Personal music data
+Music/**
+!Music/.gitkeep
+*.mp3
+*.flac
+*.m4a
+*.aac
+*.wav
+*.ogg
+
+# SQLite runtime and backups
+library.db
+library.db-*
+*.sqlite
+*.sqlite3
+Backups/
+Exports/
+
+# Generated artwork and diagnostics
+.artwork-cache/
+library-diagnostics.json
+library-diagnostics.csv
+music-library-data.json
+mp3-index.json
+artwork-index.json
+library-cache.json
+
+# Private migration data
+legacy-library-data.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Distribution artifacts
+*.zip
+*.7z
+*.rar
