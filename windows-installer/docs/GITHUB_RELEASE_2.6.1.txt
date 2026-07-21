@@ -1,0 +1,16 @@
+GitHub Release v2.6.1
+=====================
+
+タグ:
+v2.6.1
+
+タイトル:
+自宅音楽ライブラリ v2.6.1
+
+添付ファイル:
+MusicLibrary-Setup-2.6.1-x64.exe
+SHA256SUMS.txt
+README_USER.txt
+RELEASE_NOTES_v2.6.1.md
+
+初回はPre-releaseとして公開し、別PCで確認後に正式版へ変更してください。

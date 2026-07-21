@@ -44,3 +44,38 @@ Thumbs.db
 *.zip
 *.7z
 *.rar
+
+# Windows installer build outputs
+windows-installer/.venv-build/
+windows-installer/.build-cache/
+windows-installer/build-cache/
+windows-installer/dist/
+windows-installer/release/
+windows-installer/release-assets/
+windows-installer/tests/build_data/
+
+# Python cache
+windows-installer/**/__pycache__/
+windows-installer/**/*.py[cod]
+
+# Runtime data
+windows-installer/**/*.db
+windows-installer/**/*.db-wal
+windows-installer/**/*.db-shm
+windows-installer/**/library-data/
+windows-installer/**/Music/
+
+# User settings
+windows-installer/**/remote-url.txt
+windows-installer/**/settings.json
+windows-installer/**/config.json
+
+# Logs and caches
+windows-installer/**/*.log
+windows-installer/**/library-diagnostics.*
+windows-installer/**/.artwork-cache/
+windows-installer/**/Backups/
+windows-installer/**/Exports/
+
+# Generated installers
+windows-installer/**/*.exe

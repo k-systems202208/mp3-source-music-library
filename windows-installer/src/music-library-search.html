@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音楽ライブラリ検索 — Music Library Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #efe8d8;
+    --paper-deep: #e7dfc9;
+    --card: #faf6ec;
+    --card-edge: #e3d9bf;
+    --ink: #24392b;
+    --ink-soft: #5b6b5a;
+    --ink-faint: #8b9587;
+    --brass: #a9843c;
+    --brass-deep: #7d6129;
+    --stamp: #a23b32;
+    --line: #d8cdb0;
+    --shadow: rgba(36,57,43,0.14);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, rgba(255,255,255,0.35), transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    min-height:100vh;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(36,57,43,0.015) 0px, rgba(36,57,43,0.015) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .wrap{
+    position:relative;
+    z-index:1;
+    max-width:920px;
+    margin:0 auto;
+    padding:28px 20px 80px;
+  }
+
+  header.plate{
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:6px;
+    padding:22px 26px 20px;
+    box-shadow:0 6px 0 var(--brass-deep), 0 10px 24px var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  header.plate::after{
+    content:"";
+    position:absolute; right:-40px; top:-40px;
+    width:160px; height:160px;
+    border:1.5px solid rgba(239,232,216,0.14);
+    border-radius:50%;
+  }
+  .plate-eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.22em;
+    color:var(--brass);
+    text-transform:uppercase;
+    margin:0 0 6px;
+  }
+  header.plate h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:clamp(24px, 4.4vw, 34px);
+    margin:0 0 4px;
+    letter-spacing:.02em;
+  }
+  header.plate .sub{
+    font-size:13px;
+    color:rgba(239,232,216,0.72);
+    margin:0;
+  }
+  .tab-punch{
+    position:absolute;
+    top:0; left:32px;
+    width:34px; height:14px;
+    background:var(--paper);
+    border-radius:0 0 8px 8px;
+  }
+
+  /* ---- View switch buttons ---- */
+  .view-tabs{
+    display:flex;
+    gap:8px;
+    margin-top:18px;
+  }
+  .view-tab{
+    flex:1;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    color:var(--ink-soft);
+    background:var(--card);
+    border:1px solid var(--card-edge);
+    border-bottom:3px solid var(--card-edge);
+    border-radius:6px 6px 4px 4px;
+    padding:11px 10px;
+    cursor:pointer;
+    transition:all .12s ease;
+    text-align:center;
+  }
+  .view-tab:hover{color:var(--ink); border-bottom-color:var(--brass);}
+  .view-tab.active{
+    color:var(--paper);
+    background:var(--ink);
+    border-color:var(--ink);
+    border-bottom-color:var(--stamp);
+  }
+
+  /* ---- controls ---- */
+  .controls{
+    margin-top:12px;
+    background:var(--card);
+    border:1px solid var(--card-edge);
+    border-radius:6px;
+    padding:14px 18px;
+    box-shadow:0 2px 10px var(--shadow);
+  }
+  .search-row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .search-row .icon{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--ink-faint);
+    font-size:15px;
+  }
+  #search{
+    flex:1;
+    border:none;
+    border-bottom:2px solid var(--line);
+    background:transparent;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:16px;
+    padding:8px 2px;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s ease;
+  }
+  #search::placeholder{color:var(--ink-faint);}
+  #search:focus{border-bottom-color:var(--stamp);}
+
+  .toggle-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+  }
+  .pill-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.03em;
+    color:var(--ink-soft);
+    background:var(--paper);
+    border:1px solid var(--card-edge);
+    border-radius:20px;
+    padding:5px 12px;
+    cursor:pointer;
+    transition:all .12s ease;
+  }
+  .pill-btn:hover{border-color:var(--brass);}
+  .pill-btn.active{
+    background:var(--ink);
+    color:var(--paper);
+    border-color:var(--ink);
+  }
+
+  /* ---- breadcrumb ---- */
+  .breadcrumb{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:4px;
+  }
+  .breadcrumb .crumb{
+    cursor:pointer;
+    color:var(--brass-deep);
+    text-decoration:none;
+    border-bottom:1px dotted var(--brass-deep);
+  }
+  .breadcrumb .crumb:hover{color:var(--stamp); border-bottom-color:var(--stamp);}
+  .breadcrumb .crumb.current{
+    color:var(--ink);
+    font-weight:700;
+    border-bottom:none;
+    cursor:default;
+  }
+  .breadcrumb .arrow{color:var(--ink-faint);}
+
+  /* ---- alphabet / Japanese kana catalog index ---- */
+  .catalog-index{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+  }
+  .catalog-index[hidden]{display:none;}
+  .catalog-index-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:9px;
+  }
+  .catalog-index-title{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+  }
+  .index-reset{
+    border:1px solid var(--card-edge);
+    border-radius:16px;
+    padding:4px 12px;
+    background:var(--paper);
+    color:var(--ink-soft);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .index-reset:hover{border-color:var(--brass); color:var(--ink);}
+  .index-reset.active{background:var(--ink); border-color:var(--ink); color:var(--paper);}
+  .catalog-index-row{
+    display:grid;
+    grid-template-columns:54px minmax(0,1fr);
+    gap:8px;
+    align-items:start;
+    margin-top:7px;
+  }
+  .catalog-index-label{
+    padding-top:5px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.08em;
+    color:var(--ink-faint);
+  }
+  .catalog-index-buttons{display:flex; flex-wrap:wrap; gap:5px;}
+  .index-btn{
+    min-width:31px;
+    min-height:29px;
+    border:1px solid var(--card-edge);
+    border-radius:4px;
+    padding:3px 7px;
+    background:rgba(255,255,255,.35);
+    color:var(--ink-soft);
+    font-family:'JetBrains Mono','Zen Kaku Gothic New',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+    transition:background .12s ease,color .12s ease,border-color .12s ease,transform .12s ease;
+  }
+  .index-btn:hover:not(:disabled){border-color:var(--brass); color:var(--ink); transform:translateY(-1px);}
+  .index-btn.active{background:var(--stamp); border-color:var(--stamp); color:#fff;}
+  .index-btn:disabled{opacity:.28; cursor:default;}
+  .index-btn.index-other{min-width:70px;}
+  .catalog-index-note{
+    margin:9px 0 0 62px;
+    color:var(--ink-faint);
+    font-size:10.5px;
+    line-height:1.5;
+  }
+
+  .stats-bar{
+    margin-top:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    border-top:1px dashed var(--line);
+    padding-top:12px;
+  }
+  .stats-bar .stamp-badge{
+    color:var(--stamp);
+    border:1.5px solid var(--stamp);
+    border-radius:3px;
+    padding:2px 8px;
+    letter-spacing:.06em;
+    transform:rotate(-1.5deg);
+    font-weight:700;
+  }
+
+  /* ---- Results list ---- */
+  #results{
+    margin-top:22px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .card{
+    position:relative;
+    background:var(--card);
+    border:1px solid var(--card-edge);
+    border-left:4px solid var(--brass);
+    border-radius:4px;
+    padding:12px 16px 12px 18px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:4px 14px;
+    align-items:center;
+    transition:transform .12s ease, box-shadow .12s ease, border-left-color .12s ease;
+  }
+  .card.clickable{cursor:pointer;}
+  .card.clickable:hover{
+    transform:translateX(2px);
+    box-shadow:0 3px 12px var(--shadow);
+    border-left-color:var(--stamp);
+  }
+  .card .info{min-width:0;}
+  .card .title{
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--ink);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .card .meta{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:3px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    display:flex;
+    flex-wrap:wrap;
+    gap:2px 0;
+  }
+  .card .meta .label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:.04em;
+    color:var(--ink-faint);
+    margin-right:4px;
+  }
+  .card .meta .sep{color:var(--ink-faint); margin:0 8px;}
+  .card .meta a.xref{
+    color:var(--ink-soft);
+    text-decoration:none;
+    border-bottom:1px dotted var(--brass);
+    cursor:pointer;
+    transition:color .12s ease, border-color .12s ease;
+  }
+  .card .meta a.xref:hover{color:var(--stamp); border-bottom-color:var(--stamp);}
+  .card .meta a.xref.corrected{color:var(--stamp); border-bottom-style:solid;}
+  .card .meta .artist-wrap{display:inline-flex; align-items:center; gap:1px;}
+  .card .meta .icon-btn{font-size:11px; opacity:.45;}
+
+  .title-row{display:flex; align-items:baseline; gap:6px;}
+  .title-row .title{flex:1; min-width:0;}
+  .title-row .title.corrected::after{
+    content:"訂正済";
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px;
+    color:var(--stamp);
+    border:1px solid var(--stamp);
+    border-radius:2px;
+    padding:0 4px;
+    margin-left:8px;
+    vertical-align:middle;
+    letter-spacing:.02em;
+  }
+  .icon-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:13px;
+    color:var(--ink-faint);
+    padding:2px 4px;
+    line-height:1;
+    opacity:.55;
+    transition:opacity .12s ease, color .12s ease;
+    flex-shrink:0;
+  }
+  .icon-btn:hover{opacity:1; color:var(--stamp);}
+  .title-edit-input{
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--ink);
+    background:var(--paper);
+    border:1px solid var(--brass);
+    border-radius:3px;
+    padding:3px 6px;
+    width:100%;
+    outline:none;
+  }
+
+  .card .side{
+    text-align:right;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:2px;
+    white-space:nowrap;
+  }
+  .card .side .dur{font-weight:700; color:var(--ink);}
+  .card .side .plays{color:var(--ink-faint); font-size:11px;}
+  .card .side .count-badge{
+    font-weight:700; color:var(--brass-deep); font-size:13px;
+  }
+  .card .chevron{color:var(--ink-faint); font-size:16px; margin-left:6px;}
+  .card .play-line{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+  }
+  .play-btn{
+    width:30px;
+    height:30px;
+    border:1px solid var(--brass);
+    border-radius:50%;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .12s ease, color .12s ease, transform .12s ease;
+    flex-shrink:0;
+  }
+  .play-btn:hover{background:var(--ink); color:var(--paper); transform:scale(1.04);}
+  .play-btn.playing{background:var(--stamp); color:#fff; border-color:var(--stamp);}
+
+  .song-main{display:block;}
+  .song-main.has-artwork{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:14px;
+    align-items:start;
+  }
+  .song-text{min-width:0;}
+  .artwork-thumb{
+    width:78px;
+    height:78px;
+    object-fit:cover;
+    border-radius:5px;
+    border:1px solid var(--card-edge);
+    background:var(--paper-deep);
+    box-shadow:0 2px 7px rgba(36,57,43,0.14);
+    flex-shrink:0;
+    display:block;
+  }
+  .album-main{display:block;}
+  .album-main.has-artwork{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:14px;
+    align-items:center;
+  }
+  .album-text{min-width:0;}
+  .album-artwork{
+    width:82px;
+    height:82px;
+    object-fit:cover;
+    border-radius:5px;
+    border:1px solid var(--card-edge);
+    background:var(--paper-deep);
+    box-shadow:0 2px 7px rgba(36,57,43,0.14);
+    display:block;
+    flex-shrink:0;
+  }
+
+  body.player-active .wrap{padding-bottom:170px;}
+
+  .player-bar{
+    position:fixed;
+    z-index:50;
+    left:0; right:0; bottom:0;
+    background:rgba(36,57,43,.97);
+    color:var(--paper);
+    border-top:4px solid var(--brass);
+    box-shadow:0 -6px 20px rgba(36,57,43,.22);
+  }
+  .player-bar[hidden]{display:none;}
+  .player-inner{
+    max-width:920px;
+    margin:0 auto;
+    padding:10px 20px;
+    display:grid;
+    grid-template-columns:minmax(180px,1fr) minmax(300px,1.5fr) auto auto;
+    gap:14px;
+    align-items:center;
+  }
+  .player-inner.has-artwork{
+    grid-template-columns:auto minmax(180px,1fr) minmax(300px,1.5fr) auto auto;
+  }
+  .player-artwork{
+    width:68px;
+    height:68px;
+    object-fit:cover;
+    border-radius:5px;
+    border:1px solid rgba(239,232,216,.32);
+    background:rgba(239,232,216,.08);
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+    display:block;
+  }
+  .player-artwork[hidden]{display:none;}
+  .player-artwork,
+  .player-now{
+    cursor:zoom-in;
+  }
+  .player-now{min-width:0; display:flex; flex-direction:column;}
+  .player-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px;
+    letter-spacing:.14em;
+    color:var(--brass);
+  }
+  .player-title{font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .player-artist{font-size:11px; color:rgba(239,232,216,.7); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .player-control-deck{
+    min-width:0;
+    display:grid;
+    gap:6px;
+  }
+  .player-mode-controls{
+    display:grid;
+    grid-template-columns:44px minmax(72px,1fr) 44px minmax(64px,1fr) 48px;
+    gap:5px;
+    align-items:center;
+  }
+  .player-mode-btn{
+    min-width:0;
+    height:29px;
+    padding:0 7px;
+    border:1px solid rgba(239,232,216,.25);
+    border-radius:5px;
+    background:rgba(239,232,216,.07);
+    color:rgba(239,232,216,.82);
+    cursor:pointer;
+    font-family:inherit;
+    font-size:10px;
+    line-height:1;
+    white-space:nowrap;
+    transition:background .15s ease, color .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .player-mode-btn.nav-btn{font-size:15px;}
+  .player-mode-btn:hover:not(:disabled){
+    background:rgba(239,232,216,.16);
+    color:var(--paper);
+  }
+  .player-mode-btn:active:not(:disabled){transform:translateY(1px);}
+  .player-mode-btn.active{
+    border-color:var(--brass);
+    background:var(--brass);
+    color:var(--forest);
+    font-weight:700;
+  }
+  .player-mode-btn:disabled{opacity:.35; cursor:default;}
+  .player-mode-btn:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:2px;
+  }
+  #audioPlayer{width:100%; height:36px;}
+  .player-expand,
+  .player-close{
+    border:none;
+    background:transparent;
+    color:var(--paper);
+    cursor:pointer;
+    line-height:1;
+    opacity:.65;
+    padding:6px;
+  }
+  .player-expand{font-size:19px;}
+  .player-close{font-size:22px;}
+  .player-expand:hover,
+  .player-close:hover{opacity:1;}
+  .player-expand:focus-visible,
+  .player-close:focus-visible,
+  .player-modal-close:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:2px;
+  }
+
+  body.player-modal-open{overflow:hidden;}
+  .player-modal{
+    position:fixed;
+    z-index:120;
+    inset:0;
+    display:grid;
+    place-items:center;
+    padding:24px;
+    background:rgba(18,29,22,.82);
+    backdrop-filter:blur(10px);
+  }
+  .player-modal[hidden]{display:none;}
+  .player-modal-panel{
+    position:relative;
+    width:min(920px, 100%);
+    max-height:calc(100vh - 48px);
+    overflow:auto;
+    border:1px solid rgba(239,232,216,.25);
+    border-top:5px solid var(--brass);
+    border-radius:12px;
+    background:linear-gradient(145deg, rgba(36,57,43,.99), rgba(24,39,29,.99));
+    color:var(--paper);
+    box-shadow:0 28px 90px rgba(0,0,0,.55);
+    padding:clamp(24px, 4vw, 48px);
+  }
+  .player-modal-close{
+    position:absolute;
+    top:14px;
+    right:14px;
+    width:42px;
+    height:42px;
+    border:1px solid rgba(239,232,216,.24);
+    border-radius:50%;
+    background:rgba(239,232,216,.08);
+    color:var(--paper);
+    cursor:pointer;
+    font-size:26px;
+    line-height:1;
+  }
+  .player-modal-close:hover{background:rgba(239,232,216,.16);}
+  .player-modal-content{
+    display:grid;
+    grid-template-columns:minmax(240px, 420px) minmax(260px, 1fr);
+    gap:clamp(28px, 5vw, 60px);
+    align-items:center;
+  }
+  .player-modal-artwork-wrap{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:0;
+  }
+  .player-modal-artwork{
+    width:100%;
+    max-width:420px;
+    aspect-ratio:1;
+    object-fit:cover;
+    border-radius:10px;
+    border:1px solid rgba(239,232,216,.28);
+    background:rgba(239,232,216,.08);
+    box-shadow:0 16px 44px rgba(0,0,0,.38);
+  }
+  .player-modal-artwork[hidden]{display:none;}
+  .player-modal-panel.no-artwork .player-modal-content{
+    grid-template-columns:minmax(0, 700px);
+    justify-content:center;
+    text-align:center;
+  }
+  .player-modal-panel.no-artwork .player-modal-artwork-wrap{display:none;}
+  .player-modal-info{min-width:0;}
+  .player-modal-label{
+    display:block;
+    margin-bottom:12px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    color:var(--brass);
+  }
+  .player-modal-title{
+    margin:0;
+    font-size:clamp(28px, 5vw, 52px);
+    line-height:1.12;
+    overflow-wrap:anywhere;
+  }
+  .player-modal-artist{
+    margin:14px 0 28px;
+    color:rgba(239,232,216,.72);
+    font-size:clamp(14px, 2vw, 20px);
+    line-height:1.5;
+    overflow-wrap:anywhere;
+  }
+  .player-audio-mount{min-width:0;}
+  .player-modal .player-control-deck{gap:12px;}
+  .player-modal .player-mode-controls{
+    grid-template-columns:56px minmax(92px,1fr) 56px minmax(82px,1fr) 62px;
+    gap:8px;
+  }
+  .player-modal .player-mode-btn{height:40px; font-size:12px;}
+  .player-modal .player-mode-btn.nav-btn{font-size:19px;}
+  .player-modal #audioPlayer{
+    width:100%;
+    height:54px;
+  }
+
+  @media (max-width:600px){
+    body.player-active .wrap{padding-bottom:220px;}
+    .catalog-index-row{grid-template-columns:1fr; gap:3px;}
+    .catalog-index-label{padding-top:0;}
+    .catalog-index-buttons{
+      flex-wrap:nowrap;
+      overflow-x:auto;
+      overscroll-behavior-inline:contain;
+      scrollbar-width:thin;
+      padding:1px 1px 7px;
+    }
+    .index-btn{flex:0 0 auto; min-width:36px; min-height:34px;}
+    .catalog-index-note{margin-left:0;}
+    .card{grid-template-columns:1fr;}
+    .card .side{grid-column:1/2; flex-direction:row; justify-content:space-between; border-top:1px dashed var(--line); margin-top:6px; padding-top:6px;}
+    .artwork-thumb{width:62px; height:62px;}
+    .album-artwork{width:68px; height:68px;}
+    .player-inner{grid-template-columns:1fr auto auto; gap:8px 8px; padding:8px 12px;}
+    .player-now{grid-column:1/2; grid-row:1;}
+    .player-audio-mount{grid-column:1/4; grid-row:2;}
+    .player-expand{grid-column:2/3; grid-row:1;}
+    .player-close{grid-column:3/4; grid-row:1;}
+    .player-inner.has-artwork{grid-template-columns:auto 1fr auto auto;}
+    .player-inner.has-artwork .player-artwork{grid-column:1/2; grid-row:1; width:54px; height:54px;}
+    .player-inner.has-artwork .player-now{grid-column:2/3; grid-row:1;}
+    .player-inner.has-artwork .player-audio-mount{grid-column:1/5; grid-row:2;}
+    .player-inner.has-artwork .player-expand{grid-column:3/4; grid-row:1;}
+    .player-inner.has-artwork .player-close{grid-column:4/5; grid-row:1;}
+    .player-modal{padding:0;}
+    .player-modal-panel{
+      width:100%;
+      height:100%;
+      max-height:none;
+      border-radius:0;
+      border-left:none;
+      border-right:none;
+      border-bottom:none;
+      padding:72px 22px 28px;
+      display:flex;
+      align-items:center;
+    }
+    .player-modal-content{
+      width:100%;
+      grid-template-columns:1fr;
+      gap:24px;
+      text-align:center;
+    }
+    .player-modal-artwork{max-width:min(72vw, 360px);}
+    .player-modal-artist{margin-bottom:22px;}
+    .player-modal .player-mode-controls{
+      grid-template-columns:44px minmax(72px,1fr) 44px minmax(66px,1fr) 50px;
+      gap:5px;
+    }
+    .player-modal .player-mode-btn{height:38px; padding:0 5px; font-size:10px;}
+    .player-modal .player-mode-btn.nav-btn{font-size:17px;}
+  }
+
+  #sentinel{height:1px;}
+  .loadmore{
+    text-align:center;
+    padding:20px;
+    color:var(--ink-faint);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+  }
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-soft);
+  }
+  .empty-state .stamp-big{
+    display:inline-block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    letter-spacing:.14em;
+    color:var(--stamp);
+    border:2px solid var(--stamp);
+    border-radius:4px;
+    padding:8px 18px;
+    transform:rotate(-3deg);
+    margin-bottom:14px;
+  }
+  .empty-state p{margin:4px 0; font-size:13px;}
+
+
+  .sort-row{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    margin-top:10px;
+    gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .sort-select{
+    max-width:190px;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    background:rgba(255,255,255,.35);
+    color:var(--ink);
+    padding:7px 28px 7px 10px;
+    font:inherit;
+  }
+  .sort-select:focus{outline:2px solid rgba(157,45,44,.2); border-color:var(--stamp);}
+
+  footer{
+    max-width:920px;
+    margin:30px auto 0;
+    padding:0 20px;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--ink-faint);
+  }
+
+  ::selection{background:var(--brass); color:var(--paper);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="plate">
+    <div class="tab-punch"></div>
+    <p class="plate-eyebrow">Card Catalog · No.290E9547</p>
+    <h1>音楽ライブラリ検索</h1>
+    <p class="sub" id="totalSub">読み込み中…</p>
+  </header>
+
+  <div class="view-tabs">
+    <button type="button" class="view-tab" data-view="songs">曲名</button>
+    <button type="button" class="view-tab" data-view="artists">アーティスト</button>
+    <button type="button" class="view-tab" data-view="albums">アルバム</button>
+  </div>
+
+  <div class="controls">
+    <div class="search-row">
+      <span class="icon">⌕</span>
+      <input id="search" type="text" placeholder="検索…" autocomplete="off">
+    </div>
+    <div class="toggle-row" id="toggleRow">
+      <button type="button" class="pill-btn" id="btnLatin">英数字タイトルのみ</button>
+      <button type="button" class="pill-btn" id="btnCorrectedOnly">訂正済のみ</button>
+    </div>
+    <div class="sort-row" id="sortRow">
+      <label for="sortSelect">表示順</label>
+      <select class="sort-select" id="sortSelect">
+        <option value="title">曲名順</option>
+        <option value="artist">アーティスト順</option>
+        <option value="album">アルバム順</option>
+        <option value="plays">再生回数順</option>
+        <option value="added">追加日順</option>
+      </select>
+    </div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <div class="catalog-index" id="catalogIndex" hidden aria-label="頭文字索引">
+      <div class="catalog-index-head">
+        <span class="catalog-index-title" id="catalogIndexTitle">CATALOG INDEX · 頭文字から絞り込み</span>
+        <button type="button" class="index-reset active" id="indexReset" data-index-key="">すべて</button>
+      </div>
+      <div class="catalog-index-row">
+        <span class="catalog-index-label">ABC</span>
+        <div class="catalog-index-buttons" id="alphabetIndex"></div>
+      </div>
+      <div class="catalog-index-row">
+        <span class="catalog-index-label">五十音</span>
+        <div class="catalog-index-buttons" id="kanaIndex"></div>
+      </div>
+      <p class="catalog-index-note" id="catalogIndexNote">The／A／An は次の語で分類します。漢字名はMP3の並べ替えタグがない場合「漢字・他」に入ります。</p>
+    </div>
+    <div class="stats-bar">
+      <span id="resultCount">—</span>
+      <span class="stamp-badge" id="totalTime">—</span>
+    </div>
+  </div>
+
+  <div id="results"></div>
+  <div id="sentinel"></div>
+  <div class="loadmore" id="loadmoreMsg" style="display:none;">スクロールしてさらに読み込む…</div>
+
+</div>
+
+<footer>DATE FIRST ISSUED · 2026-07-18 — MP3正本・SQLite API検索・ページ取得・最大化プレーヤー・シャッフル／リピート・曲名／アーティスト／アルバム索引</footer>
+
+<div class="player-bar" id="playerBar" hidden>
+  <div class="player-inner" id="playerInner">
+    <img class="player-artwork" id="playerArtwork" alt="" hidden title="クリックして最大化">
+    <div class="player-now" id="playerNow" title="クリックして最大化">
+      <span class="player-label">NOW PLAYING</span>
+      <strong class="player-title" id="playerTitle">—</strong>
+      <span class="player-artist" id="playerArtist"></span>
+    </div>
+    <div class="player-audio-mount" id="playerAudioMount">
+      <div class="player-control-deck" id="playerControlDeck">
+        <div class="player-mode-controls" aria-label="再生モードと曲送り">
+          <button type="button" class="player-mode-btn nav-btn" id="playerPrevious" title="前の曲へ" aria-label="前の曲へ">⏮</button>
+          <button type="button" class="player-mode-btn" id="playerShuffle" title="シャッフル再生：オフ" aria-label="シャッフル再生：オフ" aria-pressed="false">シャッフル</button>
+          <button type="button" class="player-mode-btn nav-btn" id="playerNext" title="次の曲へ" aria-label="次の曲へ">⏭</button>
+          <button type="button" class="player-mode-btn" id="playerRepeatAll" title="全体リピート：オフ" aria-label="全体リピート：オフ" aria-pressed="false">リピート</button>
+          <button type="button" class="player-mode-btn" id="playerRepeatOne" title="1曲リピート：オフ" aria-label="1曲リピート：オフ" aria-pressed="false">1曲</button>
+        </div>
+        <audio id="audioPlayer" controls preload="metadata"></audio>
+      </div>
+    </div>
+    <button type="button" class="player-expand" id="playerExpand" title="プレーヤーを最大化" aria-label="プレーヤーを最大化">⛶</button>
+    <button type="button" class="player-close" id="playerClose" title="プレーヤーを閉じる" aria-label="プレーヤーを閉じる">×</button>
+  </div>
+</div>
+
+<div class="player-modal" id="playerModal" hidden role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
+  <div class="player-modal-panel" id="playerModalPanel">
+    <button type="button" class="player-modal-close" id="playerModalClose" title="元の大きさに戻す" aria-label="元の大きさに戻す">×</button>
+    <div class="player-modal-content">
+      <div class="player-modal-artwork-wrap">
+        <img class="player-modal-artwork" id="playerModalArtwork" alt="" hidden>
+      </div>
+      <div class="player-modal-info">
+        <span class="player-modal-label">NOW PLAYING</span>
+        <h2 class="player-modal-title" id="playerModalTitle">—</h2>
+        <p class="player-modal-artist" id="playerModalArtist"></p>
+        <div class="player-audio-mount" id="playerModalAudioMount"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function(){
+  const BROWSE_API_URL = './api/browse';
+  const STATS_API_URL = './api/stats';
+  const PAGE_SIZE = 80;
+  const PLAYBACK_SETTINGS_KEY = 'music-library-playback-settings-v1';
+  const ARTIST_FALLBACK = '(不明なアーティスト)';
+  const ALBUM_FALLBACK = '(不明なアルバム)';
+  const UNKNOWN_ARTIST_KEY = '__unknown_artist__';
+  const UNKNOWN_ALBUM_KEY = '__unknown_album__';
+  const ALPHABET_INDEX_KEYS = ['0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+  const KANA_INDEX_KEYS = ['あ','か','さ','た','な','は','ま','や','ら','わ','他'];
+
+  const state = {
+    view: 'songs',
+    selectedArtistKey: null,
+    selectedArtistLabel: '',
+    selectedAlbumKey: null,
+    selectedAlbumTitle: '',
+    filterLatin: false,
+    filterCorrectedOnly: false,
+    sort: 'title',
+    indexKey: '',
+  };
+
+  const els = {
+    search: document.getElementById('search'),
+    results: document.getElementById('results'),
+    resultCount: document.getElementById('resultCount'),
+    totalTime: document.getElementById('totalTime'),
+    totalSub: document.getElementById('totalSub'),
+    sentinel: document.getElementById('sentinel'),
+    loadmoreMsg: document.getElementById('loadmoreMsg'),
+    breadcrumb: document.getElementById('breadcrumb'),
+    catalogIndex: document.getElementById('catalogIndex'),
+    catalogIndexTitle: document.getElementById('catalogIndexTitle'),
+    catalogIndexNote: document.getElementById('catalogIndexNote'),
+    indexReset: document.getElementById('indexReset'),
+    alphabetIndex: document.getElementById('alphabetIndex'),
+    kanaIndex: document.getElementById('kanaIndex'),
+    toggleRow: document.getElementById('toggleRow'),
+    btnLatin: document.getElementById('btnLatin'),
+    btnCorrectedOnly: document.getElementById('btnCorrectedOnly'),
+    sortRow: document.getElementById('sortRow'),
+    sortSelect: document.getElementById('sortSelect'),
+    playerBar: document.getElementById('playerBar'),
+    playerInner: document.getElementById('playerInner'),
+    playerArtwork: document.getElementById('playerArtwork'),
+    playerNow: document.getElementById('playerNow'),
+    playerTitle: document.getElementById('playerTitle'),
+    playerArtist: document.getElementById('playerArtist'),
+    playerAudioMount: document.getElementById('playerAudioMount'),
+    playerControlDeck: document.getElementById('playerControlDeck'),
+    playerPrevious: document.getElementById('playerPrevious'),
+    playerShuffle: document.getElementById('playerShuffle'),
+    playerNext: document.getElementById('playerNext'),
+    playerRepeatAll: document.getElementById('playerRepeatAll'),
+    playerRepeatOne: document.getElementById('playerRepeatOne'),
+    audioPlayer: document.getElementById('audioPlayer'),
+    playerExpand: document.getElementById('playerExpand'),
+    playerClose: document.getElementById('playerClose'),
+    playerModal: document.getElementById('playerModal'),
+    playerModalPanel: document.getElementById('playerModalPanel'),
+    playerModalArtwork: document.getElementById('playerModalArtwork'),
+    playerModalTitle: document.getElementById('playerModalTitle'),
+    playerModalArtist: document.getElementById('playerModalArtist'),
+    playerModalAudioMount: document.getElementById('playerModalAudioMount'),
+    playerModalClose: document.getElementById('playerModalClose'),
+  };
+
+  let stats = null;
+  let renderKind = 'song';
+  let currentItems = [];
+  let totalCount = 0;
+  let trackTotal = 0;
+  let totalDurationMs = 0;
+  let indexCounts = {};
+  let hasMore = false;
+  let loading = false;
+  let requestSerial = 0;
+  let searchTimer = null;
+  const idMap = new Map();
+
+  function escapeHtml(value){
+    return String(value || '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[c]));
+  }
+
+  function fmtDuration(ms){
+    if (!ms) return '—';
+    const totalSec = Math.round(Number(ms) / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function fmtTotal(ms){
+    const totalMin = Math.round(Number(ms || 0) / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `合計 ${h.toLocaleString()}時間${m}分`;
+  }
+
+  function mediaUrl(relativePath){
+    const path = String(relativePath || '').replace(/\\/g, '/').replace(/^\.\//, '');
+    if (!path) return '';
+    const encoded = path.split('/').map(encodeURIComponent).join('/');
+    return new URL(encoded, new URL('./', location.href)).href;
+  }
+
+  function prepareTrack(track){
+    track.id = String(track.id || '');
+    track.artistDbId = String(track.artistDbId || '');
+    track.audioUrl = mediaUrl(track.audioFile || track.relativePath);
+    track.artworkUrl = mediaUrl(track.artworkFile);
+    idMap.set(track.id, track);
+    return track;
+  }
+
+  function prepareGroup(item){
+    item.key = String(item.key || '');
+    item.display = String(item.display || item.key || '');
+    item.artworkUrl = mediaUrl(item.artworkFile);
+    if (!Array.isArray(item.artists)) item.artists = [];
+    return item;
+  }
+
+  function determineRenderKind(){
+    if (state.view === 'songs') return 'song';
+    if (state.view === 'artists' && !state.selectedArtistKey) return 'artist';
+    if (state.view === 'artists' && state.selectedArtistKey && !state.selectedAlbumKey) return 'album';
+    if (state.view === 'artists') return 'song-in-album';
+    if (state.view === 'albums' && !state.selectedAlbumTitle) return 'album-global';
+    return 'song-in-album-global';
+  }
+
+  function apiView(){
+    if (renderKind === 'song') return 'songs';
+    if (renderKind === 'artist') return 'artists';
+    if (renderKind === 'album') return 'artist_albums';
+    if (renderKind === 'song-in-album') return 'artist_tracks';
+    if (renderKind === 'album-global') return 'albums';
+    return 'album_tracks';
+  }
+
+  function isSongLevel(){
+    return renderKind === 'song' || renderKind === 'song-in-album' || renderKind === 'song-in-album-global';
+  }
+
+  function isCatalogIndexLevel(){
+    return isSongLevel() || renderKind === 'artist' || renderKind === 'album-global';
+  }
+
+  function indexButtonHtml(key){
+    const count = Number(indexCounts[key] || 0);
+    const active = state.indexKey === key;
+    const display = key === '他' ? '漢字・他' : key;
+    const classes = ['index-btn'];
+    if (active) classes.push('active');
+    if (key === '他') classes.push('index-other');
+    const disabled = count === 0 && !active ? ' disabled' : '';
+    const pressed = active ? 'true' : 'false';
+    return `<button type="button" class="${classes.join(' ')}" data-index-key="${escapeHtml(key)}" aria-pressed="${pressed}" title="${escapeHtml(display)}：${count.toLocaleString()}件"${disabled}>${escapeHtml(display)}</button>`;
+  }
+
+  function renderCatalogIndex(){
+    const visible = isCatalogIndexLevel();
+    els.catalogIndex.hidden = !visible;
+    if (!visible) return;
+
+    if (isSongLevel()) {
+      els.catalogIndexTitle.textContent = 'SONG INDEX · 曲名の頭文字から絞り込み';
+      els.catalogIndexNote.textContent = '現在の検索・アーティスト・アルバム範囲内で曲名を絞り込みます。ID3の曲名並べ替えタグ（TSOT）がある場合は、その読みを使用します。';
+    } else if (renderKind === 'artist') {
+      els.catalogIndexTitle.textContent = 'ARTIST INDEX · アーティスト名から絞り込み';
+      els.catalogIndexNote.textContent = 'The／A／An は次の語で分類します。ID3のアーティスト並べ替えタグ（TSOP）がない漢字名は「漢字・他」に入ります。';
+    } else {
+      els.catalogIndexTitle.textContent = 'ALBUM INDEX · アルバム名から絞り込み';
+      els.catalogIndexNote.textContent = 'The／A／An は次の語で分類します。ID3のアルバム並べ替えタグ（TSOA）がない漢字名は「漢字・他」に入ります。';
+    }
+
+    els.indexReset.classList.toggle('active', !state.indexKey);
+    els.indexReset.setAttribute('aria-pressed', state.indexKey ? 'false' : 'true');
+    els.alphabetIndex.innerHTML = ALPHABET_INDEX_KEYS.map(indexButtonHtml).join('');
+    els.kanaIndex.innerHTML = KANA_INDEX_KEYS.map(indexButtonHtml).join('');
+  }
+
+  function updateViewTabs(){
+    document.querySelectorAll('.view-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === state.view);
+    });
+    els.toggleRow.style.display = isSongLevel() ? 'flex' : 'none';
+    const albumDetail = renderKind === 'song-in-album' || renderKind === 'song-in-album-global';
+    els.sortRow.style.display = isSongLevel() && !albumDetail ? 'flex' : 'none';
+    els.btnLatin.classList.toggle('active', state.filterLatin);
+    els.btnCorrectedOnly.classList.toggle('active', state.filterCorrectedOnly);
+    if (state.sort !== 'album_order') els.sortSelect.value = state.sort;
+    renderCatalogIndex();
+  }
+
+  function updateSearchPlaceholder(){
+    if (renderKind === 'song') els.search.placeholder = '曲名・アーティスト・アルバム・作曲者で検索…';
+    else if (renderKind === 'artist') els.search.placeholder = 'アーティスト名で検索…';
+    else if (renderKind === 'album') els.search.placeholder = 'アルバム名で検索…';
+    else if (renderKind === 'album-global') els.search.placeholder = 'アルバム名・アーティスト名で検索…';
+    else els.search.placeholder = '曲名・アーティスト・作曲者で検索…';
+  }
+
+  function updateBreadcrumb(){
+    const crumbs = [];
+    if (state.view === 'songs') {
+      crumbs.push({label:'曲一覧', current:true});
+    } else if (state.view === 'artists') {
+      crumbs.push({
+        label:'アーティスト一覧',
+        current:!state.selectedArtistKey,
+        action:() => {
+          state.selectedArtistKey = null;
+          state.selectedArtistLabel = '';
+          state.selectedAlbumKey = null;
+          state.selectedAlbumTitle = '';
+          state.sort = 'title';
+          state.indexKey = '';
+        }
+      });
+      if (state.selectedArtistKey) {
+        crumbs.push({
+          label:state.selectedArtistLabel || ARTIST_FALLBACK,
+          current:!state.selectedAlbumKey,
+          action:() => {
+            state.selectedAlbumKey = null;
+            state.selectedAlbumTitle = '';
+            state.sort = 'title';
+            state.indexKey = '';
+          }
+        });
+      }
+      if (state.selectedAlbumKey) {
+        crumbs.push({label:state.selectedAlbumTitle || ALBUM_FALLBACK, current:true});
+      }
+    } else {
+      crumbs.push({
+        label:'アルバム一覧',
+        current:!state.selectedAlbumTitle,
+        action:() => {
+          state.selectedAlbumKey = null;
+          state.selectedAlbumTitle = '';
+          state.sort = 'title';
+          state.indexKey = '';
+        }
+      });
+      if (state.selectedAlbumTitle) {
+        crumbs.push({label:state.selectedAlbumTitle, current:true});
+      }
+    }
+
+    els.breadcrumb.innerHTML = crumbs.map((crumb, index) => {
+      const arrow = index ? '<span class="arrow">›</span>' : '';
+      if (crumb.current) return `${arrow}<span class="crumb current">${escapeHtml(crumb.label)}</span>`;
+      return `${arrow}<a class="crumb" data-crumb-index="${index}">${escapeHtml(crumb.label)}</a>`;
+    }).join('');
+
+    els.breadcrumb.querySelectorAll('[data-crumb-index]').forEach(link => {
+      link.addEventListener('click', () => {
+        const crumb = crumbs[Number(link.dataset.crumbIndex)];
+        if (!crumb || !crumb.action) return;
+        crumb.action();
+        els.search.value = '';
+        void reloadBrowse();
+      });
+    });
+  }
+
+  function buildBrowseParams(offset){
+    const params = new URLSearchParams({
+      view: apiView(),
+      q: els.search.value.trim(),
+      limit: String(PAGE_SIZE),
+      offset: String(offset),
+      sort: state.sort,
+      latinOnly: state.filterLatin ? '1' : '0',
+      correctedOnly: state.filterCorrectedOnly ? '1' : '0',
+    });
+    if (state.selectedArtistKey) params.set('artistKey', state.selectedArtistKey);
+    if (state.selectedAlbumKey) params.set('albumKey', state.selectedAlbumKey);
+    if (state.view === 'albums' && state.selectedAlbumTitle) {
+      params.set('albumTitle', state.selectedAlbumTitle);
+    }
+    if (isCatalogIndexLevel() && state.indexKey) params.set('indexKey', state.indexKey);
+    return params;
+  }
+
+  async function fetchJson(url, options){
+    const response = await fetch(url, {...options, cache:'no-store'});
+    let payload = null;
+    try { payload = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      const detail = payload && payload.error ? payload.error : `HTTP ${response.status}`;
+      throw new Error(detail);
+    }
+    return payload;
+  }
+
+  async function loadStats(){
+    stats = await fetchJson(STATS_API_URL);
+    els.totalSub.textContent = `MP3ライブラリ ${Number(stats.availableTracks || 0).toLocaleString()} 曲 · アートワーク ${Number(stats.artworkTracks || 0).toLocaleString()} 曲 · SQLite APIページ取得`;
+  }
+
+  function updateResultSummary(){
+    if (isSongLevel()) {
+      els.resultCount.textContent = `${totalCount.toLocaleString()} 曲`;
+      els.totalTime.textContent = fmtTotal(totalDurationMs);
+    } else {
+      els.resultCount.textContent = `${totalCount.toLocaleString()} 件`;
+      els.totalTime.textContent = `計 ${trackTotal.toLocaleString()} 曲`;
+    }
+  }
+
+  function loadingHtml(){
+    return `<div class="empty-state"><div class="stamp-big">SQLITE</div><p>ライブラリを検索しています…</p></div>`;
+  }
+
+  function errorHtml(error){
+    return `<div class="empty-state"><div class="stamp-big">API ERROR</div><p>SQLite検索APIからデータを取得できませんでした。</p><p>${escapeHtml(error && error.message ? error.message : String(error))}</p><p>黒いサーバー画面を閉じ、start-music-library.batから再起動してください。</p></div>`;
+  }
+
+  function emptyStateHtml(){
+    return `<div class="empty-state"><div class="stamp-big">NOT FOUND</div><p>該当する項目が見つかりませんでした。</p><p>検索語や絞り込み条件を見直してみてください。</p></div>`;
+  }
+
+  async function reloadBrowse(){
+    requestSerial += 1;
+    const serial = requestSerial;
+    renderKind = determineRenderKind();
+    currentItems = [];
+    totalCount = 0;
+    trackTotal = 0;
+    totalDurationMs = 0;
+    indexCounts = {};
+    hasMore = false;
+    els.results.innerHTML = loadingHtml();
+    els.loadmoreMsg.style.display = 'none';
+    updateViewTabs();
+    updateBreadcrumb();
+    updateSearchPlaceholder();
+    await loadNextPage(serial, true);
+  }
+
+  async function loadNextPage(serial = requestSerial, reset = false){
+    if ((!reset && loading) || (!reset && !hasMore)) return;
+    loading = true;
+    els.loadmoreMsg.textContent = 'SQLiteから続きを読み込んでいます…';
+    els.loadmoreMsg.style.display = 'block';
+    try {
+      const params = buildBrowseParams(currentItems.length);
+      const result = await fetchJson(`${BROWSE_API_URL}?${params}`);
+      if (serial !== requestSerial) return;
+      if (!result || !Array.isArray(result.items)) throw new Error('検索結果の形式が不正です。');
+
+      const items = result.kind === 'tracks'
+        ? result.items.map(prepareTrack)
+        : result.items.map(prepareGroup);
+
+      if (reset) els.results.innerHTML = '';
+      currentItems.push(...items);
+      totalCount = Number(result.total || 0);
+      trackTotal = Number(result.trackTotal || 0);
+      totalDurationMs = Number(result.totalDurationMs || 0);
+      if (result.indexCounts && typeof result.indexCounts === 'object') {
+        indexCounts = result.indexCounts;
+        renderCatalogIndex();
+      }
+      hasMore = Boolean(result.hasMore);
+      updateResultSummary();
+      appendCards(items);
+      if (currentItems.length === 0) els.results.innerHTML = emptyStateHtml();
+      els.loadmoreMsg.textContent = hasMore ? 'スクロールしてさらに読み込む…' : 'すべて読み込みました';
+      els.loadmoreMsg.style.display = hasMore ? 'block' : 'none';
+    } catch (error) {
+      if (serial !== requestSerial) return;
+      console.error('SQLite browse error:', error);
+      if (reset || currentItems.length === 0) els.results.innerHTML = errorHtml(error);
+      els.loadmoreMsg.style.display = 'none';
+    } finally {
+      if (serial === requestSerial) loading = false;
+    }
+  }
+
+  function songCardHtml(track, options){
+    options = options || {};
+    const showMeta = options.showMeta !== false;
+    let metaHtml = '';
+    if (showMeta) {
+      const albumHtml = track.album ? `<span><span class="label">album</span><a class="xref" data-type="album">${escapeHtml(track.album)}</a></span>` : '';
+      const artistEdit = track.artistDbId ? `<button type="button" class="icon-btn" data-action="edit-artist" title="アーティスト名を編集（同じアーティストの全曲に反映）">✎</button>` : '';
+      const artistHtml = track.artist ? `<span class="artist-wrap"><span class="label">artist</span><a class="xref${track.isArtistCorrected ? ' corrected' : ''}" data-type="artist">${escapeHtml(track.artist)}</a>${artistEdit}</span>` : '';
+      metaHtml = [albumHtml, artistHtml].filter(Boolean).join('<span class="sep">・</span>');
+    } else {
+      const bits = [];
+      if (track.discNumber && track.trackNumber) bits.push(`Disc ${track.discNumber} / Track ${track.trackNumber}`);
+      else if (track.trackNumber) bits.push(`Track ${track.trackNumber}`);
+      metaHtml = bits.map(bit => `<span>${escapeHtml(bit)}</span>`).join('');
+    }
+
+    const searchQuery = encodeURIComponent([track.artist, track.album, track.name].filter(Boolean).join(' '));
+    const searchUrl = `https://www.google.com/search?q=${searchQuery}`;
+    const isPlaying = currentTrackId === track.id && !els.audioPlayer.paused && !els.audioPlayer.ended;
+    const playButton = track.audioUrl
+      ? `<button type="button" class="play-btn${isPlaying ? ' playing' : ''}" data-action="play" title="${isPlaying ? '一時停止' : '再生'}" aria-label="${isPlaying ? '一時停止' : '再生'}">${isPlaying ? 'Ⅱ' : '▶'}</button>`
+      : '';
+    const artworkHtml = track.artworkUrl
+      ? `<img class="artwork-thumb" src="${escapeHtml(track.artworkUrl)}" alt="" loading="lazy" onerror="this.closest('.song-main').classList.remove('has-artwork');this.remove()">`
+      : '';
+
+    return `<div class="card" data-id="${escapeHtml(track.id)}">
+      <div class="info"><div class="song-main${track.artworkUrl ? ' has-artwork' : ''}">
+        ${artworkHtml}<div class="song-text">
+          <div class="title-row">
+            <span class="title${track.isCorrected ? ' corrected' : ''}" data-role="title-text">${escapeHtml(track.name || '(無題)')}</span>
+            <button type="button" class="icon-btn" data-action="edit" title="表記を編集">✎</button>
+            <a class="icon-btn" href="${searchUrl}" target="_blank" rel="noopener" title="正式表記を検索で確認">🔍</a>
+          </div>
+          <div class="meta">${metaHtml}</div>
+        </div>
+      </div></div>
+      <div class="side"><div class="play-line">${playButton}<span class="dur">${fmtDuration(track.time)}</span></div><span class="plays">再生 ${Number(track.playCount || 0).toLocaleString()}回</span></div>
+    </div>`;
+  }
+
+  function artistCardHtml(group){
+    const edit = group.key !== UNKNOWN_ARTIST_KEY
+      ? `<button type="button" class="icon-btn" data-action="edit-artist-group" title="アーティスト名を編集（全曲に反映）">✎</button>`
+      : '';
+    return `<div class="card clickable" data-artist-key="${escapeHtml(group.key)}" data-artist-label="${escapeHtml(group.display)}">
+      <div class="info"><div class="title-row"><span class="title${group.isCorrected ? ' corrected' : ''}">${escapeHtml(group.display || ARTIST_FALLBACK)}</span>${edit}</div><div class="meta">${Number(group.albumCount || 0).toLocaleString()} アルバム</div></div>
+      <div class="side"><span class="count-badge">${Number(group.count || 0).toLocaleString()}曲</span><span class="chevron">›</span></div>
+    </div>`;
+  }
+
+  function albumCardHtml(group, options){
+    options = options || {};
+    const artists = Array.isArray(group.artists) ? group.artists : [];
+    const artistLine = options.showArtists && artists.length
+      ? `<div class="meta">${escapeHtml(artists.slice(0,3).join(' / '))}${artists.length > 3 ? ' ほか' : ''}</div>`
+      : '';
+    const artworkHtml = group.artworkUrl
+      ? `<img class="album-artwork" src="${escapeHtml(group.artworkUrl)}" alt="" loading="lazy" onerror="this.closest('.album-main').classList.remove('has-artwork');this.remove()">`
+      : '';
+    return `<div class="card clickable" data-album-key="${escapeHtml(group.key)}" data-album-title="${escapeHtml(group.display || group.key || ALBUM_FALLBACK)}">
+      <div class="info"><div class="album-main${group.artworkUrl ? ' has-artwork' : ''}">${artworkHtml}<div class="album-text"><div class="title-row"><span class="title">${escapeHtml(group.display || group.key || ALBUM_FALLBACK)}</span></div>${artistLine}</div></div></div>
+      <div class="side"><span class="count-badge">${Number(group.count || 0).toLocaleString()}曲</span><span class="chevron">›</span></div>
+    </div>`;
+  }
+
+  function appendCards(items){
+    if (!items.length) return;
+    let html = '';
+    if (renderKind === 'song') html = items.map(track => songCardHtml(track, {showMeta:true})).join('');
+    else if (renderKind === 'song-in-album') html = items.map(track => songCardHtml(track, {showMeta:false})).join('');
+    else if (renderKind === 'song-in-album-global') html = items.map(track => songCardHtml(track, {showMeta:true})).join('');
+    else if (renderKind === 'artist') html = items.map(artistCardHtml).join('');
+    else if (renderKind === 'album') html = items.map(group => albumCardHtml(group, {showArtists:false})).join('');
+    else html = items.map(group => albumCardHtml(group, {showArtists:true})).join('');
+    els.results.insertAdjacentHTML('beforeend', html);
+    updatePlayButtons();
+  }
+
+  let currentTrackId = null;
+  let playCountRecordedForCurrentLoad = false;
+  let playbackContext = null;
+  let playbackTransitioning = false;
+  let shuffleEnabled = false;
+  let repeatMode = 'off';
+  let shuffleOrder = [];
+  let shufflePosition = -1;
+
+  function loadPlaybackSettings(){
+    try {
+      const saved = JSON.parse(localStorage.getItem(PLAYBACK_SETTINGS_KEY) || '{}');
+      shuffleEnabled = Boolean(saved.shuffleEnabled);
+      repeatMode = saved.repeatMode === 'all' || saved.repeatMode === 'one' ? saved.repeatMode : 'off';
+    } catch (_) {
+      shuffleEnabled = false;
+      repeatMode = 'off';
+    }
+  }
+
+  function savePlaybackSettings(){
+    try {
+      localStorage.setItem(PLAYBACK_SETTINGS_KEY, JSON.stringify({shuffleEnabled, repeatMode}));
+    } catch (_) {}
+  }
+
+  function updatePlaybackModeControls(){
+    const shuffleLabel = `シャッフル再生：${shuffleEnabled ? 'オン' : 'オフ'}`;
+    const repeatAllActive = repeatMode === 'all';
+    const repeatOneActive = repeatMode === 'one';
+    const repeatAllLabel = `全体リピート：${repeatAllActive ? 'オン' : 'オフ'}`;
+    const repeatOneLabel = `1曲リピート：${repeatOneActive ? 'オン' : 'オフ'}`;
+
+    els.playerShuffle.classList.toggle('active', shuffleEnabled);
+    els.playerShuffle.setAttribute('aria-pressed', shuffleEnabled ? 'true' : 'false');
+    els.playerShuffle.title = shuffleLabel;
+    els.playerShuffle.setAttribute('aria-label', shuffleLabel);
+
+    els.playerRepeatAll.classList.toggle('active', repeatAllActive);
+    els.playerRepeatAll.setAttribute('aria-pressed', repeatAllActive ? 'true' : 'false');
+    els.playerRepeatAll.title = repeatAllLabel;
+    els.playerRepeatAll.setAttribute('aria-label', repeatAllLabel);
+
+    els.playerRepeatOne.classList.toggle('active', repeatOneActive);
+    els.playerRepeatOne.setAttribute('aria-pressed', repeatOneActive ? 'true' : 'false');
+    els.playerRepeatOne.title = repeatOneLabel;
+    els.playerRepeatOne.setAttribute('aria-label', repeatOneLabel);
+
+    const hasQueue = Boolean(currentTrackId && playbackContext && playbackContext.total > 1);
+    els.playerPrevious.disabled = !hasQueue || playbackTransitioning;
+    els.playerNext.disabled = !hasQueue || playbackTransitioning;
+  }
+
+  function shuffleArray(values){
+    for (let index = values.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
+    }
+    return values;
+  }
+
+  function resetShuffleOrder(currentOffset){
+    const total = Number(playbackContext && playbackContext.total || 0);
+    if (!total) {
+      shuffleOrder = [];
+      shufflePosition = -1;
+      return;
+    }
+    const normalizedOffset = Math.min(Math.max(Number(currentOffset || 0), 0), total - 1);
+    const remaining = [];
+    for (let offset = 0; offset < total; offset += 1) {
+      if (offset !== normalizedOffset) remaining.push(offset);
+    }
+    shuffleOrder = [normalizedOffset, ...shuffleArray(remaining)];
+    shufflePosition = 0;
+  }
+
+  function resetShuffleForNewCycle(currentOffset){
+    const total = Number(playbackContext && playbackContext.total || 0);
+    shuffleOrder = shuffleArray(Array.from({length: total}, (_, index) => index));
+    if (total > 1 && shuffleOrder[0] === currentOffset) {
+      [shuffleOrder[0], shuffleOrder[1]] = [shuffleOrder[1], shuffleOrder[0]];
+    }
+    shufflePosition = 0;
+  }
+
+  function setShuffleEnabled(enabled){
+    shuffleEnabled = Boolean(enabled);
+    if (shuffleEnabled && playbackContext) resetShuffleOrder(playbackContext.currentOffset);
+    if (!shuffleEnabled) {
+      shuffleOrder = [];
+      shufflePosition = -1;
+    }
+    savePlaybackSettings();
+    updatePlaybackModeControls();
+  }
+
+  function setRepeatMode(mode){
+    repeatMode = repeatMode === mode ? 'off' : mode;
+    savePlaybackSettings();
+    updatePlaybackModeControls();
+  }
+
+  function capturePlaybackContext(track){
+    if (!isSongLevel()) return;
+    const offset = currentItems.findIndex(item => String(item.id) === String(track.id));
+    if (offset < 0 || totalCount <= 0) return;
+    const params = buildBrowseParams(0);
+    params.delete('limit');
+    params.delete('offset');
+    playbackContext = {
+      baseParams: params.toString(),
+      total: Number(totalCount),
+      currentOffset: offset,
+    };
+    if (shuffleEnabled) resetShuffleOrder(offset);
+    else {
+      shuffleOrder = [];
+      shufflePosition = -1;
+    }
+    updatePlaybackModeControls();
+  }
+
+  async function fetchPlaybackTrackAtOffset(offset){
+    if (!playbackContext) return null;
+    const params = new URLSearchParams(playbackContext.baseParams);
+    params.set('limit', '1');
+    params.set('offset', String(offset));
+    const result = await fetchJson(`${BROWSE_API_URL}?${params}`);
+    if (!result || result.kind !== 'tracks' || !Array.isArray(result.items) || !result.items.length) return null;
+    playbackContext.total = Number(result.total || playbackContext.total || 0);
+    return prepareTrack(result.items[0]);
+  }
+
+  function updateMediaSession(track){
+    if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+    const artwork = track.artworkUrl ? [{src: track.artworkUrl}] : [];
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.name || '(無題)',
+        artist: track.artist || '',
+        album: track.album || '',
+        artwork,
+      });
+    } catch (_) {}
+  }
+
+  async function recordTrackPlayed(track){
+    try {
+      const result = await fetchJson(`./api/tracks/${encodeURIComponent(track.id)}/played`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+      });
+      track.playCount = Number(result.playCount || 0);
+    } catch (error) {
+      console.warn('再生回数を保存できませんでした:', error);
+      track.playCount = Number(track.playCount || 0) + 1;
+    }
+    els.results.querySelectorAll('.card[data-id]').forEach(card => {
+      if (card.dataset.id !== track.id) return;
+      const plays = card.querySelector('.plays');
+      if (plays) plays.textContent = `再生 ${Number(track.playCount || 0).toLocaleString()}回`;
+    });
+  }
+
+  function updatePlayButtons(){
+    els.results.querySelectorAll('button[data-action="play"]').forEach(button => {
+      const card = button.closest('.card[data-id]');
+      const active = card && card.dataset.id === currentTrackId;
+      const playing = active && !els.audioPlayer.paused && !els.audioPlayer.ended;
+      button.textContent = playing ? 'Ⅱ' : '▶';
+      button.classList.toggle('playing', playing);
+      button.title = playing ? '一時停止' : '再生';
+      button.setAttribute('aria-label', button.title);
+    });
+  }
+
+  function setPlayerTrack(track){
+    currentTrackId = track.id;
+    playCountRecordedForCurrentLoad = false;
+    els.audioPlayer.src = track.audioUrl;
+    els.playerTitle.textContent = track.name || '(無題)';
+    els.playerArtist.textContent = [track.artist, track.album].filter(Boolean).join(' · ');
+    if (track.artworkUrl) {
+      els.playerArtwork.src = track.artworkUrl;
+      els.playerArtwork.hidden = false;
+      els.playerInner.classList.add('has-artwork');
+    } else {
+      els.playerArtwork.removeAttribute('src');
+      els.playerArtwork.hidden = true;
+      els.playerInner.classList.remove('has-artwork');
+    }
+    els.playerBar.hidden = false;
+    document.body.classList.add('player-active');
+    updateMediaSession(track);
+    if (!els.playerModal.hidden) syncPlayerModal();
+    updatePlaybackModeControls();
+  }
+
+  async function playTrack(track, {offset = null} = {}){
+    if (!track || !track.audioUrl) return false;
+    if (currentTrackId !== track.id) setPlayerTrack(track);
+    if (playbackContext && Number.isInteger(offset)) playbackContext.currentOffset = offset;
+    if (els.audioPlayer.ended) {
+      playCountRecordedForCurrentLoad = false;
+      try { els.audioPlayer.currentTime = 0; } catch (_) {}
+    }
+    try {
+      await els.audioPlayer.play();
+      if (!playCountRecordedForCurrentLoad) {
+        playCountRecordedForCurrentLoad = true;
+        void recordTrackPlayed(track);
+      }
+      return true;
+    } catch (error) {
+      console.error('MP3再生エラー:', error);
+      els.playerArtist.textContent = 'MP3を再生できませんでした。ファイル名や形式を確認してください。';
+      if (!els.playerModal.hidden) syncPlayerModal();
+      updatePlayButtons();
+      return false;
+    }
+  }
+
+  async function toggleTrackPlayback(id){
+    const track = idMap.get(String(id));
+    if (!track || !track.audioUrl) return;
+    if (currentTrackId === track.id && !els.audioPlayer.paused) {
+      els.audioPlayer.pause();
+      return;
+    }
+    if (currentTrackId !== track.id) capturePlaybackContext(track);
+    const offset = playbackContext && currentTrackId !== track.id ? playbackContext.currentOffset : null;
+    await playTrack(track, {offset});
+  }
+
+  async function movePlayback(direction, {fromEnded = false} = {}){
+    if (playbackTransitioning || !currentTrackId || !playbackContext || playbackContext.total <= 0) return false;
+
+    if (fromEnded && repeatMode === 'one') {
+      const current = idMap.get(String(currentTrackId));
+      if (!current) return false;
+      playCountRecordedForCurrentLoad = false;
+      try { els.audioPlayer.currentTime = 0; } catch (_) {}
+      return playTrack(current, {offset: playbackContext.currentOffset});
+    }
+
+    if (direction < 0 && !fromEnded && Number(els.audioPlayer.currentTime || 0) > 5) {
+      els.audioPlayer.currentTime = 0;
+      return true;
+    }
+
+    playbackTransitioning = true;
+    updatePlaybackModeControls();
+    try {
+      let targetOffset = null;
+      let targetShufflePosition = shufflePosition;
+
+      if (shuffleEnabled) {
+        if (!shuffleOrder.length) resetShuffleOrder(playbackContext.currentOffset);
+        if (direction < 0) {
+          if (shufflePosition <= 0) {
+            els.audioPlayer.currentTime = 0;
+            return false;
+          }
+          targetShufflePosition = shufflePosition - 1;
+          targetOffset = shuffleOrder[targetShufflePosition];
+        } else {
+          targetShufflePosition = shufflePosition + 1;
+          if (targetShufflePosition >= shuffleOrder.length) {
+            if (repeatMode !== 'all') return false;
+            resetShuffleForNewCycle(playbackContext.currentOffset);
+            targetShufflePosition = 0;
+          }
+          targetOffset = shuffleOrder[targetShufflePosition];
+        }
+      } else {
+        targetOffset = Number(playbackContext.currentOffset) + direction;
+        if (targetOffset < 0 || targetOffset >= playbackContext.total) {
+          if (repeatMode === 'all') {
+            targetOffset = targetOffset < 0 ? playbackContext.total - 1 : 0;
+          } else {
+            if (direction < 0) els.audioPlayer.currentTime = 0;
+            return false;
+          }
+        }
+      }
+
+      const track = await fetchPlaybackTrackAtOffset(targetOffset);
+      if (!track) return false;
+      const played = await playTrack(track, {offset: targetOffset});
+      if (played && shuffleEnabled) shufflePosition = targetShufflePosition;
+      return played;
+    } catch (error) {
+      console.error('曲送りエラー:', error);
+      els.playerArtist.textContent = '次の曲を取得できませんでした。もう一度お試しください。';
+      if (!els.playerModal.hidden) syncPlayerModal();
+      return false;
+    } finally {
+      playbackTransitioning = false;
+      updatePlaybackModeControls();
+      updatePlayButtons();
+    }
+  }
+
+  let playerModalReturnFocus = null;
+
+  function syncPlayerModal(){
+    els.playerModalTitle.textContent = els.playerTitle.textContent || '—';
+    els.playerModalArtist.textContent = els.playerArtist.textContent || '';
+    const artworkSrc = els.playerArtwork.getAttribute('src');
+    if (artworkSrc && !els.playerArtwork.hidden) {
+      els.playerModalArtwork.src = artworkSrc;
+      els.playerModalArtwork.alt = `${els.playerModalTitle.textContent}のアートワーク`;
+      els.playerModalArtwork.hidden = false;
+      els.playerModalPanel.classList.remove('no-artwork');
+    } else {
+      els.playerModalArtwork.removeAttribute('src');
+      els.playerModalArtwork.alt = '';
+      els.playerModalArtwork.hidden = true;
+      els.playerModalPanel.classList.add('no-artwork');
+    }
+  }
+
+  function openPlayerModal(returnFocusElement){
+    if (!currentTrackId || els.playerBar.hidden || !els.playerModal.hidden) return;
+    syncPlayerModal();
+    playerModalReturnFocus = returnFocusElement || document.activeElement;
+    els.playerModalAudioMount.appendChild(els.playerControlDeck);
+    els.playerModal.hidden = false;
+    document.body.classList.add('player-modal-open');
+    requestAnimationFrame(() => els.playerModalClose.focus());
+  }
+
+  function closePlayerModal({restoreFocus = true} = {}){
+    if (els.playerModal.hidden) return;
+    els.playerAudioMount.appendChild(els.playerControlDeck);
+    els.playerModal.hidden = true;
+    document.body.classList.remove('player-modal-open');
+    if (restoreFocus && playerModalReturnFocus && typeof playerModalReturnFocus.focus === 'function') {
+      playerModalReturnFocus.focus();
+    }
+    playerModalReturnFocus = null;
+  }
+
+  function closePlayer(){
+    closePlayerModal({restoreFocus:false});
+    els.audioPlayer.pause();
+    els.audioPlayer.removeAttribute('src');
+    els.audioPlayer.load();
+    currentTrackId = null;
+    playCountRecordedForCurrentLoad = false;
+    playbackContext = null;
+    shuffleOrder = [];
+    shufflePosition = -1;
+    els.playerArtwork.removeAttribute('src');
+    els.playerArtwork.hidden = true;
+    els.playerInner.classList.remove('has-artwork');
+    els.playerModalArtwork.removeAttribute('src');
+    els.playerModalArtwork.hidden = true;
+    els.playerBar.hidden = true;
+    document.body.classList.remove('player-active');
+    updatePlaybackModeControls();
+    updatePlayButtons();
+  }
+
+  async function saveTitleCorrection(track, value){
+    const result = await fetchJson(`./api/tracks/${encodeURIComponent(track.id)}/title-correction`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value})
+    });
+    track.name = result.name;
+    track.originalName = result.originalName;
+    track.isCorrected = Boolean(result.isCorrected);
+    if (currentTrackId === track.id) {
+      els.playerTitle.textContent = track.name || '(無題)';
+      if (!els.playerModal.hidden) syncPlayerModal();
+    }
+  }
+
+  async function saveArtistCorrection(artistId, value){
+    return fetchJson(`./api/artists/${encodeURIComponent(artistId)}/correction`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value})
+    });
+  }
+
+  function startEditTitle(button){
+    const card = button.closest('.card[data-id]');
+    const track = card ? idMap.get(card.dataset.id) : null;
+    if (!track) return;
+    const titleRow = button.closest('.title-row');
+    const titleSpan = titleRow.querySelector('[data-role="title-text"]');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'title-edit-input';
+    input.value = track.name || '';
+    titleSpan.replaceWith(input);
+    button.style.display = 'none';
+    input.focus();
+    input.select();
+    let done = false;
+
+    async function finish(commit){
+      if (done) return;
+      done = true;
+      const value = commit ? input.value.trim() : track.name;
+      try {
+        if (commit) await saveTitleCorrection(track, value && value !== track.originalName ? value : null);
+      } catch (error) {
+        alert(`曲名を保存できませんでした。\n${error.message}`);
+      }
+      await reloadBrowse();
+    }
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); void finish(true); }
+      if (event.key === 'Escape') { event.preventDefault(); void finish(false); }
+    });
+    input.addEventListener('blur', () => void finish(true));
+  }
+
+  function startEditArtist(button, artistId, currentDisplay){
+    if (!artistId || artistId === UNKNOWN_ARTIST_KEY) return;
+    const target = button.closest('.title-row')?.querySelector('.title') || button.closest('.artist-wrap')?.querySelector('a.xref');
+    if (!target) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'title-edit-input';
+    input.value = currentDisplay || '';
+    target.replaceWith(input);
+    button.style.display = 'none';
+    input.focus();
+    input.select();
+    let done = false;
+
+    async function finish(commit){
+      if (done) return;
+      done = true;
+      try {
+        if (commit) {
+          const value = input.value.trim();
+          const result = await saveArtistCorrection(artistId, value || null);
+          if (state.selectedArtistKey === artistId) state.selectedArtistLabel = result.artist || state.selectedArtistLabel;
+          if (currentTrackId) {
+            const current = idMap.get(currentTrackId);
+            if (current && current.artistDbId === artistId) {
+              current.artist = result.artist;
+              els.playerArtist.textContent = [current.artist, current.album].filter(Boolean).join(' · ');
+              if (!els.playerModal.hidden) syncPlayerModal();
+            }
+          }
+        }
+      } catch (error) {
+        alert(`アーティスト名を保存できませんでした。\n${error.message}`);
+      }
+      await reloadBrowse();
+    }
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); void finish(true); }
+      if (event.key === 'Escape') { event.preventDefault(); void finish(false); }
+    });
+    input.addEventListener('blur', () => void finish(true));
+  }
+
+  document.querySelectorAll('.view-tab').forEach(button => {
+    button.addEventListener('click', () => {
+      state.view = button.dataset.view;
+      state.selectedArtistKey = null;
+      state.selectedArtistLabel = '';
+      state.selectedAlbumKey = null;
+      state.selectedAlbumTitle = '';
+      state.sort = 'title';
+      state.indexKey = '';
+      els.search.value = '';
+      void reloadBrowse();
+    });
+  });
+
+  els.catalogIndex.addEventListener('click', event => {
+    const button = event.target.closest('button[data-index-key]');
+    if (!button || button.disabled) return;
+    const key = String(button.dataset.indexKey || '');
+    if (state.indexKey === key) return;
+    state.indexKey = key;
+    void reloadBrowse();
+  });
+
+  els.btnLatin.addEventListener('click', () => {
+    state.filterLatin = !state.filterLatin;
+    void reloadBrowse();
+  });
+  els.btnCorrectedOnly.addEventListener('click', () => {
+    state.filterCorrectedOnly = !state.filterCorrectedOnly;
+    void reloadBrowse();
+  });
+  els.sortSelect.addEventListener('change', () => {
+    state.sort = els.sortSelect.value;
+    void reloadBrowse();
+  });
+  els.search.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => void reloadBrowse(), 250);
+  });
+
+  els.results.addEventListener('click', event => {
+    const playButton = event.target.closest('button[data-action="play"]');
+    if (playButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const card = playButton.closest('.card[data-id]');
+      if (card) void toggleTrackPlayback(card.dataset.id);
+      return;
+    }
+
+    const editTitleButton = event.target.closest('button[data-action="edit"]');
+    if (editTitleButton) { startEditTitle(editTitleButton); return; }
+
+    const editArtistButton = event.target.closest('button[data-action="edit-artist"]');
+    if (editArtistButton) {
+      const card = editArtistButton.closest('.card[data-id]');
+      const track = card ? idMap.get(card.dataset.id) : null;
+      if (track) startEditArtist(editArtistButton, track.artistDbId, track.artist);
+      return;
+    }
+
+    const editArtistGroupButton = event.target.closest('button[data-action="edit-artist-group"]');
+    if (editArtistGroupButton) {
+      event.stopPropagation();
+      const card = editArtistGroupButton.closest('.card[data-artist-key]');
+      if (card) startEditArtist(editArtistGroupButton, card.dataset.artistKey, card.dataset.artistLabel);
+      return;
+    }
+
+    const xref = event.target.closest('a.xref');
+    if (xref) {
+      event.preventDefault();
+      const card = xref.closest('.card[data-id]');
+      const track = card ? idMap.get(card.dataset.id) : null;
+      if (!track) return;
+      if (xref.dataset.type === 'artist') {
+        state.view = 'artists';
+        state.indexKey = '';
+        state.selectedArtistKey = track.artistDbId || UNKNOWN_ARTIST_KEY;
+        state.selectedArtistLabel = track.artist || ARTIST_FALLBACK;
+        state.selectedAlbumKey = null;
+        state.selectedAlbumTitle = '';
+        state.sort = 'title';
+      } else {
+        state.view = 'albums';
+        state.indexKey = '';
+        state.selectedArtistKey = null;
+        state.selectedArtistLabel = '';
+        state.selectedAlbumKey = null;
+        state.selectedAlbumTitle = track.album || ALBUM_FALLBACK;
+        state.sort = 'album_order';
+      }
+      els.search.value = '';
+      void reloadBrowse();
+      return;
+    }
+
+    const artistCard = event.target.closest('.card[data-artist-key]');
+    if (artistCard) {
+      state.view = 'artists';
+      state.selectedArtistKey = artistCard.dataset.artistKey;
+      state.selectedArtistLabel = artistCard.dataset.artistLabel || ARTIST_FALLBACK;
+      state.selectedAlbumKey = null;
+      state.selectedAlbumTitle = '';
+      state.sort = 'title';
+      state.indexKey = '';
+      els.search.value = '';
+      void reloadBrowse();
+      return;
+    }
+
+    const albumCard = event.target.closest('.card[data-album-key]');
+    if (albumCard) {
+      state.selectedAlbumKey = state.view === 'artists' ? albumCard.dataset.albumKey : null;
+      state.selectedAlbumTitle = albumCard.dataset.albumTitle || ALBUM_FALLBACK;
+      state.sort = 'album_order';
+      state.indexKey = '';
+      els.search.value = '';
+      void reloadBrowse();
+    }
+  });
+
+  els.playerArtwork.addEventListener('error', () => {
+    els.playerArtwork.removeAttribute('src');
+    els.playerArtwork.hidden = true;
+    els.playerInner.classList.remove('has-artwork');
+    if (!els.playerModal.hidden) syncPlayerModal();
+  });
+  els.playerModalArtwork.addEventListener('error', () => {
+    els.playerModalArtwork.removeAttribute('src');
+    els.playerModalArtwork.hidden = true;
+    els.playerModalPanel.classList.add('no-artwork');
+  });
+  els.audioPlayer.addEventListener('play', () => {
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    updatePlayButtons();
+  });
+  els.audioPlayer.addEventListener('pause', () => {
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    updatePlayButtons();
+  });
+  els.audioPlayer.addEventListener('ended', () => {
+    playCountRecordedForCurrentLoad = false;
+    updatePlayButtons();
+    void movePlayback(1, {fromEnded:true});
+  });
+  els.audioPlayer.addEventListener('error', () => {
+    if (!els.audioPlayer.getAttribute('src')) return;
+    els.playerArtist.textContent = 'MP3を読み込めませんでした。ファイル名やファイル形式を確認してください。';
+    if (!els.playerModal.hidden) syncPlayerModal();
+    updatePlayButtons();
+  });
+  els.playerArtwork.addEventListener('click', () => openPlayerModal(els.playerArtwork));
+  els.playerNow.addEventListener('click', () => openPlayerModal(els.playerNow));
+  els.playerExpand.addEventListener('click', event => {
+    event.stopPropagation();
+    openPlayerModal(els.playerExpand);
+  });
+  els.playerModalClose.addEventListener('click', () => closePlayerModal());
+  els.playerModal.addEventListener('click', event => {
+    if (event.target === els.playerModal) closePlayerModal();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !els.playerModal.hidden) {
+      event.preventDefault();
+      closePlayerModal();
+    }
+  });
+  els.playerPrevious.addEventListener('click', event => {
+    event.stopPropagation();
+    void movePlayback(-1);
+  });
+  els.playerNext.addEventListener('click', event => {
+    event.stopPropagation();
+    void movePlayback(1);
+  });
+  els.playerShuffle.addEventListener('click', event => {
+    event.stopPropagation();
+    setShuffleEnabled(!shuffleEnabled);
+  });
+  els.playerRepeatAll.addEventListener('click', event => {
+    event.stopPropagation();
+    setRepeatMode('all');
+  });
+  els.playerRepeatOne.addEventListener('click', event => {
+    event.stopPropagation();
+    setRepeatMode('one');
+  });
+  els.playerClose.addEventListener('click', closePlayer);
+
+  if ('mediaSession' in navigator) {
+    try { navigator.mediaSession.setActionHandler('previoustrack', () => void movePlayback(-1)); } catch (_) {}
+    try { navigator.mediaSession.setActionHandler('nexttrack', () => void movePlayback(1)); } catch (_) {}
+    try { navigator.mediaSession.setActionHandler('play', () => void els.audioPlayer.play()); } catch (_) {}
+    try { navigator.mediaSession.setActionHandler('pause', () => els.audioPlayer.pause()); } catch (_) {}
+  }
+
+  loadPlaybackSettings();
+  updatePlaybackModeControls();
+
+  const observer = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting) && hasMore && !loading) {
+      void loadNextPage();
+    }
+  }, {rootMargin:'500px'});
+  observer.observe(els.sentinel);
+
+  try {
+    await loadStats();
+    await reloadBrowse();
+  } catch (error) {
+    console.error('初期化エラー:', error);
+    els.totalSub.textContent = 'SQLite APIへ接続できませんでした';
+    els.resultCount.textContent = '読込エラー';
+    els.totalTime.textContent = '—';
+    els.results.innerHTML = errorHtml(error);
+  }
+})();
+
+</script>
+</body>
+</html>
