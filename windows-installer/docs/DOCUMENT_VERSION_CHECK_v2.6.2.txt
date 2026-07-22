@@ -1,0 +1,16 @@
+自宅音楽ライブラリ v2.6.2
+ドキュメント版数確認結果
+================================
+
+README.md: # 自宅音楽ライブラリ v2.6.2 インストーラービルド一式
+RELEASE_NOTES_v2.6.2.md: # 自宅音楽ライブラリ v2.6.2
+docs/GITHUB_RELEASE_2.6.2.txt: 自宅音楽ライブラリ v2.6.2
+docs/INSTALL_INFO.txt: 自宅音楽ライブラリ v2.6.2
+docs/README_BUILD.txt: 自宅音楽ライブラリ v2.6.2
+docs/README_USER.txt: 自宅音楽ライブラリ v2.6.2
+docs/REMOTE_ACCESS_FAMILY.txt: 自宅音楽ライブラリ v2.6.2
+docs/REMOTE_ACCESS_USER.txt: 自宅音楽ライブラリ v2.6.2
+
+すべての現行ドキュメントをv2.6.2基準で確認済みです。
+v2.6.1という表記は、更新元・公開済み旧Releaseを示す履歴説明に限ります。
+MUTAGEN_LICENSE.txtは第三者ライセンス原文のため版数表記対象外です。

@@ -66,7 +66,7 @@ BLOCKED_STATIC_NAMES = {
 class MusicLibraryHandler(SimpleHTTPRequestHandler):
     """SQLite API and UTF-8 static server with MP3 byte-range support."""
 
-    server_version = "MusicLibrary/SQLiteAPI2.6.1"
+    server_version = "MusicLibrary/SQLiteAPI2.6.2"
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
         ".html": "text/html; charset=utf-8",

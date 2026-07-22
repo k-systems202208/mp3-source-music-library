@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
 
@@ -18,7 +18,7 @@ if not defined PYTHON_CMD (
 if not defined PYTHON_CMD (
   echo ERROR: Python 3 was not found.
   echo Run 02_install_python.bat or install Python 3 manually.
-  pause
+if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
   exit /b 1
 )
 
@@ -80,7 +80,7 @@ if not defined ISCC (
   echo.
   echo ERROR: Inno Setup was not found.
   echo Run 01_install_inno_setup.bat, then run this build again.
-  pause
+if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
   exit /b 2
 )
 
@@ -96,12 +96,12 @@ echo Installer output:
 echo %CD%\release
 
 echo.
-start "" explorer.exe "%CD%\release"
-pause
+if not defined MUSIC_LIBRARY_AUTOMATED_BUILD start "" explorer.exe "%CD%\release"
+if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
 exit /b 0
 
 :error
 echo.
 echo BUILD FAILED. Review the messages above.
-pause
+if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
 exit /b 1

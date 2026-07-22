@@ -1,4 +1,4 @@
-# MP3 Source Music Library v2.4
+﻿# MP3 Source Music Library v2.4
 
 手元のMP3ファイルを正本として、タグ・アートワーク・再生回数・表記補正をSQLiteで管理し、ブラウザから検索・再生する個人向け音楽ライブラリです。
 
@@ -216,3 +216,70 @@ windows-installer\00_build_installer.bat
 
 をWindows上で実行するとSetup.exeを生成します。
 
+<!-- BEGIN WINDOWS-INSTALLER-V2.6.2 -->
+
+## Windowsインストーラー版
+
+Windows 10・11（64bit）では、Pythonやコマンド操作なしで使える
+Windowsインストーラー版を配布しています。
+
+### ダウンロード
+
+1. [最新のRelease](＜GitHubリポジトリURL＞/releases/latest)を開く
+2. `MusicLibrary-Setup-*-x64.exe`をダウンロード
+3. インストーラーを実行
+4. 「自宅音楽ライブラリ」を起動
+5. 初回だけMP3フォルダを選択
+
+### 主な機能
+
+- MP3・ID3タグ・アートワークの読込み
+- 曲・アーティスト・アルバム検索
+- SQLiteによる再生回数・表記補正管理
+- ブラウザ再生、シーク、シャッフル、リピート
+- Tailscale Serveによる外部接続設定
+- 外部URLの自動取得・保存
+- スタートメニュー登録とアンインストール
+
+### 外出先から利用する
+
+管理画面の「外部接続をかんたん設定」を使用します。
+
+正常なURL：
+
+```text
+https://PC名.tailnet名.ts.net/music-library-search.html
+```
+
+ルーターのポート開放やTailscale Funnelは使用しません。
+
+### データ保存場所
+
+```text
+アプリ本体：
+%LOCALAPPDATA%\Programs\MusicLibrary
+
+管理データ：
+%LOCALAPPDATA%\MusicLibrary
+
+MP3：
+利用者が選択した既存フォルダ
+```
+
+更新インストール後も、再生回数・表記補正・設定・外部URLは保持されます。
+
+### 注意
+
+- MP3音源、library.db、Tailscale認証情報は含まれません
+- Setup.exeは未署名のため、SmartScreenの警告が出る場合があります
+- 自宅PCが停止またはスリープ中は外部利用できません
+
+### 開発者向け
+
+```text
+windows-installer\00_build_installer.bat
+```
+
+をWindows上で実行するとSetup.exeを生成します。
+
+<!-- END WINDOWS-INSTALLER-V2.6.2 -->

@@ -1,0 +1,12 @@
+﻿区分,確認内容,状態,メモ
+事前,公開済みv2.6.1を変更しない,□,
+配置,v2.6.2をwindows-installerへ配置,□,
+除外,MP3・DB・remote-url.txt・Setup.exeがGit追跡外,□,
+版数,コード・文書・Inno Setupが2.6.2,□,
+ビルド,MusicLibrary-Setup-2.6.2-x64.exeを生成,□,
+テスト,付属テストがすべて成功,□,
+Assets,SHA256SUMS.txtがSetup.exeと一致,□,
+Git,コミット Prepare v2.6.2 release,□,
+Tag,新規タグv2.6.2を作成・push,□,
+Release,DraftかつPre-releaseで作成,□,
+Release,5つの配布ファイルを添付,□,

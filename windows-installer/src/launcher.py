@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "自宅音楽ライブラリ"
-APP_VERSION = "2.6.1"
+APP_VERSION = "2.6.2"
 APP_ID = "MusicLibrary"
 DEFAULT_PORT = 8765
 

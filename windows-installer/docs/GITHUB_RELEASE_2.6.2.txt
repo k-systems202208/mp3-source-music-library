@@ -1,0 +1,29 @@
+自宅音楽ライブラリ v2.6.2
+GitHub Release作成情報
+================================
+
+タグ:
+v2.6.2
+
+Releaseタイトル:
+自宅音楽ライブラリ v2.6.2
+
+Release説明:
+RELEASE_NOTES_v2.6.2.mdの内容を使用します。
+
+添付ファイル:
+・MusicLibrary-Setup-2.6.2-x64.exe
+・SHA256SUMS.txt
+・README_USER.txt
+・REMOTE_ACCESS_USER.txt
+・REMOTE_ACCESS_FAMILY.txt
+
+初回公開:
+Set as a pre-releaseを有効にします。
+
+確認事項:
+・Setup.exeのファイル名が2.6.2
+・管理画面の表示が2.6.2
+・外部URLがmusic-library-search.htmlで終わる
+・公開済みv2.6.1のタグやReleaseを変更していない
+・v2.6.1のSetup.exeをv2.6.2へ添付していない

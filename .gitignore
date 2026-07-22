@@ -1,4 +1,4 @@
-# Personal music data
+﻿# Personal music data
 Music/**
 !Music/.gitkeep
 *.mp3
@@ -79,3 +79,21 @@ windows-installer/**/Exports/
 
 # Generated installers
 windows-installer/**/*.exe
+
+# BEGIN Music Library installer generated files
+windows-installer/.venv-build/
+windows-installer/.build-cache/
+windows-installer/dist/
+windows-installer/release/*
+!windows-installer/release/.gitkeep
+windows-installer/release-assets/
+windows-installer/**/__pycache__/
+windows-installer/**/*.py[cod]
+windows-installer/**/*.db
+windows-installer/**/*.sqlite
+windows-installer/**/*.sqlite3
+windows-installer/**/Music/
+windows-installer/**/remote-url.txt
+windows-installer/**/*.exe
+windows-installer/**/*.msi
+# END Music Library installer generated files
