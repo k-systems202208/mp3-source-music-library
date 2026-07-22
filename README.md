@@ -161,7 +161,7 @@ Windowsインストーラー版を配布しています。
 
 ### ダウンロード
 
-1. [最新のRelease](＜GitHubリポジトリURL＞/releases/latest)を開く
+1. [最新のRelease](https://github.com/k-systems202208/mp3-source-music-library/releases/latest)を開く
 2. `MusicLibrary-Setup-*-x64.exe`をダウンロード
 3. インストーラーを実行
 4. 「自宅音楽ライブラリ」を起動
