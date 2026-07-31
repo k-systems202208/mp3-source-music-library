@@ -354,6 +354,36 @@
     flex-wrap:wrap;
     gap:2px 0;
   }
+
+  .favorite-btn{
+    width:34px;
+    height:34px;
+    border:1px solid var(--card-edge);
+    border-radius:50%;
+    background:var(--paper);
+    color:var(--ink-faint);
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    transition:transform .12s ease,border-color .12s ease,color .12s ease,background .12s ease;
+  }
+  .favorite-btn:hover:not(:disabled){
+    transform:translateY(-1px);
+    border-color:var(--brass);
+    color:var(--brass-deep);
+  }
+  .favorite-btn.active{
+    background:#fff8dd;
+    border-color:var(--brass);
+    color:var(--brass-deep);
+  }
+  .favorite-btn:disabled{
+    opacity:.42;
+    cursor:not-allowed;
+  }
+  .favorite-btn.busy{cursor:progress; opacity:.65;}
+  .song-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end;}
   .card .meta .label{
     font-family:'JetBrains Mono', monospace;
     font-size:10px;
@@ -830,6 +860,303 @@
     color:var(--ink-faint);
   }
 
+
+  /* ---- current user / minimal user management ---- */
+  .user-chip{
+    position:absolute;
+    top:16px;
+    right:18px;
+    z-index:3;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    max-width:min(46%, 280px);
+    min-height:34px;
+    padding:7px 11px;
+    border:1px solid rgba(239,232,216,.34);
+    border-radius:999px;
+    background:rgba(239,232,216,.08);
+    color:var(--paper);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .user-chip:hover,
+  .user-chip:focus-visible{
+    border-color:var(--brass);
+    background:rgba(239,232,216,.14);
+    outline:none;
+  }
+  .user-chip-dot{
+    flex:0 0 auto;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--ink-faint);
+    box-shadow:0 0 0 2px rgba(239,232,216,.12);
+  }
+  .user-chip.authenticated .user-chip-dot{background:#91c788;}
+  .user-chip.owner .user-chip-dot{background:var(--brass);}
+  .user-chip-label{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .user-modal{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:22px;
+    background:rgba(23,34,26,.72);
+    backdrop-filter:blur(3px);
+  }
+  .user-modal[hidden]{display:none;}
+  .user-panel{
+    width:min(760px, 100%);
+    max-height:min(820px, calc(100vh - 44px));
+    overflow:auto;
+    position:relative;
+    background:var(--card);
+    color:var(--ink);
+    border:1px solid var(--card-edge);
+    border-radius:8px;
+    box-shadow:0 18px 60px rgba(0,0,0,.32);
+    padding:24px;
+  }
+  .user-panel-close{
+    position:absolute;
+    top:12px;
+    right:12px;
+    width:36px;
+    height:36px;
+    border:1px solid var(--card-edge);
+    border-radius:50%;
+    background:var(--paper);
+    color:var(--ink);
+    font-size:22px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .user-panel h2{
+    margin:0 46px 4px 0;
+    font-family:'Shippori Mincho', serif;
+    font-size:25px;
+  }
+  .user-panel-lead{
+    margin:0 46px 18px 0;
+    color:var(--ink-soft);
+    font-size:13px;
+  }
+  .user-summary{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:14px;
+    border:1px solid var(--card-edge);
+    border-radius:6px;
+    background:var(--paper);
+  }
+  .user-summary-mark{
+    flex:0 0 auto;
+    display:grid;
+    place-items:center;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+  }
+  .user-summary strong{display:block;}
+  .user-summary small{
+    display:block;
+    margin-top:3px;
+    color:var(--ink-soft);
+    overflow-wrap:anywhere;
+  }
+  .user-section{
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px dashed var(--line);
+  }
+  .user-section[hidden]{display:none;}
+  .user-section h3{
+    margin:0 0 6px;
+    font-size:16px;
+  }
+  .user-section p{
+    margin:5px 0;
+    color:var(--ink-soft);
+    font-size:13px;
+    line-height:1.65;
+  }
+  .user-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+  }
+  .user-action-btn{
+    border:1px solid var(--ink);
+    border-radius:5px;
+    padding:8px 13px;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .user-action-btn.secondary{
+    background:var(--paper);
+    color:var(--ink);
+    border-color:var(--card-edge);
+  }
+  .user-action-btn.danger{
+    background:var(--stamp);
+    border-color:var(--stamp);
+  }
+  .user-action-btn:disabled{
+    opacity:.48;
+    cursor:not-allowed;
+  }
+  .owner-link-box{
+    margin-top:12px;
+    padding:13px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:rgba(255,255,255,.38);
+  }
+  .owner-link-code{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+  }
+  .owner-link-code code{
+    flex:1;
+    min-width:0;
+    padding:9px 10px;
+    border:1px dashed var(--brass-deep);
+    border-radius:4px;
+    background:var(--paper);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    overflow-wrap:anywhere;
+    user-select:all;
+  }
+  .owner-link-input{
+    width:100%;
+    margin-top:9px;
+    padding:10px 11px;
+    border:1px solid var(--card-edge);
+    border-radius:5px;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'JetBrains Mono', monospace;
+  }
+  .user-message{
+    margin-top:10px;
+    padding:9px 11px;
+    border-radius:5px;
+    background:var(--paper-deep);
+    color:var(--ink-soft);
+    font-size:13px;
+    line-height:1.55;
+  }
+  .user-message.error{
+    background:#f3d9d5;
+    color:#7d2822;
+  }
+  .user-message.success{
+    background:#dfead9;
+    color:#2f5b2b;
+  }
+  .candidate-card{
+    margin-top:10px;
+    padding:11px;
+    border:1px solid var(--brass);
+    border-radius:5px;
+    background:rgba(169,132,60,.09);
+  }
+  .candidate-card strong{display:block;}
+  .candidate-card small{
+    display:block;
+    margin-top:4px;
+    color:var(--ink-soft);
+    overflow-wrap:anywhere;
+  }
+  .user-list{
+    display:grid;
+    gap:9px;
+    margin-top:10px;
+  }
+  .managed-user{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:10px;
+    align-items:center;
+    padding:11px 12px;
+    border:1px solid var(--card-edge);
+    border-radius:5px;
+    background:var(--paper);
+  }
+  .managed-user.inactive{opacity:.65;}
+  .managed-user-name{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px;
+    font-weight:700;
+  }
+  .managed-user-badge{
+    border:1px solid var(--card-edge);
+    border-radius:999px;
+    padding:2px 7px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+  }
+  .managed-user-badge.owner{
+    color:var(--brass-deep);
+    border-color:var(--brass);
+  }
+  .managed-user-meta{
+    margin-top:4px;
+    color:var(--ink-soft);
+    font-size:11px;
+    line-height:1.55;
+    overflow-wrap:anywhere;
+  }
+
+  @media (max-width:600px){
+    header.plate{padding-top:60px;}
+    .user-chip{
+      top:14px;
+      left:18px;
+      right:18px;
+      max-width:none;
+      justify-content:center;
+    }
+    .user-modal{padding:0;}
+    .user-panel{
+      width:100%;
+      height:100%;
+      max-height:none;
+      border-radius:0;
+      border:none;
+      padding:22px 18px 34px;
+    }
+    .managed-user{grid-template-columns:1fr;}
+    .managed-user .user-action-btn{width:100%;}
+  }
+
   ::selection{background:var(--brass); color:var(--paper);}
 </style>
 </head>
@@ -838,6 +1165,10 @@
 
   <header class="plate">
     <div class="tab-punch"></div>
+    <button type="button" class="user-chip" id="userMenuButton" aria-haspopup="dialog" aria-controls="userModal">
+      <span class="user-chip-dot" aria-hidden="true"></span>
+      <span class="user-chip-label" id="userChipLabel">利用者を確認中…</span>
+    </button>
     <p class="plate-eyebrow">Card Catalog · No.290E9547</p>
     <h1>音楽ライブラリ検索</h1>
     <p class="sub" id="totalSub">読み込み中…</p>
@@ -857,6 +1188,7 @@
     <div class="toggle-row" id="toggleRow">
       <button type="button" class="pill-btn" id="btnLatin">英数字タイトルのみ</button>
       <button type="button" class="pill-btn" id="btnCorrectedOnly">訂正済のみ</button>
+      <button type="button" class="pill-btn" id="btnFavoritesOnly" aria-pressed="false" title="利用者を確認するとお気に入りだけを表示できます">☆ お気に入りのみ</button>
     </div>
     <div class="sort-row" id="sortRow">
       <label for="sortSelect">表示順</label>
@@ -897,6 +1229,70 @@
 </div>
 
 <footer>DATE FIRST ISSUED · 2026-07-18 — MP3正本・SQLite API検索・ページ取得・最大化プレーヤー・シャッフル／リピート・曲名／アーティスト／アルバム索引</footer>
+
+
+<div class="user-modal" id="userModal" hidden role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+  <section class="user-panel">
+    <button type="button" class="user-panel-close" id="userModalClose" aria-label="利用者画面を閉じる">×</button>
+    <h2 id="userModalTitle">現在の利用者</h2>
+    <p class="user-panel-lead">利用者の識別状態と、オーナー／Tailscaleの関連付けを確認します。</p>
+
+    <div class="user-summary" id="currentUserSummary">
+      <span class="user-summary-mark" id="currentUserMark">?</span>
+      <div>
+        <strong id="currentUserName">確認中…</strong>
+        <small id="currentUserDetail">利用者情報を取得しています。</small>
+      </div>
+    </div>
+
+    <section class="user-section" id="anonymousUserSection" hidden>
+      <h3>個人機能は利用できません</h3>
+      <p>管理画面からブラウザを開くか、利用者本人のTailscaleアカウントで接続してください。未識別の状態では、将来追加するお気に入りや個人別再生回数を保存しません。</p>
+    </section>
+
+    <section class="user-section" id="tailscaleClaimSection" hidden>
+      <h3>このTailscaleアカウントをオーナーへ関連付ける</h3>
+      <p>自宅PCのローカルオーナー画面に表示された関連付けコードを入力します。コードを送信しただけではオーナーにならず、自宅PC側での最終承認が必要です。</p>
+      <input class="owner-link-input" id="tailscaleLinkCodeInput" type="text" autocomplete="off" spellcheck="false" placeholder="関連付けコードを貼り付け">
+      <div class="user-actions">
+        <button type="button" class="user-action-btn" id="tailscaleClaimButton">コードを送信</button>
+      </div>
+      <div class="user-message" id="tailscaleClaimMessage" hidden></div>
+    </section>
+
+    <section class="user-section" id="ownerLinkSection" hidden>
+      <h3>本人のTailscaleアカウントを関連付ける</h3>
+      <p id="ownerLinkAvailability">自宅PCでコードを発行し、本人のTailscale接続画面から送信してください。</p>
+      <div class="user-actions">
+        <button type="button" class="user-action-btn" id="ownerLinkStartButton">関連付けコードを発行</button>
+      </div>
+      <div class="owner-link-box" id="ownerLinkBox" hidden>
+        <strong>関連付けコード</strong>
+        <div class="owner-link-code">
+          <code id="ownerLinkCode">—</code>
+          <button type="button" class="user-action-btn secondary" id="ownerLinkCopyButton">コピー</button>
+        </div>
+        <div class="user-message" id="ownerLinkStatus">Tailscale側からの送信を待っています。</div>
+        <div class="candidate-card" id="ownerLinkCandidate" hidden>
+          <strong id="ownerLinkCandidateName">—</strong>
+          <small id="ownerLinkCandidateSubject">—</small>
+          <small id="ownerLinkCandidateState">個人データを確認しています。</small>
+          <div class="user-actions">
+            <button type="button" class="user-action-btn" id="ownerLinkConfirmButton">この本人を承認</button>
+            <button type="button" class="user-action-btn danger" id="ownerLinkCancelButton">中止</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="user-section" id="userManagementSection" hidden>
+      <h3>利用者管理</h3>
+      <p id="userManagementNote">登録済みの利用者と識別方法を表示します。</p>
+      <div class="user-list" id="userList"></div>
+      <div class="user-message" id="userManagementMessage" hidden></div>
+    </section>
+  </section>
+</div>
 
 <div class="player-bar" id="playerBar" hidden>
   <div class="player-inner" id="playerInner">
@@ -944,6 +1340,13 @@
 (async function(){
   const BROWSE_API_URL = './api/browse';
   const STATS_API_URL = './api/stats';
+  const CURRENT_USER_API_URL = './api/current-user';
+  const USERS_API_URL = './api/users';
+  const OWNER_LINK_START_API_URL = './api/owner-link/start';
+  const OWNER_LINK_CLAIM_API_URL = './api/owner-link/claim';
+  const OWNER_LINK_STATUS_API_URL = './api/owner-link/status';
+  const OWNER_LINK_CONFIRM_API_URL = './api/owner-link/confirm';
+  const OWNER_LINK_CANCEL_API_URL = './api/owner-link/cancel';
   const PAGE_SIZE = 80;
   const PLAYBACK_SETTINGS_KEY = 'music-library-playback-settings-v1';
   const ARTIST_FALLBACK = '(不明なアーティスト)';
@@ -961,6 +1364,7 @@
     selectedAlbumTitle: '',
     filterLatin: false,
     filterCorrectedOnly: false,
+    filterFavoritesOnly: false,
     sort: 'title',
     indexKey: '',
   };
@@ -983,6 +1387,7 @@
     toggleRow: document.getElementById('toggleRow'),
     btnLatin: document.getElementById('btnLatin'),
     btnCorrectedOnly: document.getElementById('btnCorrectedOnly'),
+    btnFavoritesOnly: document.getElementById('btnFavoritesOnly'),
     sortRow: document.getElementById('sortRow'),
     sortSelect: document.getElementById('sortSelect'),
     playerBar: document.getElementById('playerBar'),
@@ -1008,6 +1413,35 @@
     playerModalArtist: document.getElementById('playerModalArtist'),
     playerModalAudioMount: document.getElementById('playerModalAudioMount'),
     playerModalClose: document.getElementById('playerModalClose'),
+    userMenuButton: document.getElementById('userMenuButton'),
+    userChipLabel: document.getElementById('userChipLabel'),
+    userModal: document.getElementById('userModal'),
+    userModalClose: document.getElementById('userModalClose'),
+    currentUserMark: document.getElementById('currentUserMark'),
+    currentUserName: document.getElementById('currentUserName'),
+    currentUserDetail: document.getElementById('currentUserDetail'),
+    anonymousUserSection: document.getElementById('anonymousUserSection'),
+    tailscaleClaimSection: document.getElementById('tailscaleClaimSection'),
+    tailscaleLinkCodeInput: document.getElementById('tailscaleLinkCodeInput'),
+    tailscaleClaimButton: document.getElementById('tailscaleClaimButton'),
+    tailscaleClaimMessage: document.getElementById('tailscaleClaimMessage'),
+    ownerLinkSection: document.getElementById('ownerLinkSection'),
+    ownerLinkAvailability: document.getElementById('ownerLinkAvailability'),
+    ownerLinkStartButton: document.getElementById('ownerLinkStartButton'),
+    ownerLinkBox: document.getElementById('ownerLinkBox'),
+    ownerLinkCode: document.getElementById('ownerLinkCode'),
+    ownerLinkCopyButton: document.getElementById('ownerLinkCopyButton'),
+    ownerLinkStatus: document.getElementById('ownerLinkStatus'),
+    ownerLinkCandidate: document.getElementById('ownerLinkCandidate'),
+    ownerLinkCandidateName: document.getElementById('ownerLinkCandidateName'),
+    ownerLinkCandidateSubject: document.getElementById('ownerLinkCandidateSubject'),
+    ownerLinkCandidateState: document.getElementById('ownerLinkCandidateState'),
+    ownerLinkConfirmButton: document.getElementById('ownerLinkConfirmButton'),
+    ownerLinkCancelButton: document.getElementById('ownerLinkCancelButton'),
+    userManagementSection: document.getElementById('userManagementSection'),
+    userManagementNote: document.getElementById('userManagementNote'),
+    userList: document.getElementById('userList'),
+    userManagementMessage: document.getElementById('userManagementMessage'),
   };
 
   let stats = null;
@@ -1022,6 +1456,11 @@
   let requestSerial = 0;
   let searchTimer = null;
   const idMap = new Map();
+
+  let currentUser = null;
+  let ownerLinkCodeValue = '';
+  let ownerLinkCandidateValue = null;
+  let ownerLinkPollTimer = null;
 
   function escapeHtml(value){
     return String(value || '').replace(/[&<>"']/g, c => ({
@@ -1058,6 +1497,7 @@
     track.artistDbId = String(track.artistDbId || '');
     track.audioUrl = mediaUrl(track.audioFile || track.relativePath);
     track.artworkUrl = mediaUrl(track.artworkFile);
+    track.favorite = Boolean(track.favorite);
     idMap.set(track.id, track);
     return track;
   }
@@ -1130,6 +1570,21 @@
     els.kanaIndex.innerHTML = KANA_INDEX_KEYS.map(indexButtonHtml).join('');
   }
 
+  function updateFavoriteFilterButton(){
+    const authenticated = Boolean(currentUser && currentUser.authenticated);
+    const songLevel = isSongLevel();
+    const count = Number(stats && stats.favoriteTracks || 0);
+    els.btnFavoritesOnly.classList.toggle('active', state.filterFavoritesOnly);
+    els.btnFavoritesOnly.setAttribute('aria-pressed', state.filterFavoritesOnly ? 'true' : 'false');
+    els.btnFavoritesOnly.disabled = !authenticated || !songLevel;
+    els.btnFavoritesOnly.textContent = authenticated
+      ? `★ お気に入りのみ (${count.toLocaleString()})`
+      : '☆ お気に入りのみ';
+    els.btnFavoritesOnly.title = authenticated
+      ? (state.filterFavoritesOnly ? 'お気に入り絞り込みを解除' : '現在の利用者のお気に入りだけを表示')
+      : '利用者を確認するとお気に入りだけを表示できます';
+  }
+
   function updateViewTabs(){
     document.querySelectorAll('.view-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === state.view);
@@ -1139,6 +1594,7 @@
     els.sortRow.style.display = isSongLevel() && !albumDetail ? 'flex' : 'none';
     els.btnLatin.classList.toggle('active', state.filterLatin);
     els.btnCorrectedOnly.classList.toggle('active', state.filterCorrectedOnly);
+    updateFavoriteFilterButton();
     if (state.sort !== 'album_order') els.sortSelect.value = state.sort;
     renderCatalogIndex();
   }
@@ -1226,6 +1682,7 @@
       latinOnly: state.filterLatin ? '1' : '0',
       correctedOnly: state.filterCorrectedOnly ? '1' : '0',
     });
+    if (isSongLevel() && state.filterFavoritesOnly) params.set('favoriteOnly', '1');
     if (state.selectedArtistKey) params.set('artistKey', state.selectedArtistKey);
     if (state.selectedAlbumKey) params.set('albumKey', state.selectedAlbumKey);
     if (state.view === 'albums' && state.selectedAlbumTitle) {
@@ -1246,9 +1703,404 @@
     return payload;
   }
 
+
+  function providerLabel(provider){
+    if (provider === 'local_owner') return '自宅PCのローカルオーナー';
+    if (provider === 'tailscale') return 'Tailscale';
+    return '未識別';
+  }
+
+  function setMessage(element, text, kind=''){
+    element.textContent = text || '';
+    element.classList.toggle('error', kind === 'error');
+    element.classList.toggle('success', kind === 'success');
+    element.hidden = !text;
+  }
+
+  function stopOwnerLinkPolling(){
+    if (ownerLinkPollTimer !== null) {
+      clearTimeout(ownerLinkPollTimer);
+      ownerLinkPollTimer = null;
+    }
+  }
+
+  function updateCurrentUserUi(user){
+    currentUser = user || {
+      authenticated:false,
+      id:null,
+      displayName:'',
+      isOwner:false,
+      provider:'',
+    };
+
+    const authenticated = Boolean(currentUser.authenticated);
+    if (!authenticated) state.filterFavoritesOnly = false;
+    const owner = authenticated && Boolean(currentUser.isOwner);
+    const displayName = authenticated
+      ? (currentUser.displayName || '利用者')
+      : '未識別の利用者';
+
+    els.userMenuButton.classList.toggle('authenticated', authenticated);
+    els.userMenuButton.classList.toggle('owner', owner);
+    els.userChipLabel.textContent = owner
+      ? `${displayName}（オーナー）`
+      : displayName;
+
+    els.currentUserMark.textContent = owner ? 'O' : (authenticated ? 'U' : '?');
+    els.currentUserName.textContent = displayName;
+    els.currentUserDetail.textContent = authenticated
+      ? `${providerLabel(currentUser.provider)}で識別されています。`
+      : '利用者情報を確認できませんでした。';
+
+    els.anonymousUserSection.hidden = authenticated;
+    els.tailscaleClaimSection.hidden = !(
+      authenticated
+      && currentUser.provider === 'tailscale'
+      && !owner
+    );
+    els.ownerLinkSection.hidden = !owner;
+    els.userManagementSection.hidden = !owner;
+    updateFavoriteButtons();
+    updateFavoriteFilterButton();
+
+    const localOwner = owner && currentUser.provider === 'local_owner';
+    els.ownerLinkStartButton.hidden = !localOwner;
+    els.ownerLinkAvailability.textContent = localOwner
+      ? '自宅PCでコードを発行し、本人のTailscale接続画面から送信してください。'
+      : 'Tailscale経由のオーナー接続では、新しい関連付けコードを発行できません。自宅PCの管理画面から開いて操作してください。';
+    els.userManagementNote.textContent = localOwner
+      ? '登録済み利用者を確認し、オーナー以外の利用を停止・再開できます。'
+      : '登録済み利用者を確認できます。利用停止・再開は自宅PCの管理画面から行います。';
+  }
+
+  async function loadCurrentUser(){
+    const user = await fetchJson(CURRENT_USER_API_URL);
+    updateCurrentUserUi(user);
+    return user;
+  }
+
+  function identityText(identity){
+    if (!identity) return '';
+    if (identity.provider === 'local_owner') return 'ローカルオーナー';
+    const name = identity.providerDisplayName || 'Tailscale';
+    return `${name} · ${identity.subject || ''}`;
+  }
+
+  function renderManagedUsers(users){
+    if (!Array.isArray(users) || users.length === 0) {
+      els.userList.innerHTML = '<div class="user-message">登録済み利用者はありません。</div>';
+      return;
+    }
+
+    const canChange = Boolean(
+      currentUser
+      && currentUser.isOwner
+      && currentUser.provider === 'local_owner'
+    );
+
+    els.userList.innerHTML = users.map(user => {
+      const identities = Array.isArray(user.identities)
+        ? user.identities.map(identityText).filter(Boolean)
+        : [];
+      const badges = [
+        user.isOwner ? '<span class="managed-user-badge owner">OWNER</span>' : '',
+        user.isActive
+          ? '<span class="managed-user-badge">有効</span>'
+          : '<span class="managed-user-badge">停止中</span>',
+      ].join('');
+      const action = canChange && !user.isOwner
+        ? `<button type="button" class="user-action-btn ${user.isActive ? 'danger' : 'secondary'}" data-user-active-id="${escapeHtml(user.id)}" data-next-active="${user.isActive ? 'false' : 'true'}">${user.isActive ? '利用を停止' : '利用を再開'}</button>`
+        : '';
+      return `
+        <article class="managed-user ${user.isActive ? '' : 'inactive'}">
+          <div>
+            <div class="managed-user-name">${escapeHtml(user.displayName)} ${badges}</div>
+            <div class="managed-user-meta">${identities.length ? identities.map(escapeHtml).join('<br>') : '識別情報なし'}<br>個人状態 ${Number(user.stateCount || 0).toLocaleString()} 曲 · 再生 ${Number(user.playCount || 0).toLocaleString()} 回</div>
+          </div>
+          ${action}
+        </article>`;
+    }).join('');
+  }
+
+  async function loadManagedUsers(){
+    if (!currentUser || !currentUser.isOwner) return;
+    try {
+      const payload = await fetchJson(USERS_API_URL);
+      renderManagedUsers(payload.users);
+      setMessage(els.userManagementMessage, '');
+    } catch (error) {
+      els.userList.innerHTML = '';
+      setMessage(
+        els.userManagementMessage,
+        `利用者一覧を取得できませんでした。${error.message}`,
+        'error',
+      );
+    }
+  }
+
+  async function openUserModal(){
+    els.userModal.hidden = false;
+    try {
+      await loadCurrentUser();
+      await loadManagedUsers();
+    } catch (error) {
+      updateCurrentUserUi(null);
+      setMessage(
+        els.userManagementMessage,
+        `利用者情報を取得できませんでした。${error.message}`,
+        'error',
+      );
+    }
+  }
+
+  function closeUserModal(){
+    els.userModal.hidden = true;
+  }
+
+  function resetOwnerLinkUi(){
+    stopOwnerLinkPolling();
+    ownerLinkCodeValue = '';
+    ownerLinkCandidateValue = null;
+    els.ownerLinkBox.hidden = true;
+    els.ownerLinkCode.textContent = '—';
+    els.ownerLinkCandidate.hidden = true;
+    els.ownerLinkConfirmButton.disabled = false;
+    els.ownerLinkCancelButton.disabled = false;
+    setMessage(els.ownerLinkStatus, '');
+  }
+
+  function scheduleOwnerLinkPoll(){
+    stopOwnerLinkPolling();
+    ownerLinkPollTimer = setTimeout(
+      () => void pollOwnerLinkStatus(),
+      1800,
+    );
+  }
+
+  async function pollOwnerLinkStatus(){
+    if (!ownerLinkCodeValue || els.userModal.hidden) return;
+    try {
+      const status = await fetchJson(
+        `${OWNER_LINK_STATUS_API_URL}?code=${encodeURIComponent(ownerLinkCodeValue)}`,
+      );
+      if (status.status === 'awaiting_owner_confirmation' && status.candidate) {
+        ownerLinkCandidateValue = status.candidate;
+        els.ownerLinkCandidateName.textContent = status.candidate.displayName || 'Tailscale利用者';
+        els.ownerLinkCandidateSubject.textContent = status.candidate.subject || '';
+        const stateCount = Number(status.candidate.stateCount || 0);
+        const playCount = Number(status.candidate.playCount || 0);
+        const favoriteCount = Number(status.candidate.favoriteCount || 0);
+        const ratingCount = Number(status.candidate.ratingCount || 0);
+        const ratingConflictCount = Number(status.candidate.ratingConflictCount || 0);
+        els.ownerLinkCandidateState.textContent = status.candidate.alreadyOwner
+          ? 'このTailscaleアカウントは、すでにオーナーへ関連付け済みです。'
+          : `統合対象：個人状態 ${stateCount}曲・再生 ${playCount}回・お気に入り ${favoriteCount}件・評価 ${ratingCount}件`;
+        els.ownerLinkConfirmButton.disabled = !status.candidate.canMerge;
+        els.ownerLinkCandidate.hidden = false;
+        if (ratingConflictCount > 0) {
+          setMessage(
+            els.ownerLinkStatus,
+            `評価が異なる曲が${ratingConflictCount}件あるため、データを推測せず関連付けを停止します。`,
+            'error',
+          );
+        } else {
+          setMessage(
+            els.ownerLinkStatus,
+            'Tailscale側から本人情報が届きました。表示内容と統合対象を確認してから承認してください。',
+            'success',
+          );
+        }
+        return;
+      }
+      if (status.status === 'confirming') {
+        setMessage(els.ownerLinkStatus, '関連付け処理中です。');
+      } else {
+        const seconds = Number(status.expiresInSeconds || 0);
+        setMessage(
+          els.ownerLinkStatus,
+          `Tailscale側からの送信を待っています。残り約${seconds}秒`,
+        );
+      }
+      scheduleOwnerLinkPoll();
+    } catch (error) {
+      setMessage(
+        els.ownerLinkStatus,
+        `関連付け状態を確認できませんでした。${error.message}`,
+        'error',
+      );
+    }
+  }
+
+  async function startOwnerLink(){
+    resetOwnerLinkUi();
+    els.ownerLinkStartButton.disabled = true;
+    try {
+      const payload = await fetchJson(OWNER_LINK_START_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({expiresInSeconds:300}),
+      });
+      ownerLinkCodeValue = String(payload.code || '');
+      els.ownerLinkCode.textContent = ownerLinkCodeValue;
+      els.ownerLinkBox.hidden = false;
+      setMessage(
+        els.ownerLinkStatus,
+        '本人のTailscale接続画面で、このコードを送信してください。',
+      );
+      scheduleOwnerLinkPoll();
+    } catch (error) {
+      setMessage(
+        els.ownerLinkStatus,
+        `コードを発行できませんでした。${error.message}`,
+        'error',
+      );
+      els.ownerLinkBox.hidden = false;
+    } finally {
+      els.ownerLinkStartButton.disabled = false;
+    }
+  }
+
+  async function claimOwnerLink(){
+    const code = els.tailscaleLinkCodeInput.value.trim();
+    if (!code) {
+      setMessage(els.tailscaleClaimMessage, '関連付けコードを入力してください。', 'error');
+      return;
+    }
+    els.tailscaleClaimButton.disabled = true;
+    try {
+      const payload = await fetchJson(OWNER_LINK_CLAIM_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code}),
+      });
+      setMessage(
+        els.tailscaleClaimMessage,
+        `「${payload.displayName || currentUser.displayName}」として送信しました。自宅PC側での承認を待ってください。`,
+        'success',
+      );
+    } catch (error) {
+      setMessage(
+        els.tailscaleClaimMessage,
+        `コードを送信できませんでした。${error.message}`,
+        'error',
+      );
+    } finally {
+      els.tailscaleClaimButton.disabled = false;
+    }
+  }
+
+  async function confirmOwnerLink(){
+    if (!ownerLinkCodeValue || !ownerLinkCandidateValue) return;
+    const label = `${ownerLinkCandidateValue.displayName || 'Tailscale利用者'}\n${ownerLinkCandidateValue.subject || ''}`;
+    const stateCount = Number(ownerLinkCandidateValue.stateCount || 0);
+    const playCount = Number(ownerLinkCandidateValue.playCount || 0);
+    const favoriteCount = Number(ownerLinkCandidateValue.favoriteCount || 0);
+    const ratingCount = Number(ownerLinkCandidateValue.ratingCount || 0);
+    const mergeDetail = ownerLinkCandidateValue.alreadyOwner
+      ? 'このアカウントは関連付け済みです。'
+      : `個人状態 ${stateCount}曲・再生 ${playCount}回・お気に入り ${favoriteCount}件・評価 ${ratingCount}件をオーナーへ統合します。`;
+    if (!confirm(`次のTailscaleアカウントをオーナーへ関連付けます。\n\n${label}\n\n${mergeDetail}\n\n間違いない場合だけOKを押してください。`)) {
+      return;
+    }
+    els.ownerLinkConfirmButton.disabled = true;
+    els.ownerLinkCancelButton.disabled = true;
+    try {
+      const result = await fetchJson(OWNER_LINK_CONFIRM_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          code:ownerLinkCodeValue,
+          userId:ownerLinkCandidateValue.userId,
+          subject:ownerLinkCandidateValue.subject,
+          confirmed:true,
+        }),
+      });
+      stopOwnerLinkPolling();
+      const merged = result.mergedPersonalState || {};
+      const mergedCount = Number(merged.candidateStateCount || 0);
+      const addedPlays = Number(merged.playCountAdded || 0);
+      const mergedMessage = mergedCount > 0
+        ? `Tailscaleアカウントをオーナーへ関連付け、個人状態${mergedCount}曲・再生${addedPlays}回を統合しました。`
+        : 'Tailscaleアカウントをオーナーへ関連付けました。';
+      setMessage(
+        els.ownerLinkStatus,
+        mergedMessage,
+        'success',
+      );
+      els.ownerLinkCandidate.hidden = true;
+      ownerLinkCandidateValue = null;
+      await loadCurrentUser();
+      await loadManagedUsers();
+    } catch (error) {
+      setMessage(
+        els.ownerLinkStatus,
+        `関連付けを完了できませんでした。${error.message}`,
+        'error',
+      );
+      els.ownerLinkConfirmButton.disabled = false;
+      els.ownerLinkCancelButton.disabled = false;
+    }
+  }
+
+  async function cancelOwnerLink(){
+    if (!ownerLinkCodeValue) {
+      resetOwnerLinkUi();
+      return;
+    }
+    els.ownerLinkCancelButton.disabled = true;
+    try {
+      await fetchJson(OWNER_LINK_CANCEL_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code:ownerLinkCodeValue}),
+      });
+      resetOwnerLinkUi();
+    } catch (error) {
+      setMessage(
+        els.ownerLinkStatus,
+        `関連付けを中止できませんでした。${error.message}`,
+        'error',
+      );
+      els.ownerLinkCancelButton.disabled = false;
+    }
+  }
+
+  async function updateUserActive(button){
+    const userId = String(button.dataset.userActiveId || '');
+    const nextActive = button.dataset.nextActive === 'true';
+    const actionLabel = nextActive ? '利用を再開' : '利用を停止';
+    if (!userId || !confirm(`${actionLabel}します。よろしいですか？`)) return;
+
+    button.disabled = true;
+    try {
+      await fetchJson(
+        `./api/users/${encodeURIComponent(userId)}/active`,
+        {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({active:nextActive}),
+        },
+      );
+      await loadManagedUsers();
+      setMessage(
+        els.userManagementMessage,
+        `${actionLabel}しました。`,
+        'success',
+      );
+    } catch (error) {
+      setMessage(
+        els.userManagementMessage,
+        `${actionLabel}できませんでした。${error.message}`,
+        'error',
+      );
+      button.disabled = false;
+    }
+  }
+
   async function loadStats(){
     stats = await fetchJson(STATS_API_URL);
     els.totalSub.textContent = `MP3ライブラリ ${Number(stats.availableTracks || 0).toLocaleString()} 曲 · アートワーク ${Number(stats.artworkTracks || 0).toLocaleString()} 曲 · SQLite APIページ取得`;
+    updateFavoriteFilterButton();
   }
 
   function updateResultSummary(){
@@ -1270,6 +2122,9 @@
   }
 
   function emptyStateHtml(){
+    if (isSongLevel() && state.filterFavoritesOnly) {
+      return `<div class="empty-state"><div class="stamp-big">FAVORITES</div><p>この条件に一致するお気に入りはありません。</p><p>★を付けるか、検索・頭文字などの条件を見直してください。</p></div>`;
+    }
     return `<div class="empty-state"><div class="stamp-big">NOT FOUND</div><p>該当する項目が見つかりませんでした。</p><p>検索語や絞り込み条件を見直してみてください。</p></div>`;
   }
 
@@ -1368,7 +2223,13 @@
           <div class="meta">${metaHtml}</div>
         </div>
       </div></div>
-      <div class="side"><div class="play-line">${playButton}<span class="dur">${fmtDuration(track.time)}</span></div><span class="plays">再生 ${Number(track.playCount || 0).toLocaleString()}回</span></div>
+      <div class="side">
+        <div class="song-actions">
+          <button type="button" class="favorite-btn${track.favorite ? ' active' : ''}" data-action="favorite" aria-pressed="${track.favorite ? 'true' : 'false'}" aria-label="${track.favorite ? 'お気に入りから外す' : 'お気に入りに追加'}" title="${currentUser && currentUser.authenticated ? (track.favorite ? 'お気に入りから外す' : 'お気に入りに追加') : '利用者を確認できないためお気に入りを保存できません'}"${currentUser && currentUser.authenticated ? '' : ' disabled'}>${track.favorite ? '★' : '☆'}</button>
+          <div class="play-line">${playButton}<span class="dur">${fmtDuration(track.time)}</span></div>
+        </div>
+        <span class="plays">再生 ${Number(track.playCount || 0).toLocaleString()}回</span>
+      </div>
     </div>`;
   }
 
@@ -1408,6 +2269,7 @@
     else html = items.map(group => albumCardHtml(group, {showArtists:true})).join('');
     els.results.insertAdjacentHTML('beforeend', html);
     updatePlayButtons();
+    updateFavoriteButtons();
   }
 
   let currentTrackId = null;
@@ -1563,6 +2425,7 @@
         method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
       });
       track.playCount = Number(result.playCount || 0);
+      track.lastPlayedAt = String(result.lastPlayedAt || '');
     } catch (error) {
       console.warn('再生回数を保存できませんでした:', error);
       track.playCount = Number(track.playCount || 0) + 1;
@@ -1572,6 +2435,61 @@
       const plays = card.querySelector('.plays');
       if (plays) plays.textContent = `再生 ${Number(track.playCount || 0).toLocaleString()}回`;
     });
+  }
+
+
+  function updateFavoriteButtons(){
+    const authenticated = Boolean(currentUser && currentUser.authenticated);
+    els.results.querySelectorAll('button[data-action="favorite"]').forEach(button => {
+      const card = button.closest('.card[data-id]');
+      const track = card ? idMap.get(card.dataset.id) : null;
+      if (!track) return;
+      const active = Boolean(track.favorite);
+      button.classList.toggle('active', active);
+      button.textContent = active ? '★' : '☆';
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      button.setAttribute('aria-label', active ? 'お気に入りから外す' : 'お気に入りに追加');
+      button.disabled = !authenticated || button.classList.contains('busy');
+      button.title = authenticated
+        ? (active ? 'お気に入りから外す' : 'お気に入りに追加')
+        : '利用者を確認できないためお気に入りを保存できません';
+    });
+  }
+
+  async function setTrackFavorite(track, favorite, button){
+    if (!currentUser || !currentUser.authenticated) {
+      alert('お気に入りを保存するには、管理画面またはTailscale経由で利用者を確認してください。');
+      return;
+    }
+    if (button) {
+      button.classList.add('busy');
+      button.disabled = true;
+    }
+    try {
+      const result = await fetchJson(
+        `./api/tracks/${encodeURIComponent(track.id)}/favorite`,
+        {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({favorite:Boolean(favorite)}),
+        },
+      );
+      track.favorite = Boolean(result.favorite);
+      if (Number.isFinite(Number(result.playCount))) track.playCount = Number(result.playCount);
+      if (typeof result.lastPlayedAt === 'string') track.lastPlayedAt = result.lastPlayedAt;
+      updateFavoriteButtons();
+      try {
+        await loadStats();
+      } catch (statsError) {
+        console.warn('お気に入り件数を更新できませんでした:', statsError);
+      }
+      if (state.filterFavoritesOnly && !track.favorite) await reloadBrowse();
+    } catch (error) {
+      alert(`お気に入りを保存できませんでした。\n${error.message}`);
+    } finally {
+      if (button) button.classList.remove('busy');
+      updateFavoriteButtons();
+    }
   }
 
   function updatePlayButtons(){
@@ -1901,6 +2819,11 @@
     state.filterCorrectedOnly = !state.filterCorrectedOnly;
     void reloadBrowse();
   });
+  els.btnFavoritesOnly.addEventListener('click', () => {
+    if (!currentUser || !currentUser.authenticated || !isSongLevel()) return;
+    state.filterFavoritesOnly = !state.filterFavoritesOnly;
+    void reloadBrowse();
+  });
   els.sortSelect.addEventListener('change', () => {
     state.sort = els.sortSelect.value;
     void reloadBrowse();
@@ -1911,6 +2834,17 @@
   });
 
   els.results.addEventListener('click', event => {
+    const favoriteButton = event.target.closest('button[data-action="favorite"]');
+    if (favoriteButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (favoriteButton.disabled) return;
+      const card = favoriteButton.closest('.card[data-id]');
+      const track = card ? idMap.get(card.dataset.id) : null;
+      if (track) void setTrackFavorite(track, !track.favorite, favoriteButton);
+      return;
+    }
+
     const playButton = event.target.closest('button[data-action="play"]');
     if (playButton) {
       event.preventDefault();
@@ -2033,7 +2967,13 @@
     if (event.target === els.playerModal) closePlayerModal();
   });
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !els.playerModal.hidden) {
+    if (event.key !== 'Escape') return;
+    if (!els.userModal.hidden) {
+      event.preventDefault();
+      closeUserModal();
+      return;
+    }
+    if (!els.playerModal.hidden) {
       event.preventDefault();
       closePlayerModal();
     }
@@ -2067,6 +3007,40 @@
     try { navigator.mediaSession.setActionHandler('pause', () => els.audioPlayer.pause()); } catch (_) {}
   }
 
+
+  els.userMenuButton.addEventListener('click', () => void openUserModal());
+  els.userModalClose.addEventListener('click', closeUserModal);
+  els.userModal.addEventListener('click', event => {
+    if (event.target === els.userModal) closeUserModal();
+  });
+  els.ownerLinkStartButton.addEventListener('click', () => void startOwnerLink());
+  els.ownerLinkCopyButton.addEventListener('click', async () => {
+    if (!ownerLinkCodeValue) return;
+    try {
+      await navigator.clipboard.writeText(ownerLinkCodeValue);
+      setMessage(els.ownerLinkStatus, '関連付けコードをコピーしました。', 'success');
+    } catch (_) {
+      setMessage(
+        els.ownerLinkStatus,
+        '自動コピーできませんでした。コード部分を選択してコピーしてください。',
+        'error',
+      );
+    }
+  });
+  els.tailscaleClaimButton.addEventListener('click', () => void claimOwnerLink());
+  els.tailscaleLinkCodeInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void claimOwnerLink();
+    }
+  });
+  els.ownerLinkConfirmButton.addEventListener('click', () => void confirmOwnerLink());
+  els.ownerLinkCancelButton.addEventListener('click', () => void cancelOwnerLink());
+  els.userList.addEventListener('click', event => {
+    const button = event.target.closest('button[data-user-active-id]');
+    if (button) void updateUserActive(button);
+  });
+
   loadPlaybackSettings();
   updatePlaybackModeControls();
 
@@ -2076,6 +3050,13 @@
     }
   }, {rootMargin:'500px'});
   observer.observe(els.sentinel);
+
+  try {
+    await loadCurrentUser();
+  } catch (error) {
+    console.error('利用者情報の初期化エラー:', error);
+    updateCurrentUserUi(null);
+  }
 
   try {
     await loadStats();

@@ -1,6 +1,6 @@
 ﻿#define MyAppName "自宅音楽ライブラリ"
 #define MyAppEnglishName "Music Library"
-#define MyAppVersion "2.6.3"
+#define MyAppVersion "2.7.0"
 #define MyAppPublisher "k-systems202208"
 #define MyAppExeName "MusicLibrary.exe"
 #define MyAppId "{{DDF12346-0D38-4D31-A4AF-27B406C91D8A}"
@@ -60,4 +60,3 @@ Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDi
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{#MyAppName}を起動"; Flags: nowait postinstall skipifsilent
-

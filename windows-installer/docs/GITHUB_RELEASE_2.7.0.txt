@@ -1,0 +1,34 @@
+﻿自宅音楽ライブラリ v2.7.0
+GitHub Release準備
+================================
+
+タグ:
+v2.7.0
+
+タイトル:
+自宅音楽ライブラリ v2.7.0
+
+本文:
+RELEASE_NOTES_v2.7.0.mdを使用します。
+
+添付:
+・MusicLibrary-Setup-2.7.0-x64.exe
+・SHA256SUMS.txt
+・README_USER.txt
+・REMOTE_ACCESS_USER.txt
+・REMOTE_ACCESS_FAMILY.txt
+・RELEASE_NOTES_v2.7.0.md
+
+公開前の必須条件:
+・RC1インストーラーのビルド成功
+・v2.6.3からの実機上書き更新成功
+・スキーマ5移行前バックアップ確認
+・ローカルオーナー確認
+・Tailscale家族利用者確認
+・利用者別再生回数確認
+・利用者別お気に入り確認
+・オーナー本人の既存個人データ統合確認
+・既存の検索・再生機能確認
+・Setup.exeのSHA-256確認
+
+実機確認が完了するまではGitHub Releaseを公開しません。

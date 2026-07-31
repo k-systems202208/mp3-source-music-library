@@ -1,5 +1,5 @@
-param(
-    [string]$Version = '2.6.3'
+﻿param(
+    [string]$Version = '2.7.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,7 +70,7 @@ $hashLine | Set-Content `
     -Encoding ascii
 
 Write-Host ''
-Write-Host 'GitHub Release assets were prepared:'
+Write-Host 'Release assets were prepared:'
 Write-Host $output
 Write-Host ''
 Get-ChildItem $output | ForEach-Object {

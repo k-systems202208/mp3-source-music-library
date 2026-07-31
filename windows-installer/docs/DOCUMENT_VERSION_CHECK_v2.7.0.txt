@@ -1,0 +1,25 @@
+﻿自宅音楽ライブラリ v2.7.0
+文書・プログラムのバージョン確認
+================================
+
+現行バージョン:
+2.7.0
+
+確認対象:
+・src\paths.py
+・src\launcher.py
+・src\server.py
+・installer\MusicLibrary.iss
+・build\version_info.txt
+・README.md
+・RELEASE_NOTES_v2.7.0.md
+・docs\INSTALL_INFO.txt
+・docs\README_BUILD.txt
+・docs\README_USER.txt
+・docs\REMOTE_ACCESS_USER.txt
+・docs\REMOTE_ACCESS_FAMILY.txt
+・docs\MANUAL_TEST_v2.7.0.txt
+・docs\GITHUB_RELEASE_2.7.0.txt
+
+旧版の説明として必要な箇所を除き、
+現在版の表示は2.7.0へ統一します。

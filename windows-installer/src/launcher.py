@@ -7,6 +7,7 @@ import json
 import os
 import signal
 import socket
+import secrets
 import subprocess
 import sys
 import threading
@@ -21,9 +22,11 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "自宅音楽ライブラリ"
-APP_VERSION = "2.6.3"
+APP_VERSION = "2.7.0"
 APP_ID = "MusicLibrary"
 DEFAULT_PORT = 8765
+OWNER_CONTROL_SECRET_ENV = "MUSIC_LIBRARY_OWNER_CONTROL_SECRET"
+OWNER_TOKEN_TTL_SECONDS = 60
 
 
 def default_data_root() -> Path:
@@ -70,6 +73,64 @@ def build_health_url(url: str) -> str:
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return ""
     return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "/api/health", "", ""))
+
+
+def build_server_url(url: str, path: str) -> str:
+    if not url:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return ""
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    normalized_path = "/" + str(path or "").lstrip("/")
+    return urllib.parse.urlunsplit(
+        (parsed.scheme, parsed.netloc, normalized_path, "", "")
+    )
+
+
+def request_local_owner_browser_url(
+    page_url: str,
+    control_secret: str,
+    *,
+    token: str | None = None,
+) -> str:
+    endpoint = build_server_url(page_url, "/api/local-auth/token")
+    exchange = build_server_url(page_url, "/api/local-auth/exchange")
+    if not endpoint or not exchange:
+        raise ValueError("library URL is invalid")
+    if len(str(control_secret or "")) < 32:
+        raise ValueError("local owner control secret is unavailable")
+
+    one_time_token = token or secrets.token_urlsafe(32)
+    payload = json.dumps(
+        {
+            "token": one_time_token,
+            "expiresInSeconds": OWNER_TOKEN_TTL_SECONDS,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint,
+        data=payload,
+        method="POST",
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "X-Music-Library-Control-Secret": control_secret,
+        },
+    )
+    with urllib.request.urlopen(request, timeout=2.0) as response:
+        if int(getattr(response, "status", 0)) != 201:
+            raise RuntimeError("local owner token registration failed")
+        raw = response.read()
+        value = json.loads(raw.decode("utf-8")) if raw else {}
+        if not isinstance(value, dict) or value.get("registered") is not True:
+            raise RuntimeError("local owner token registration was not confirmed")
+
+    query = urllib.parse.urlencode({"token": one_time_token})
+    return f"{exchange}?{query}"
 
 
 def health_ok(url: str) -> bool:
@@ -137,7 +198,12 @@ def worker_main(args: argparse.Namespace) -> int:
             import server as music_server
 
             port = free_port(args.port)
-            httpd = music_server.create_server("127.0.0.1", port)
+            owner_control_secret = os.environ.get(OWNER_CONTROL_SECRET_ENV, "")
+            httpd = music_server.create_server(
+                "127.0.0.1",
+                port,
+                owner_control_secret=owner_control_secret or None,
+            )
             url = f"http://127.0.0.1:{port}/music-library-search.html"
             atomic_write_json(runtime_path, {
                 "state": "running",
@@ -195,6 +261,8 @@ class LauncherWindow:
         self.remote_busy = False
         self.auto_remote_setup = auto_remote_setup
         self.auto_remote_setup_started = False
+        self.owner_control_secret = ""
+        self.pending_owner_browser_open = False
 
         self.root = tk.Tk()
         self.root.title(f"{APP_NAME} {APP_VERSION}")
@@ -322,6 +390,7 @@ class LauncherWindow:
             "--music-root", music_root,
             "--data-root", str(self.data_root),
             "--port", str(int(self.config.get("port") or DEFAULT_PORT)),
+            "--no-browser",
         ]
         if getattr(sys, "frozen", False):
             return [sys.executable, *args]
@@ -339,7 +408,7 @@ class LauncherWindow:
             self.current_url = existing_url
             self.status_var.set("実行中")
             self.set_running_controls(True)
-            webbrowser.open(existing_url)
+            self.open_owner_browser_url(existing_url, show_warning=False)
             return
 
         try:
@@ -356,10 +425,15 @@ class LauncherWindow:
         flags = 0
         if os.name == "nt":
             flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        self.owner_control_secret = secrets.token_urlsafe(48)
+        self.pending_owner_browser_open = True
+        child_environment = os.environ.copy()
+        child_environment[OWNER_CONTROL_SECRET_ENV] = self.owner_control_secret
         self.process = subprocess.Popen(
             self.worker_command(music_root),
             cwd=str(Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).parent),
             creationflags=flags,
+            env=child_environment,
         )
 
     def set_running_controls(self, running: bool, starting: bool = False) -> None:
@@ -376,6 +450,15 @@ class LauncherWindow:
                 self.current_url = url
                 self.status_var.set("実行中 — ブラウザで利用できます")
                 self.set_running_controls(True)
+                if self.pending_owner_browser_open:
+                    self.pending_owner_browser_open = False
+                    self.root.after(
+                        100,
+                        lambda current_url=url: self.open_owner_browser_url(
+                            current_url,
+                            show_warning=False,
+                        ),
+                    )
                 if self.auto_remote_setup and not self.auto_remote_setup_started:
                     self.auto_remote_setup_started = True
                     self.root.after(500, self.setup_remote_access)
@@ -609,13 +692,53 @@ class LauncherWindow:
             return
         remote_access.open_download_page()
 
+    def open_owner_browser_url(
+        self,
+        url: str,
+        *,
+        show_warning: bool = True,
+    ) -> bool:
+        if not health_ok(url):
+            if show_warning:
+                self.messagebox.showwarning(
+                    APP_NAME,
+                    "ライブラリは現在起動していません。",
+                )
+            return False
+
+        if not self.owner_control_secret:
+            webbrowser.open(url)
+            self.append_log(
+                "ローカルオーナー用の実行情報がないため、"
+                "未識別状態でブラウザを開きました。\n"
+            )
+            return False
+
+        try:
+            authenticated_url = request_local_owner_browser_url(
+                url,
+                self.owner_control_secret,
+            )
+        except Exception as exc:
+            self.append_log(
+                "ローカルオーナー確認URLを作成できませんでした: "
+                f"{type(exc).__name__}: {exc}\n"
+            )
+            webbrowser.open(url)
+            if show_warning:
+                self.messagebox.showwarning(
+                    APP_NAME,
+                    "オーナー確認に失敗したため、個人機能を使わない状態で開きました。",
+                )
+            return False
+
+        webbrowser.open(authenticated_url)
+        return True
+
     def open_browser(self) -> None:
         runtime = read_json(self.runtime_path)
         url = str(runtime.get("url") or self.current_url)
-        if health_ok(url):
-            webbrowser.open(url)
-        else:
-            self.messagebox.showwarning(APP_NAME, "ライブラリは現在起動していません。")
+        self.open_owner_browser_url(url)
 
     def open_data_folder(self) -> None:
         self.data_root.mkdir(parents=True, exist_ok=True)
@@ -650,6 +773,8 @@ class LauncherWindow:
         self.remote_busy = False
         self.auto_remote_setup = False
         self.auto_remote_setup_started = False
+        self.owner_control_secret = ""
+        self.pending_owner_browser_open = False
         self.status_var.set("停止しました")
         self.set_running_controls(False)
         return True

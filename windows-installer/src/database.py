@@ -7,6 +7,7 @@ import re
 import shutil
 import sqlite3
 import unicodedata
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +17,25 @@ from typing import Any, Iterator, Sequence
 
 ensure_data_directories()
 DATABASE_PATH = DATA_ROOT / "library.db"
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
+MIGRATION_V5_FLAG = "user_state_migration_v5"
+MIGRATION_V5_COMPLETED = "completed"
+OWNER_IDENTITY_PROVIDER = "local_owner"
+OWNER_IDENTITY_SUBJECT = "local-owner"
+OWNER_DEFAULT_DISPLAY_NAME = "オーナー"
+TAILSCALE_IDENTITY_PROVIDER = "tailscale"
+
+
+class OwnerIdentityLinkError(RuntimeError):
+    """Raised when an owner/Tailscale identity link cannot be completed safely."""
+
+
+class OwnerIdentityLinkNotFound(OwnerIdentityLinkError):
+    pass
+
+
+class OwnerIdentityLinkConflict(OwnerIdentityLinkError):
+    pass
 
 
 def utc_now() -> str:
@@ -118,7 +137,204 @@ def _catalog_sort_key(value: Any) -> str:
     return unicodedata.normalize("NFKC", text).casefold()
 
 
-def connect_database(path: Path = DATABASE_PATH) -> sqlite3.Connection:
+def _table_exists(connection: sqlite3.Connection, table_name: str) -> bool:
+    row = connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def read_schema_version(connection: sqlite3.Connection) -> int:
+    if not _table_exists(connection, "schema_info"):
+        return 0
+    row = connection.execute(
+        "SELECT value FROM schema_info WHERE key = 'schema_version'"
+    ).fetchone()
+    if row is None:
+        return 0
+    try:
+        return int(row[0])
+    except (TypeError, ValueError):
+        return 0
+
+
+def database_schema_version(path: Path) -> int:
+    if not path.exists() or path.stat().st_size == 0:
+        return 0
+    connection = sqlite3.connect(path, timeout=30.0)
+    try:
+        return read_schema_version(connection)
+    finally:
+        connection.close()
+
+
+def _next_available_backup_path(backup_dir: Path, stamp: str) -> Path:
+    candidate = backup_dir / f"library-pre-v2.7.0-{stamp}.db"
+    if not candidate.exists():
+        return candidate
+    for number in range(1, 1000):
+        candidate = backup_dir / f"library-pre-v2.7.0-{stamp}-{number:02d}.db"
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError("移行前バックアップの保存名を確保できませんでした。")
+
+
+def _track_count(connection: sqlite3.Connection) -> int | None:
+    if not _table_exists(connection, "tracks"):
+        return None
+    row = connection.execute("SELECT COUNT(*) FROM tracks").fetchone()
+    return int(row[0]) if row is not None else 0
+
+
+def verify_sqlite_backup(
+    source_path: Path,
+    backup_path: Path,
+    *,
+    expected_schema_version: int,
+) -> None:
+    if not backup_path.exists() or backup_path.stat().st_size == 0:
+        raise RuntimeError("移行前バックアップが空です。")
+
+    source = sqlite3.connect(source_path, timeout=30.0)
+    backup = sqlite3.connect(backup_path, timeout=30.0)
+    try:
+        check = backup.execute("PRAGMA quick_check").fetchone()
+        if check is None or str(check[0]).casefold() != "ok":
+            raise RuntimeError(f"移行前バックアップの整合性確認に失敗しました: {check}")
+
+        backup_version = read_schema_version(backup)
+        if backup_version != expected_schema_version:
+            raise RuntimeError(
+                "移行前バックアップのスキーマバージョンが一致しません。"
+            )
+
+        source_track_count = _track_count(source)
+        backup_track_count = _track_count(backup)
+        if source_track_count != backup_track_count:
+            raise RuntimeError("移行前バックアップの曲数が元データと一致しません。")
+    finally:
+        backup.close()
+        source.close()
+
+
+def create_pre_v27_migration_backup(
+    database_path: Path = DATABASE_PATH,
+    *,
+    backup_dir: Path = BACKUP_DIR,
+    now: datetime | None = None,
+) -> Path | None:
+    """Create and verify a dedicated backup before the schema-v5 migration."""
+    if not database_path.exists() or database_path.stat().st_size == 0:
+        return None
+
+    current_version = database_schema_version(database_path)
+    if current_version >= SCHEMA_VERSION:
+        return None
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = now or datetime.now().astimezone()
+    destination = _next_available_backup_path(
+        backup_dir,
+        timestamp.strftime("%Y%m%d-%H%M%S"),
+    )
+
+    source = sqlite3.connect(database_path, timeout=30.0)
+    target = sqlite3.connect(destination, timeout=30.0)
+    try:
+        source.backup(target)
+        target.commit()
+    except Exception:
+        target.close()
+        source.close()
+        destination.unlink(missing_ok=True)
+        raise
+    else:
+        target.close()
+        source.close()
+
+    try:
+        verify_sqlite_backup(
+            database_path,
+            destination,
+            expected_schema_version=current_version,
+        )
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+
+    return destination
+
+
+
+def create_pre_owner_link_backup(
+    database_path: Path = DATABASE_PATH,
+    *,
+    backup_dir: Path = BACKUP_DIR,
+    now: datetime | None = None,
+) -> Path:
+    """Create a verified backup immediately before linking an identity.
+
+    Owner linking deletes an empty duplicate profile after moving its single
+    Tailscale identity. The backup is separate from daily and migration
+    backups so that this explicit identity operation always has a recovery
+    point.
+    """
+    if not database_path.exists() or database_path.stat().st_size == 0:
+        raise FileNotFoundError("library.dbが見つかりません。")
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = now or datetime.now().astimezone()
+    stamp = timestamp.strftime("%Y%m%d-%H%M%S")
+    destination = backup_dir / f"library-pre-owner-link-{stamp}.db"
+    for number in range(1, 1000):
+        if not destination.exists():
+            break
+        destination = backup_dir / (
+            f"library-pre-owner-link-{stamp}-{number:02d}.db"
+        )
+    else:
+        raise RuntimeError("関連付け前バックアップの保存名を確保できませんでした。")
+
+    source = sqlite3.connect(database_path, timeout=30.0)
+    target = sqlite3.connect(destination, timeout=30.0)
+    try:
+        source.backup(target)
+        target.commit()
+    except Exception:
+        target.close()
+        source.close()
+        destination.unlink(missing_ok=True)
+        raise
+    else:
+        target.close()
+        source.close()
+
+    try:
+        verify_sqlite_backup(
+            database_path,
+            destination,
+            expected_schema_version=database_schema_version(database_path),
+        )
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+
+    return destination
+
+
+def connect_database(
+    path: Path = DATABASE_PATH,
+    *,
+    prepare_migration_backup: bool = True,
+    migration_backup_dir: Path | None = None,
+) -> sqlite3.Connection:
+    if prepare_migration_backup:
+        create_pre_v27_migration_backup(
+            path,
+            backup_dir=migration_backup_dir or (path.parent / "Backups"),
+        )
+
     connection = sqlite3.connect(path, timeout=30.0)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
@@ -132,8 +348,17 @@ def connect_database(path: Path = DATABASE_PATH) -> sqlite3.Connection:
 
 
 @contextmanager
-def database(path: Path = DATABASE_PATH) -> Iterator[sqlite3.Connection]:
-    connection = connect_database(path)
+def database(
+    path: Path = DATABASE_PATH,
+    *,
+    prepare_migration_backup: bool = True,
+    migration_backup_dir: Path | None = None,
+) -> Iterator[sqlite3.Connection]:
+    connection = connect_database(
+        path,
+        prepare_migration_backup=prepare_migration_backup,
+        migration_backup_dir=migration_backup_dir,
+    )
     try:
         yield connection
         connection.commit()
@@ -234,6 +459,59 @@ CREATE TABLE IF NOT EXISTS tracks (
     FOREIGN KEY (artwork_id) REFERENCES artworks(id)
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    is_owner INTEGER NOT NULL DEFAULT 0 CHECK(is_owner IN (0, 1)),
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_single_owner
+ON users(is_owner)
+WHERE is_owner = 1;
+
+CREATE TABLE IF NOT EXISTS user_identities (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    provider_display_name TEXT NOT NULL DEFAULT '',
+    profile_picture_url TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL DEFAULT '',
+    UNIQUE(provider, subject),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_identities_user
+ON user_identities(user_id);
+
+CREATE TABLE IF NOT EXISTS user_track_state (
+    user_id TEXT NOT NULL,
+    track_id TEXT NOT NULL,
+    favorite INTEGER NOT NULL DEFAULT 0 CHECK(favorite IN (0, 1)),
+    rating INTEGER CHECK(rating IS NULL OR (rating >= 0 AND rating <= 5)),
+    play_count INTEGER NOT NULL DEFAULT 0 CHECK(play_count >= 0),
+    last_played_at TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(user_id, track_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+    FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_track_state_plays
+ON user_track_state(user_id, play_count DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_track_state_last_played
+ON user_track_state(user_id, last_played_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_track_state_favorite
+ON user_track_state(user_id, favorite);
+
 CREATE TABLE IF NOT EXISTS scan_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at TEXT NOT NULL,
@@ -292,9 +570,7 @@ ON scan_errors(scan_run_id);
 """
 
 
-def initialize_database(connection: sqlite3.Connection) -> None:
-    connection.executescript(SCHEMA_SQL)
-
+def _run_additive_schema_migrations(connection: sqlite3.Connection) -> None:
     # Additive migrations for databases created by earlier development builds.
     artist_columns = {
         str(row["name"]) for row in connection.execute("PRAGMA table_info(artists)").fetchall()
@@ -303,8 +579,6 @@ def initialize_database(connection: sqlite3.Connection) -> None:
         connection.execute("ALTER TABLE artists ADD COLUMN sort_name TEXT NOT NULL DEFAULT ''")
     if "display_name_override" not in artist_columns:
         connection.execute("ALTER TABLE artists ADD COLUMN display_name_override TEXT")
-        # Migrate group corrections from early development builds that stored
-        # the same override redundantly on every track.
         rows = connection.execute(
             """
             SELECT artist_id, MIN(artist_override) AS value,
@@ -336,15 +610,263 @@ def initialize_database(connection: sqlite3.Connection) -> None:
     if "sort_title" not in album_columns:
         connection.execute("ALTER TABLE albums ADD COLUMN sort_title TEXT NOT NULL DEFAULT ''")
 
+
+def _new_user_id() -> str:
+    return f"usr_{uuid.uuid4().hex}"
+
+
+def _ensure_owner_user(connection: sqlite3.Connection, timestamp: str) -> str:
+    owners = connection.execute(
+        "SELECT id FROM users WHERE is_owner = 1 ORDER BY created_at, id"
+    ).fetchall()
+    if len(owners) > 1:
+        raise RuntimeError("オーナーが複数登録されているため移行できません。")
+
+    if owners:
+        owner_id = str(owners[0]["id"])
+    else:
+        owner_id = _new_user_id()
+        connection.execute(
+            """
+            INSERT INTO users(
+                id, display_name, is_owner, is_active,
+                created_at, updated_at, last_seen_at
+            ) VALUES (?, ?, 1, 1, ?, ?, '')
+            """,
+            (owner_id, OWNER_DEFAULT_DISPLAY_NAME, timestamp, timestamp),
+        )
+
+    identity = connection.execute(
+        """
+        SELECT id, user_id
+          FROM user_identities
+         WHERE provider = ? AND subject = ?
+        """,
+        (OWNER_IDENTITY_PROVIDER, OWNER_IDENTITY_SUBJECT),
+    ).fetchone()
+
+    if identity is None:
+        connection.execute(
+            """
+            INSERT INTO user_identities(
+                id, user_id, provider, subject,
+                provider_display_name, profile_picture_url,
+                created_at, last_seen_at
+            ) VALUES (?, ?, ?, ?, ?, '', ?, '')
+            """,
+            (
+                stable_key("idn", OWNER_IDENTITY_PROVIDER, OWNER_IDENTITY_SUBJECT),
+                owner_id,
+                OWNER_IDENTITY_PROVIDER,
+                OWNER_IDENTITY_SUBJECT,
+                OWNER_DEFAULT_DISPLAY_NAME,
+                timestamp,
+            ),
+        )
+    elif str(identity["user_id"]) != owner_id:
+        raise RuntimeError("ローカルオーナー識別情報が別ユーザーへ関連付けられています。")
+
     connection.execute(
-        "INSERT INTO schema_info(key, value) VALUES('schema_version', ?) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        (str(SCHEMA_VERSION),),
+        """
+        INSERT INTO schema_info(key, value) VALUES('owner_user_id', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        """,
+        (owner_id,),
     )
+    return owner_id
+
+
+def _legacy_user_state_count(connection: sqlite3.Connection) -> int:
+    row = connection.execute(
+        """
+        SELECT COUNT(*)
+          FROM tracks
+         WHERE play_count <> 0
+            OR last_played_at <> ''
+            OR favorite <> 0
+            OR rating IS NOT NULL
+        """
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def _migrate_legacy_user_state(
+    connection: sqlite3.Connection,
+    owner_id: str,
+    timestamp: str,
+) -> None:
+    migration = connection.execute(
+        "SELECT value FROM schema_info WHERE key = ?",
+        (MIGRATION_V5_FLAG,),
+    ).fetchone()
+    initial_migration = not (
+        migration is not None
+        and str(migration["value"]) == MIGRATION_V5_COMPLETED
+    )
+    expected_count = _legacy_user_state_count(connection)
+
+    # Keep this insert idempotent even after the initial migration. A fresh
+    # database can be initialized before the first scan imports legacy play
+    # counts. The next initialization must add only the missing owner rows.
     connection.execute(
-        "INSERT INTO schema_info(key, value) VALUES('created_by', 'MP3 Source Music Library') "
-        "ON CONFLICT(key) DO NOTHING"
+        """
+        INSERT INTO user_track_state(
+            user_id, track_id, favorite, rating,
+            play_count, last_played_at, created_at, updated_at
+        )
+        SELECT ?, id, favorite, rating,
+               play_count, last_played_at, ?, ?
+          FROM tracks
+         WHERE (play_count <> 0
+             OR last_played_at <> ''
+             OR favorite <> 0
+             OR rating IS NOT NULL)
+           AND NOT EXISTS (
+                SELECT 1
+                  FROM user_track_state AS existing
+                 WHERE existing.user_id = ?
+                   AND existing.track_id = tracks.id
+           )
+        """,
+        (owner_id, timestamp, timestamp, owner_id),
     )
+
+    missing_row = connection.execute(
+        """
+        SELECT COUNT(*)
+          FROM tracks AS t
+         WHERE (t.play_count <> 0
+             OR t.last_played_at <> ''
+             OR t.favorite <> 0
+             OR t.rating IS NOT NULL)
+           AND NOT EXISTS (
+                SELECT 1
+                  FROM user_track_state AS uts
+                 WHERE uts.user_id = ?
+                   AND uts.track_id = t.id
+           )
+        """,
+        (owner_id,),
+    ).fetchone()
+    if missing_row and int(missing_row[0]) != 0:
+        raise RuntimeError("既存の曲状態に対応するオーナー行が不足しています。")
+
+    if initial_migration:
+        state_count_row = connection.execute(
+            "SELECT COUNT(*) FROM user_track_state WHERE user_id = ?",
+            (owner_id,),
+        ).fetchone()
+        state_count = int(state_count_row[0]) if state_count_row else 0
+        if state_count != expected_count:
+            raise RuntimeError(
+                "既存の曲状態をオーナーへ移行した件数が一致しません。"
+            )
+
+        mismatch_row = connection.execute(
+            """
+            SELECT COUNT(*)
+              FROM tracks AS t
+              JOIN user_track_state AS uts
+                ON uts.user_id = ?
+               AND uts.track_id = t.id
+             WHERE (t.play_count <> 0
+                 OR t.last_played_at <> ''
+                 OR t.favorite <> 0
+                 OR t.rating IS NOT NULL)
+               AND (
+                    uts.favorite <> t.favorite
+                 OR NOT (uts.rating IS t.rating)
+                 OR uts.play_count <> t.play_count
+                 OR uts.last_played_at <> t.last_played_at
+               )
+            """,
+            (owner_id,),
+        ).fetchone()
+        if mismatch_row and int(mismatch_row[0]) != 0:
+            raise RuntimeError("移行後の曲状態が既存データと一致しません。")
+
+        connection.execute(
+            """
+            INSERT INTO schema_info(key, value) VALUES(?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (MIGRATION_V5_FLAG, MIGRATION_V5_COMPLETED),
+        )
+
+
+def _verify_schema_v5(connection: sqlite3.Connection, owner_id: str) -> None:
+    required_tables = {"users", "user_identities", "user_track_state"}
+    actual_tables = {
+        str(row[0])
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    missing = required_tables - actual_tables
+    if missing:
+        raise RuntimeError(f"スキーマ5のテーブルが不足しています: {sorted(missing)}")
+
+    owner_count = connection.execute(
+        "SELECT COUNT(*) FROM users WHERE is_owner = 1"
+    ).fetchone()
+    if owner_count is None or int(owner_count[0]) != 1:
+        raise RuntimeError("オーナーが正しく1人登録されていません。")
+
+    identity = connection.execute(
+        """
+        SELECT user_id
+          FROM user_identities
+         WHERE provider = ? AND subject = ?
+        """,
+        (OWNER_IDENTITY_PROVIDER, OWNER_IDENTITY_SUBJECT),
+    ).fetchone()
+    if identity is None or str(identity["user_id"]) != owner_id:
+        raise RuntimeError("ローカルオーナー識別情報を確認できません。")
+
+    foreign_key_errors = connection.execute("PRAGMA foreign_key_check").fetchall()
+    if foreign_key_errors:
+        raise RuntimeError("スキーマ5の外部キー整合性確認に失敗しました。")
+
+
+def initialize_database(connection: sqlite3.Connection) -> None:
+    if connection.in_transaction:
+        raise RuntimeError("データベース初期化は未処理の更新がない状態で実行してください。")
+
+    current_version = read_schema_version(connection)
+    if current_version > SCHEMA_VERSION:
+        raise RuntimeError(
+            f"このアプリより新しいデータベース形式です: {current_version}"
+        )
+
+    # executescript commits pending work before execution. Beginning the
+    # transaction inside the script keeps table creation and data migration
+    # within the same rollback boundary.
+    connection.executescript("BEGIN IMMEDIATE;\n" + SCHEMA_SQL)
+    try:
+        _run_additive_schema_migrations(connection)
+        timestamp = utc_now()
+        owner_id = _ensure_owner_user(connection, timestamp)
+        _migrate_legacy_user_state(connection, owner_id, timestamp)
+        _verify_schema_v5(connection, owner_id)
+
+        connection.execute(
+            """
+            INSERT INTO schema_info(key, value) VALUES('schema_version', ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (str(SCHEMA_VERSION),),
+        )
+        connection.execute(
+            """
+            INSERT INTO schema_info(key, value)
+            VALUES('created_by', 'MP3 Source Music Library')
+            ON CONFLICT(key) DO NOTHING
+            """
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
 
 
 def backup_database_if_needed(database_path: Path = DATABASE_PATH) -> Path | None:
@@ -446,6 +968,12 @@ def load_track_rows(connection: sqlite3.Connection) -> list[sqlite3.Row]:
 
 def row_to_track(row: sqlite3.Row) -> dict[str, Any]:
     metadata_source: dict[str, Any]
+    row_keys = set(row.keys())
+
+    def state_value(alias: str, legacy: str) -> Any:
+        if alias in row_keys:
+            return row[alias]
+        return row[legacy]
     try:
         parsed = json.loads(row["metadata_source_json"] or "{}")
         metadata_source = parsed if isinstance(parsed, dict) else {}
@@ -481,11 +1009,15 @@ def row_to_track(row: sqlite3.Row) -> dict[str, Any]:
         "time": int(row["duration_ms"] or 0),
         "trackNumber": row["track_number"] if row["track_number"] is not None else "",
         "discNumber": row["disc_number"] if row["disc_number"] is not None else "",
-        "playCount": int(row["play_count"] or 0),
+        "playCount": int(state_value("user_play_count", "play_count") or 0),
         "dateAdded": row["date_added"] or "",
-        "lastPlayedAt": row["last_played_at"] or "",
-        "favorite": bool(row["favorite"]),
-        "rating": row["rating"] if row["rating"] is not None else "",
+        "lastPlayedAt": state_value("user_last_played_at", "last_played_at") or "",
+        "favorite": bool(state_value("user_favorite", "favorite")),
+        "rating": (
+            state_value("user_rating", "rating")
+            if state_value("user_rating", "rating") is not None
+            else ""
+        ),
         "kind": row["kind"] or "MP3オーディオファイル",
         "size": int(row["file_size"] or 0),
         "relativePath": row["relative_path"] or "",
@@ -501,18 +1033,28 @@ def row_to_track(row: sqlite3.Row) -> dict[str, Any]:
     return track
 
 
-def get_available_tracks(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+def get_available_tracks(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str | None = None,
+) -> list[dict[str, Any]]:
     rows = connection.execute(
         """
         SELECT t.*, ar.name AS artist_name,
                ar.display_name_override AS artist_display_override,
                al.title AS album_title,
                aw.relative_path AS artwork_relative_path,
-               aw.source_type AS artwork_source_type
+               aw.source_type AS artwork_source_type,
+               COALESCE(uts.play_count, 0) AS user_play_count,
+               COALESCE(uts.last_played_at, '') AS user_last_played_at,
+               COALESCE(uts.favorite, 0) AS user_favorite,
+               uts.rating AS user_rating
           FROM tracks t
           LEFT JOIN artists ar ON ar.id = t.artist_id
           LEFT JOIN albums al ON al.id = t.album_id
           LEFT JOIN artworks aw ON aw.id = t.artwork_id
+          LEFT JOIN user_track_state uts
+            ON uts.track_id = t.id AND uts.user_id = ?
          WHERE t.is_available = 1
          ORDER BY COALESCE(t.artist_override, ar.display_name_override, ar.name, '') COLLATE NOCASE,
                   COALESCE(t.album_override, al.title, '') COLLATE NOCASE,
@@ -520,7 +1062,8 @@ def get_available_tracks(connection: sqlite3.Connection) -> list[dict[str, Any]]
                   COALESCE(t.track_number, 0),
                   COALESCE(t.title_override, t.title, '') COLLATE NOCASE,
                   t.relative_path COLLATE NOCASE
-        """
+        """,
+        (str(user_id or ""),),
     ).fetchall()
     return [row_to_track(row) for row in rows]
 
@@ -611,6 +1154,8 @@ def _base_track_conditions(
     artist_key: str = "",
     album_key: str = "",
     global_album_title: str = "",
+    favorite_only: bool = False,
+    user_id: str | None = None,
 ) -> tuple[list[str], list[Any]]:
     conditions = ["t.is_available = 1"]
     params: list[Any] = []
@@ -644,6 +1189,16 @@ def _base_track_conditions(
     if global_album_title:
         conditions.append(f"{ALBUM_EXPR} = ?")
         params.append(global_album_title)
+    if favorite_only:
+        conditions.append(
+            "EXISTS ("
+            "SELECT 1 FROM user_track_state favorite_state "
+            "WHERE favorite_state.user_id = ? "
+            "AND favorite_state.track_id = t.id "
+            "AND favorite_state.favorite = 1"
+            ")"
+        )
+        params.append(str(user_id or ""))
 
     return conditions, params
 
@@ -660,7 +1215,7 @@ def _track_order(sort: str, *, album_context: bool) -> str:
             f"{ALBUM_EXPR} COLLATE NOCASE, COALESCE(t.disc_number, 0), "
             f"COALESCE(t.track_number, 0), {TITLE_EXPR} COLLATE NOCASE"
         ),
-        "plays": f"t.play_count DESC, {TITLE_EXPR} COLLATE NOCASE",
+        "plays": f"COALESCE(uts.play_count, 0) DESC, {TITLE_EXPR} COLLATE NOCASE",
         "added": f"t.date_added DESC, {TITLE_EXPR} COLLATE NOCASE",
         "title": f"catalog_sort_key({TITLE_SORT_EXPR}) COLLATE NOCASE, {TITLE_EXPR} COLLATE NOCASE, {ARTIST_EXPR} COLLATE NOCASE",
     }
@@ -680,6 +1235,8 @@ def browse_tracks(
     global_album_title: str = "",
     sort: str = "title",
     index_key: str = "",
+    user_id: str | None = None,
+    favorite_only: bool = False,
 ) -> dict[str, Any]:
     limit = _bounded_page_size(limit)
     offset = max(0, int(offset))
@@ -692,6 +1249,8 @@ def browse_tracks(
         artist_key=artist_key,
         album_key=album_key,
         global_album_title=global_album_title,
+        favorite_only=favorite_only,
+        user_id=user_id,
     )
     base_where_sql = " AND ".join(conditions)
     count_rows = connection.execute(
@@ -732,16 +1291,22 @@ def browse_tracks(
                ar.display_name_override AS artist_display_override,
                al.title AS album_title,
                aw.relative_path AS artwork_relative_path,
-               aw.source_type AS artwork_source_type
+               aw.source_type AS artwork_source_type,
+               COALESCE(uts.play_count, 0) AS user_play_count,
+               COALESCE(uts.last_played_at, '') AS user_last_played_at,
+               COALESCE(uts.favorite, 0) AS user_favorite,
+               uts.rating AS user_rating
           FROM tracks t
           LEFT JOIN artists ar ON ar.id = t.artist_id
           LEFT JOIN albums al ON al.id = t.album_id
           LEFT JOIN artworks aw ON aw.id = t.artwork_id
+          LEFT JOIN user_track_state uts
+            ON uts.track_id = t.id AND uts.user_id = ?
          WHERE {where_sql}
          ORDER BY {_track_order(sort, album_context=album_context)}
          LIMIT ? OFFSET ?
         """,
-        [*filtered_params, limit, offset],
+        [str(user_id or ""), *filtered_params, limit, offset],
     ).fetchall()
     total = int(aggregate["total"] or 0)
     return {
@@ -755,6 +1320,7 @@ def browse_tracks(
         "hasMore": offset + len(rows) < total,
         "indexKey": index_key,
         "indexCounts": index_counts,
+        "favoriteOnly": bool(favorite_only),
     }
 
 
@@ -1028,6 +1594,8 @@ def browse_library(
     album_title: str = "",
     sort: str = "title",
     index_key: str = "",
+    user_id: str | None = None,
+    favorite_only: bool = False,
 ) -> dict[str, Any]:
     if view == "artists":
         return browse_artists(
@@ -1061,6 +1629,8 @@ def browse_library(
             album_key=album_key,
             sort=sort or "album_order",
             index_key=index_key,
+            user_id=user_id,
+            favorite_only=favorite_only,
         )
     if view == "album_tracks":
         if not album_title:
@@ -1075,6 +1645,8 @@ def browse_library(
             global_album_title=album_title,
             sort=sort or "album_order",
             index_key=index_key,
+            user_id=user_id,
+            favorite_only=favorite_only,
         )
     if view != "songs":
         raise ValueError(f"unsupported view: {view}")
@@ -1087,6 +1659,8 @@ def browse_library(
         corrected_only=corrected_only,
         sort=sort,
         index_key=index_key,
+        user_id=user_id,
+        favorite_only=favorite_only,
     )
 
 
@@ -1406,6 +1980,158 @@ def increment_play_count(connection: sqlite3.Connection, track_id: str) -> int |
     return int(row["play_count"]) if row else None
 
 
+def record_user_playback(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str | None,
+    track_id: str,
+) -> dict[str, Any] | None:
+    """Record one completed playback for the authenticated user.
+
+    Anonymous requests may still play audio, but they do not create or update
+    personal state. Legacy columns in ``tracks`` remain as migration fallback
+    data and are intentionally not updated after schema version 5.
+    """
+    track = connection.execute(
+        "SELECT id FROM tracks WHERE id = ? AND is_available = 1",
+        (track_id,),
+    ).fetchone()
+    if track is None:
+        return None
+
+    normalized_user_id = str(user_id or "").strip()
+    if not normalized_user_id:
+        return {
+            "playCount": 0,
+            "lastPlayedAt": "",
+            "recorded": False,
+        }
+
+    user = connection.execute(
+        "SELECT is_active FROM users WHERE id = ?",
+        (normalized_user_id,),
+    ).fetchone()
+    if user is None or not bool(user["is_active"]):
+        raise PermissionError("active user authentication is required")
+
+    timestamp = utc_now()
+    connection.execute(
+        """
+        INSERT INTO user_track_state(
+            user_id, track_id, favorite, rating,
+            play_count, last_played_at, created_at, updated_at
+        ) VALUES (?, ?, 0, NULL, 1, ?, ?, ?)
+        ON CONFLICT(user_id, track_id) DO UPDATE SET
+            play_count = user_track_state.play_count + 1,
+            last_played_at = excluded.last_played_at,
+            updated_at = excluded.updated_at
+        """,
+        (normalized_user_id, track_id, timestamp, timestamp, timestamp),
+    )
+    state = connection.execute(
+        """
+        SELECT play_count, last_played_at
+          FROM user_track_state
+         WHERE user_id = ? AND track_id = ?
+        """,
+        (normalized_user_id, track_id),
+    ).fetchone()
+    if state is None:
+        raise RuntimeError("user playback state was not created")
+    return {
+        "playCount": int(state["play_count"] or 0),
+        "lastPlayedAt": str(state["last_played_at"] or ""),
+        "recorded": True,
+    }
+
+
+def set_user_favorite(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str | None,
+    track_id: str,
+    favorite: bool,
+) -> dict[str, Any] | None:
+    """Set one authenticated user's favorite state for an available track.
+
+    The requested state is explicit rather than a server-side toggle, making
+    retries idempotent. Existing rating/playback fields are preserved. When a
+    cleared favorite would leave an otherwise empty state row, that row is
+    removed to keep ``user_track_state`` sparse.
+    """
+    if type(favorite) is not bool:
+        raise ValueError("favorite must be a boolean")
+
+    track = connection.execute(
+        "SELECT id FROM tracks WHERE id = ? AND is_available = 1",
+        (track_id,),
+    ).fetchone()
+    if track is None:
+        return None
+
+    normalized_user_id = str(user_id or "").strip()
+    if not normalized_user_id:
+        raise PermissionError("authenticated user is required")
+
+    user = connection.execute(
+        "SELECT id FROM users WHERE id = ? AND is_active = 1",
+        (normalized_user_id,),
+    ).fetchone()
+    if user is None:
+        raise PermissionError("active user is required")
+
+    timestamp = utc_now()
+    if bool(favorite):
+        connection.execute(
+            """
+            INSERT INTO user_track_state(
+                user_id, track_id, favorite, rating,
+                play_count, last_played_at, created_at, updated_at
+            ) VALUES (?, ?, 1, NULL, 0, '', ?, ?)
+            ON CONFLICT(user_id, track_id) DO UPDATE SET
+                favorite = 1,
+                updated_at = excluded.updated_at
+            """,
+            (normalized_user_id, track_id, timestamp, timestamp),
+        )
+    else:
+        connection.execute(
+            """
+            UPDATE user_track_state
+               SET favorite = 0,
+                   updated_at = ?
+             WHERE user_id = ? AND track_id = ?
+            """,
+            (timestamp, normalized_user_id, track_id),
+        )
+        connection.execute(
+            """
+            DELETE FROM user_track_state
+             WHERE user_id = ?
+               AND track_id = ?
+               AND favorite = 0
+               AND rating IS NULL
+               AND play_count = 0
+               AND last_played_at = ''
+            """,
+            (normalized_user_id, track_id),
+        )
+
+    state = connection.execute(
+        """
+        SELECT favorite, rating, play_count, last_played_at
+          FROM user_track_state
+         WHERE user_id = ? AND track_id = ?
+        """,
+        (normalized_user_id, track_id),
+    ).fetchone()
+    return {
+        "favorite": bool(state["favorite"]) if state is not None else False,
+        "rating": state["rating"] if state is not None else None,
+        "playCount": int(state["play_count"] or 0) if state is not None else 0,
+        "lastPlayedAt": str(state["last_played_at"] or "") if state is not None else "",
+    }
+
 
 def set_title_override(
     connection: sqlite3.Connection, track_id: str, value: str | None
@@ -1471,16 +2197,38 @@ def set_artist_override(
         "updatedTracks": int(count_row["count"] or 0),
     }
 
-def database_stats(connection: sqlite3.Connection) -> dict[str, Any]:
+def database_stats(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str | None = None,
+) -> dict[str, Any]:
     row = connection.execute(
         """
         SELECT COUNT(*) AS total_rows,
                SUM(CASE WHEN is_available = 1 THEN 1 ELSE 0 END) AS available_tracks,
                SUM(CASE WHEN is_available = 0 THEN 1 ELSE 0 END) AS unavailable_tracks,
-               SUM(CASE WHEN artwork_id IS NOT NULL THEN 1 ELSE 0 END) AS artwork_tracks,
-               SUM(play_count) AS total_plays
+               SUM(CASE WHEN artwork_id IS NOT NULL THEN 1 ELSE 0 END) AS artwork_tracks
           FROM tracks
         """
+    ).fetchone()
+    plays_row = connection.execute(
+        """
+        SELECT COALESCE(SUM(play_count), 0) AS total_plays
+          FROM user_track_state
+         WHERE user_id = ?
+        """,
+        (str(user_id or ""),),
+    ).fetchone()
+    favorite_row = connection.execute(
+        """
+        SELECT COUNT(*) AS favorite_tracks
+          FROM user_track_state AS uts
+          JOIN tracks AS t ON t.id = uts.track_id
+         WHERE uts.user_id = ?
+           AND uts.favorite = 1
+           AND t.is_available = 1
+        """,
+        (str(user_id or ""),),
     ).fetchone()
     latest = connection.execute(
         """
@@ -1496,11 +2244,704 @@ def database_stats(connection: sqlite3.Connection) -> dict[str, Any]:
         "availableTracks": int(row["available_tracks"] or 0),
         "unavailableTracks": int(row["unavailable_tracks"] or 0),
         "artworkTracks": int(row["artwork_tracks"] or 0),
-        "totalPlays": int(row["total_plays"] or 0),
+        "totalPlays": int(plays_row["total_plays"] or 0),
+        "favoriteTracks": int(favorite_row["favorite_tracks"] or 0),
         "latestScan": dict(latest) if latest else None,
     }
 
 
+
+
+def _user_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": str(row["id"]),
+        "displayName": str(row["display_name"]),
+        "isOwner": bool(row["is_owner"]),
+        "isActive": bool(row["is_active"]),
+        "createdAt": str(row["created_at"]),
+        "updatedAt": str(row["updated_at"]),
+        "lastSeenAt": str(row["last_seen_at"]),
+    }
+
+
+def get_or_create_tailscale_user(
+    connection: sqlite3.Connection,
+    *,
+    subject: str,
+    display_name: str,
+    profile_picture_url: str = "",
+) -> dict[str, Any]:
+    """Resolve one Tailscale identity and update its last-seen metadata.
+
+    ``subject`` must already be normalized by ``tailscale_identity``. The
+    identity table, rather than the current display name, is the stable link
+    to the user profile. Existing user display names are not overwritten,
+    which preserves future manual profile-name edits.
+    """
+    normalized_subject = unicodedata.normalize(
+        "NFKC",
+        str(subject or ""),
+    ).strip().casefold()
+    if not normalized_subject:
+        raise ValueError("Tailscale login subject is required")
+    if len(normalized_subject) > 512:
+        raise ValueError("Tailscale login subject is too long")
+
+    provider_name = str(display_name or "").strip() or normalized_subject
+    provider_name = provider_name[:200]
+    profile_url = str(profile_picture_url or "").strip()[:2048]
+    timestamp = utc_now()
+
+    started_transaction = not connection.in_transaction
+    if started_transaction:
+        connection.execute("BEGIN IMMEDIATE")
+
+    try:
+        row = connection.execute(
+            """
+            SELECT u.id, u.display_name, u.is_owner, u.is_active,
+                   u.created_at, u.updated_at, u.last_seen_at,
+                   i.id AS identity_id
+              FROM user_identities AS i
+              JOIN users AS u ON u.id = i.user_id
+             WHERE i.provider = ?
+               AND i.subject = ?
+            """,
+            (TAILSCALE_IDENTITY_PROVIDER, normalized_subject),
+        ).fetchone()
+
+        if row is None:
+            user_id = _new_user_id()
+            connection.execute(
+                """
+                INSERT INTO users(
+                    id, display_name, is_owner, is_active,
+                    created_at, updated_at, last_seen_at
+                ) VALUES (?, ?, 0, 1, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    provider_name,
+                    timestamp,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO user_identities(
+                    id, user_id, provider, subject,
+                    provider_display_name, profile_picture_url,
+                    created_at, last_seen_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    stable_key(
+                        "idn",
+                        TAILSCALE_IDENTITY_PROVIDER,
+                        normalized_subject,
+                    ),
+                    user_id,
+                    TAILSCALE_IDENTITY_PROVIDER,
+                    normalized_subject,
+                    provider_name,
+                    profile_url,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+        else:
+            user_id = str(row["id"])
+            connection.execute(
+                """
+                UPDATE user_identities
+                   SET provider_display_name = ?,
+                       profile_picture_url = CASE
+                           WHEN ? <> '' THEN ?
+                           ELSE profile_picture_url
+                       END,
+                       last_seen_at = ?
+                 WHERE provider = ?
+                   AND subject = ?
+                """,
+                (
+                    provider_name,
+                    profile_url,
+                    profile_url,
+                    timestamp,
+                    TAILSCALE_IDENTITY_PROVIDER,
+                    normalized_subject,
+                ),
+            )
+            connection.execute(
+                """
+                UPDATE users
+                   SET last_seen_at = ?
+                 WHERE id = ?
+                """,
+                (timestamp, user_id),
+            )
+
+        user_row = connection.execute(
+            """
+            SELECT id, display_name, is_owner, is_active,
+                   created_at, updated_at, last_seen_at
+              FROM users
+             WHERE id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+        if user_row is None:
+            raise RuntimeError("Tailscale利用者を取得できませんでした。")
+
+        result = _user_row_to_dict(user_row)
+        result.update(
+            {
+                "provider": TAILSCALE_IDENTITY_PROVIDER,
+                "subject": normalized_subject,
+                "providerDisplayName": provider_name,
+                "profilePictureUrl": profile_url,
+            }
+        )
+        return result
+    except Exception:
+        if started_transaction:
+            connection.rollback()
+        raise
+
+
+
+
+def get_user_state_summary(
+    connection: sqlite3.Connection,
+    user_id: str,
+) -> dict[str, int]:
+    """Return a compact personal-state summary for one user profile."""
+    row = connection.execute(
+        """
+        SELECT COUNT(*) AS state_count,
+               COALESCE(SUM(play_count), 0) AS play_count,
+               COALESCE(SUM(favorite), 0) AS favorite_count,
+               COALESCE(SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END), 0)
+                   AS rating_count
+          FROM user_track_state
+         WHERE user_id = ?
+        """,
+        (str(user_id or ""),),
+    ).fetchone()
+    return {
+        "stateCount": int(row["state_count"] or 0),
+        "playCount": int(row["play_count"] or 0),
+        "favoriteCount": int(row["favorite_count"] or 0),
+        "ratingCount": int(row["rating_count"] or 0),
+    }
+
+
+def get_owner_link_merge_preview(
+    connection: sqlite3.Connection,
+    candidate_user_id: str,
+) -> dict[str, Any]:
+    """Describe the candidate state that would be merged into the owner."""
+    candidate_id = str(candidate_user_id or "").strip()
+    if not candidate_id:
+        raise ValueError("candidate_user_id is required")
+
+    candidate = connection.execute(
+        "SELECT id, is_owner, is_active FROM users WHERE id = ?",
+        (candidate_id,),
+    ).fetchone()
+    if candidate is None:
+        raise OwnerIdentityLinkNotFound("確認対象の利用者が見つかりません。")
+
+    summary = get_user_state_summary(connection, candidate_id)
+    identity_row = connection.execute(
+        "SELECT COUNT(*) AS count FROM user_identities WHERE user_id = ?",
+        (candidate_id,),
+    ).fetchone()
+    identity_count = int(identity_row["count"] or 0) if identity_row else 0
+
+    conflict_row = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+          FROM user_track_state AS candidate_state
+          JOIN users AS owner_user
+            ON owner_user.is_owner = 1
+          JOIN user_track_state AS owner_state
+            ON owner_state.user_id = owner_user.id
+           AND owner_state.track_id = candidate_state.track_id
+         WHERE candidate_state.user_id = ?
+           AND candidate_state.rating IS NOT NULL
+           AND owner_state.rating IS NOT NULL
+           AND candidate_state.rating <> owner_state.rating
+        """,
+        (candidate_id,),
+    ).fetchone()
+    rating_conflict_count = int(conflict_row["count"] or 0) if conflict_row else 0
+
+    result: dict[str, Any] = dict(summary)
+    result.update(
+        {
+            "identityCount": identity_count,
+            "ratingConflictCount": rating_conflict_count,
+            "canMerge": bool(candidate["is_owner"]) or (
+                bool(candidate["is_active"])
+                and identity_count == 1
+                and rating_conflict_count == 0
+            ),
+        }
+    )
+    return result
+
+
+def _parse_owner_link_timestamp(value: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise OwnerIdentityLinkConflict(
+            "最終再生日時を安全に比較できない曲があるため関連付けを中止しました。"
+        ) from exc
+    if parsed.tzinfo is None:
+        raise OwnerIdentityLinkConflict(
+            "タイムゾーンのない最終再生日時があるため関連付けを中止しました。"
+        )
+    return parsed.astimezone(timezone.utc)
+
+
+def _latest_owner_link_timestamp(left: str, right: str) -> str:
+    left_value = str(left or "")
+    right_value = str(right or "")
+    if not left_value:
+        return right_value
+    if not right_value:
+        return left_value
+    left_time = _parse_owner_link_timestamp(left_value)
+    right_time = _parse_owner_link_timestamp(right_value)
+    return left_value if left_time >= right_time else right_value
+
+
+def _merge_user_track_state_into_owner(
+    connection: sqlite3.Connection,
+    *,
+    owner_user_id: str,
+    candidate_user_id: str,
+    timestamp: str,
+) -> dict[str, int]:
+    """Merge all candidate personal state without discarding conflicting data."""
+    candidate_rows = connection.execute(
+        """
+        SELECT track_id, favorite, rating, play_count,
+               last_played_at, created_at, updated_at
+          FROM user_track_state
+         WHERE user_id = ?
+         ORDER BY track_id
+        """,
+        (candidate_user_id,),
+    ).fetchall()
+    owner_rows = {
+        str(row["track_id"]): row
+        for row in connection.execute(
+            """
+            SELECT track_id, favorite, rating, play_count,
+                   last_played_at, created_at, updated_at
+              FROM user_track_state
+             WHERE user_id = ?
+            """,
+            (owner_user_id,),
+        ).fetchall()
+    }
+
+    # Detect every lossy or ambiguous condition before modifying any row.
+    rating_conflicts: list[str] = []
+    for candidate in candidate_rows:
+        track_id = str(candidate["track_id"])
+        owner = owner_rows.get(track_id)
+        if owner is None:
+            continue
+        owner_rating = owner["rating"]
+        candidate_rating = candidate["rating"]
+        if (
+            owner_rating is not None
+            and candidate_rating is not None
+            and int(owner_rating) != int(candidate_rating)
+        ):
+            rating_conflicts.append(track_id)
+        _latest_owner_link_timestamp(
+            str(owner["last_played_at"] or ""),
+            str(candidate["last_played_at"] or ""),
+        )
+
+    if rating_conflicts:
+        raise OwnerIdentityLinkConflict(
+            "評価が異なる曲が"
+            f"{len(rating_conflicts)}件あるため、データを推測せず関連付けを中止しました。"
+        )
+
+    summary = {
+        "candidateStateCount": len(candidate_rows),
+        "movedStateCount": 0,
+        "combinedStateCount": 0,
+        "playCountAdded": 0,
+        "favoriteAddedCount": 0,
+        "ratingInheritedCount": 0,
+    }
+
+    for candidate in candidate_rows:
+        track_id = str(candidate["track_id"])
+        owner = owner_rows.get(track_id)
+        candidate_favorite = int(candidate["favorite"] or 0)
+        candidate_rating = candidate["rating"]
+        candidate_plays = int(candidate["play_count"] or 0)
+        summary["playCountAdded"] += candidate_plays
+
+        if owner is None:
+            connection.execute(
+                """
+                UPDATE user_track_state
+                   SET user_id = ?, updated_at = ?
+                 WHERE user_id = ? AND track_id = ?
+                """,
+                (owner_user_id, timestamp, candidate_user_id, track_id),
+            )
+            summary["movedStateCount"] += 1
+            summary["favoriteAddedCount"] += candidate_favorite
+            if candidate_rating is not None:
+                summary["ratingInheritedCount"] += 1
+            continue
+
+        owner_favorite = int(owner["favorite"] or 0)
+        owner_rating = owner["rating"]
+        merged_favorite = 1 if owner_favorite or candidate_favorite else 0
+        if candidate_favorite and not owner_favorite:
+            summary["favoriteAddedCount"] += 1
+
+        merged_rating = owner_rating
+        if owner_rating is None and candidate_rating is not None:
+            merged_rating = int(candidate_rating)
+            summary["ratingInheritedCount"] += 1
+
+        merged_last_played = _latest_owner_link_timestamp(
+            str(owner["last_played_at"] or ""),
+            str(candidate["last_played_at"] or ""),
+        )
+        merged_plays = int(owner["play_count"] or 0) + candidate_plays
+
+        connection.execute(
+            """
+            UPDATE user_track_state
+               SET favorite = ?,
+                   rating = ?,
+                   play_count = ?,
+                   last_played_at = ?,
+                   updated_at = ?
+             WHERE user_id = ? AND track_id = ?
+            """,
+            (
+                merged_favorite,
+                merged_rating,
+                merged_plays,
+                merged_last_played,
+                timestamp,
+                owner_user_id,
+                track_id,
+            ),
+        )
+        connection.execute(
+            "DELETE FROM user_track_state WHERE user_id = ? AND track_id = ?",
+            (candidate_user_id, track_id),
+        )
+        summary["combinedStateCount"] += 1
+
+    remaining = connection.execute(
+        "SELECT COUNT(*) AS count FROM user_track_state WHERE user_id = ?",
+        (candidate_user_id,),
+    ).fetchone()
+    if remaining is not None and int(remaining["count"] or 0) != 0:
+        raise OwnerIdentityLinkConflict(
+            "利用者データの統合後に未処理の状態が残ったため中止しました。"
+        )
+
+    return summary
+
+
+def link_tailscale_identity_to_owner(
+    connection: sqlite3.Connection,
+    *,
+    subject: str,
+    expected_candidate_user_id: str,
+) -> dict[str, Any]:
+    """Merge one confirmed Tailscale profile into the local owner.
+
+    Personal state is merged transactionally. Play counts are added, the
+    newest last-played timestamp is retained, favorites use logical OR, and
+    ratings are inherited only when they do not conflict.
+    """
+    normalized_subject = unicodedata.normalize(
+        "NFKC",
+        str(subject or ""),
+    ).strip().casefold()
+    expected_user_id = str(expected_candidate_user_id or "").strip()
+    if not normalized_subject or not expected_user_id:
+        raise ValueError("確認対象のTailscale利用者が不足しています。")
+
+    started_transaction = not connection.in_transaction
+    if started_transaction:
+        connection.execute("BEGIN IMMEDIATE")
+
+    try:
+        owner_row = connection.execute(
+            """
+            SELECT id, display_name, is_owner, is_active,
+                   created_at, updated_at, last_seen_at
+              FROM users
+             WHERE is_owner = 1
+             ORDER BY created_at, id
+             LIMIT 1
+            """
+        ).fetchone()
+        if owner_row is None:
+            raise OwnerIdentityLinkNotFound("オーナーを確認できませんでした。")
+        if not bool(owner_row["is_active"]):
+            raise OwnerIdentityLinkConflict("オーナーが無効化されています。")
+
+        identity_row = connection.execute(
+            """
+            SELECT i.id AS identity_id, i.user_id,
+                   i.provider_display_name, i.profile_picture_url,
+                   u.display_name, u.is_owner, u.is_active
+              FROM user_identities AS i
+              JOIN users AS u ON u.id = i.user_id
+             WHERE i.provider = ?
+               AND i.subject = ?
+            """,
+            (TAILSCALE_IDENTITY_PROVIDER, normalized_subject),
+        ).fetchone()
+        if identity_row is None:
+            raise OwnerIdentityLinkNotFound(
+                "確認対象のTailscale識別情報が見つかりません。"
+            )
+
+        actual_user_id = str(identity_row["user_id"])
+        if actual_user_id != expected_user_id:
+            raise OwnerIdentityLinkConflict(
+                "確認中にTailscale利用者が変更されたため中止しました。"
+            )
+
+        owner_id = str(owner_row["id"])
+        if actual_user_id == owner_id:
+            result = _user_row_to_dict(owner_row)
+            result.update(
+                {
+                    "provider": TAILSCALE_IDENTITY_PROVIDER,
+                    "subject": normalized_subject,
+                    "alreadyLinked": True,
+                    "removedDuplicateUserId": None,
+                    "mergedPersonalState": {
+                        "candidateStateCount": 0,
+                        "movedStateCount": 0,
+                        "combinedStateCount": 0,
+                        "playCountAdded": 0,
+                        "favoriteAddedCount": 0,
+                        "ratingInheritedCount": 0,
+                    },
+                }
+            )
+            return result
+
+        if bool(identity_row["is_owner"]):
+            raise OwnerIdentityLinkConflict(
+                "別のオーナープロフィールが関連付けられています。"
+            )
+        if not bool(identity_row["is_active"]):
+            raise OwnerIdentityLinkConflict(
+                "無効化された利用者はオーナーへ関連付けできません。"
+            )
+
+        identity_count_row = connection.execute(
+            "SELECT COUNT(*) FROM user_identities WHERE user_id = ?",
+            (actual_user_id,),
+        ).fetchone()
+        identity_count = int(identity_count_row[0]) if identity_count_row else 0
+        if identity_count != 1:
+            raise OwnerIdentityLinkConflict(
+                "複数の識別情報を持つ利用者は自動統合できません。"
+            )
+
+        timestamp = utc_now()
+        merge_summary = _merge_user_track_state_into_owner(
+            connection,
+            owner_user_id=owner_id,
+            candidate_user_id=actual_user_id,
+            timestamp=timestamp,
+        )
+        connection.execute(
+            """
+            UPDATE user_identities
+               SET user_id = ?,
+                   last_seen_at = ?
+             WHERE id = ?
+               AND user_id = ?
+            """,
+            (
+                owner_id,
+                timestamp,
+                str(identity_row["identity_id"]),
+                actual_user_id,
+            ),
+        )
+        connection.execute(
+            "DELETE FROM users WHERE id = ? AND is_owner = 0",
+            (actual_user_id,),
+        )
+        connection.execute(
+            """
+            UPDATE users
+               SET updated_at = ?,
+                   last_seen_at = ?
+             WHERE id = ?
+            """,
+            (timestamp, timestamp, owner_id),
+        )
+
+        foreign_key_errors = connection.execute(
+            "PRAGMA foreign_key_check"
+        ).fetchall()
+        if foreign_key_errors:
+            raise OwnerIdentityLinkConflict(
+                "関連付け後のデータ整合性確認に失敗しました。"
+            )
+
+        updated_owner = connection.execute(
+            """
+            SELECT id, display_name, is_owner, is_active,
+                   created_at, updated_at, last_seen_at
+              FROM users
+             WHERE id = ?
+            """,
+            (owner_id,),
+        ).fetchone()
+        if updated_owner is None:
+            raise OwnerIdentityLinkNotFound("関連付け後のオーナーを取得できません。")
+
+        result = _user_row_to_dict(updated_owner)
+        result.update(
+            {
+                "provider": TAILSCALE_IDENTITY_PROVIDER,
+                "subject": normalized_subject,
+                "alreadyLinked": False,
+                "removedDuplicateUserId": actual_user_id,
+                "mergedPersonalState": merge_summary,
+            }
+        )
+        return result
+    except Exception:
+        if started_transaction:
+            connection.rollback()
+        raise
+
+
+
+def get_user_by_id(
+    connection: sqlite3.Connection,
+    user_id: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        """
+        SELECT id, display_name, is_owner, is_active,
+               created_at, updated_at, last_seen_at
+          FROM users
+         WHERE id = ?
+        """,
+        (str(user_id or ""),),
+    ).fetchone()
+    if row is None:
+        return None
+    return _user_row_to_dict(row)
+
+
+def list_users_for_management(
+    connection: sqlite3.Connection,
+) -> list[dict[str, Any]]:
+    """Return owner-visible profiles with identities and state totals."""
+    rows = connection.execute(
+        """
+        SELECT u.id, u.display_name, u.is_owner, u.is_active,
+               u.created_at, u.updated_at, u.last_seen_at,
+               COUNT(uts.track_id) AS state_count,
+               COALESCE(SUM(uts.favorite), 0) AS favorite_count,
+               COALESCE(SUM(uts.play_count), 0) AS play_count
+          FROM users AS u
+          LEFT JOIN user_track_state AS uts
+                 ON uts.user_id = u.id
+         GROUP BY u.id
+         ORDER BY u.is_owner DESC,
+                  u.is_active DESC,
+                  u.display_name COLLATE NOCASE,
+                  u.id
+        """
+    ).fetchall()
+
+    identity_rows = connection.execute(
+        """
+        SELECT user_id, provider, subject,
+               provider_display_name, profile_picture_url,
+               created_at, last_seen_at
+          FROM user_identities
+         ORDER BY user_id, provider, subject
+        """
+    ).fetchall()
+
+    identities_by_user: dict[str, list[dict[str, Any]]] = {}
+    for identity in identity_rows:
+        user_id = str(identity["user_id"])
+        identities_by_user.setdefault(user_id, []).append(
+            {
+                "provider": str(identity["provider"]),
+                "subject": str(identity["subject"]),
+                "providerDisplayName": str(
+                    identity["provider_display_name"]
+                ),
+                "profilePictureUrl": str(
+                    identity["profile_picture_url"]
+                ),
+                "createdAt": str(identity["created_at"]),
+                "lastSeenAt": str(identity["last_seen_at"]),
+            }
+        )
+
+    users: list[dict[str, Any]] = []
+    for row in rows:
+        user = _user_row_to_dict(row)
+        user.update(
+            {
+                "identities": identities_by_user.get(user["id"], []),
+                "stateCount": int(row["state_count"] or 0),
+                "favoriteCount": int(row["favorite_count"] or 0),
+                "playCount": int(row["play_count"] or 0),
+                "canChangeActive": not bool(row["is_owner"]),
+            }
+        )
+        users.append(user)
+    return users
+
+
+def set_user_active(
+    connection: sqlite3.Connection,
+    user_id: str,
+    is_active: bool,
+) -> bool:
+    """Testable foundation for the later owner-only user management screen."""
+    timestamp = utc_now()
+    cursor = connection.execute(
+        """
+        UPDATE users
+           SET is_active = ?,
+               updated_at = ?
+         WHERE id = ?
+           AND is_owner = 0
+        """,
+        (1 if is_active else 0, timestamp, str(user_id or "")),
+    )
+    return cursor.rowcount == 1
 def manual_backup(destination: Path | None = None) -> Path:
     if not DATABASE_PATH.exists():
         raise FileNotFoundError("library.db がまだ作成されていません。先にライブラリを起動してください。")
@@ -1516,3 +2957,20 @@ def manual_backup(destination: Path | None = None) -> Path:
         target.close()
         source.close()
     return destination
+
+
+def get_owner_user(connection: sqlite3.Connection) -> dict[str, Any] | None:
+    """Return the single owner profile used by local authenticated sessions."""
+    row = connection.execute(
+        """
+        SELECT id, display_name, is_owner, is_active,
+               created_at, updated_at, last_seen_at
+          FROM users
+         WHERE is_owner = 1
+         ORDER BY created_at, id
+         LIMIT 1
+        """
+    ).fetchone()
+    if row is None:
+        return None
+    return _user_row_to_dict(row)

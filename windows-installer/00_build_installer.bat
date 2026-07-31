@@ -1,11 +1,26 @@
-﻿@echo off
+@echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
 
+set "BUILD_LOG=%CD%\release\BUILD_LOG_v2.7.0_RC2.txt"
+set "BUILD_REPORT=%CD%\release\BUILD_REPORT_v2.7.0_RC2.txt"
+set "INSTALLER=%CD%\release\MusicLibrary-Setup-2.7.0-x64.exe"
+set "HASH_FILE=%CD%\release\MusicLibrary-Setup-2.7.0-x64_SHA256.txt"
+
+if not exist "release" mkdir "release"
+> "%BUILD_LOG%" echo Music Library v2.7.0 RC2 Build Log
+>>"%BUILD_LOG%" echo ======================================
+>>"%BUILD_LOG%" echo Started: %DATE% %TIME%
+>>"%BUILD_LOG%" echo Package: %CD%
+>>"%BUILD_LOG%" echo.
+
 echo.
 echo ============================================================
-echo Music Library installer build
+echo Music Library v2.7.0 RC2 installer build
 echo ============================================================
+echo.
+echo This step builds the installer only.
+echo Do not install it until the next verification step.
 echo.
 
 set "PYTHON_CMD="
@@ -17,14 +32,15 @@ if not defined PYTHON_CMD (
 )
 if not defined PYTHON_CMD (
   echo ERROR: Python 3 was not found.
-  echo Run 02_install_python.bat or install Python 3 manually.
-if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
+  echo ERROR: Python 3 was not found.>>"%BUILD_LOG%"
+  echo Run 02_install_python.bat first.
+  pause
   exit /b 1
 )
 
 if not exist ".venv-build\Scripts\python.exe" (
   echo Creating build environment...
-  %PYTHON_CMD% -m venv ".venv-build"
+  %PYTHON_CMD% -m venv ".venv-build" >>"%BUILD_LOG%" 2>&1
   if errorlevel 1 goto :error
 )
 
@@ -32,42 +48,76 @@ call ".venv-build\Scripts\activate.bat"
 if errorlevel 1 goto :error
 
 echo Installing build requirements...
-python -m pip install --upgrade pip
+python -m pip install --upgrade pip >>"%BUILD_LOG%" 2>&1
 if errorlevel 1 goto :error
-python -m pip install -r "build\requirements-build.txt"
+python -m pip install -r "build\requirements-build.txt" >>"%BUILD_LOG%" 2>&1
 if errorlevel 1 goto :error
 
 echo Checking Python source...
-python -m compileall -q "src"
+python -m compileall -q "src" >>"%BUILD_LOG%" 2>&1
 if errorlevel 1 goto :error
 
-echo Running source sanity tests...
-python "tests\build_sanity.py"
+call :RUN_TEST "tests\build_sanity.py" "Build sanity"
 if errorlevel 1 goto :error
-python "tests\test_client_disconnects.py"
+call :RUN_TEST "tests\test_client_disconnects.py" "Client disconnects"
 if errorlevel 1 goto :error
-python "tests\test_remote_access.py"
+call :RUN_TEST "tests\test_remote_access.py" "Remote access parsing"
 if errorlevel 1 goto :error
-python "tests\test_remote_entry_path.py"
+call :RUN_TEST "tests\test_remote_entry_path.py" "Remote entry path"
 if errorlevel 1 goto :error
-python "tests\test_launcher_stability.py"
+call :RUN_TEST "tests\test_launcher_stability.py" "Launcher stability"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_schema_v5_migration.py" "Schema v5 migration"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_local_owner_auth.py" "Local owner authentication"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_tailscale_identity.py" "Tailscale identity"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_owner_tailscale_link.py" "Owner and Tailscale linking"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_user_management_ui.py" "User management UI"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_user_playback_state.py" "User playback state"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_user_favorites.py" "User favorites"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_favorite_filter.py" "Favorite filter"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_release_candidate.py" "Release candidate consistency"
 if errorlevel 1 goto :error
 
 echo Building application bundle...
 if exist "dist\MusicLibrary" rmdir /s /q "dist\MusicLibrary"
-python -m PyInstaller --noconfirm --clean --workpath ".build-cache" --distpath "dist" "build\MusicLibrary.spec"
+if exist ".build-cache" rmdir /s /q ".build-cache"
+python -m PyInstaller --noconfirm --clean --workpath ".build-cache" --distpath "dist" "build\MusicLibrary.spec" >>"%BUILD_LOG%" 2>&1
 if errorlevel 1 goto :error
 
 if not exist "dist\MusicLibrary\MusicLibrary.exe" (
   echo ERROR: MusicLibrary.exe was not created.
+  echo ERROR: MusicLibrary.exe was not created.>>"%BUILD_LOG%"
   goto :error
 )
 
-echo Testing bundled executable...
-if not exist "tests\empty_music" mkdir "tests\empty_music"
-if exist "tests\build_data" rmdir /s /q "tests\build_data"
-"dist\MusicLibrary\MusicLibrary.exe" --worker --music-root "%CD%\tests\empty_music" --data-root "%CD%\tests\build_data" --scan-only --no-browser
+echo Checking bundled version...
+for /f "delims=" %%V in ('"dist\MusicLibrary\MusicLibrary.exe" --version') do set "BUNDLED_VERSION=%%V"
+if not "%BUNDLED_VERSION%"=="2.7.0" (
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.0".
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.0".>>"%BUILD_LOG%"
+  goto :error
+)
+
+echo Testing bundled executable with an empty library...
+if exist "tests\rc_empty_music" rmdir /s /q "tests\rc_empty_music"
+if exist "tests\rc_build_data" rmdir /s /q "tests\rc_build_data"
+mkdir "tests\rc_empty_music"
+"dist\MusicLibrary\MusicLibrary.exe" --worker --music-root "%CD%\tests\rc_empty_music" --data-root "%CD%\tests\rc_build_data" --scan-only --no-browser >>"%BUILD_LOG%" 2>&1
 if errorlevel 1 goto :error
+
+if not exist "tests\rc_build_data\library.db" (
+  echo ERROR: Bundled smoke test did not create library.db.
+  echo ERROR: Bundled smoke test did not create library.db.>>"%BUILD_LOG%"
+  goto :error
+)
 
 set "ISCC="
 for /f "delims=" %%I in ('where ISCC.exe 2^>nul') do if not defined ISCC set "ISCC=%%I"
@@ -79,31 +129,86 @@ if not defined ISCC if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" set
 if not defined ISCC if exist "%LOCALAPPDATA%\Programs\Inno Setup 7\ISCC.exe" set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 7\ISCC.exe"
 
 if not defined ISCC (
-  echo.
   echo ERROR: Inno Setup was not found.
-  echo Run 01_install_inno_setup.bat, then run this build again.
-if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
+  echo ERROR: Inno Setup was not found.>>"%BUILD_LOG%"
+  echo Run 01_install_inno_setup.bat first.
+  pause
   exit /b 2
 )
 
 echo Compiling Windows installer...
-"%ISCC%" /Qp "installer\MusicLibrary.iss"
+if exist "%INSTALLER%" del /q "%INSTALLER%"
+"%ISCC%" /Qp "installer\MusicLibrary.iss" >>"%BUILD_LOG%" 2>&1
 if errorlevel 1 goto :error
+
+if not exist "%INSTALLER%" (
+  echo ERROR: The v2.7.0 installer was not created.
+  echo ERROR: The v2.7.0 installer was not created.>>"%BUILD_LOG%"
+  goto :error
+)
+
+echo Calculating SHA-256...
+powershell.exe -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath '%INSTALLER%').Hash.ToLower(); Set-Content -LiteralPath '%HASH_FILE%' -Value ($h + '  MusicLibrary-Setup-2.7.0-x64.exe') -Encoding ascii; Write-Output $h" > "%TEMP%\music-library-v270-hash.txt"
+if errorlevel 1 goto :error
+set /p "INSTALLER_HASH="<"%TEMP%\music-library-v270-hash.txt"
+del /q "%TEMP%\music-library-v270-hash.txt" >nul 2>&1
+
+> "%BUILD_REPORT%" echo Music Library v2.7.0 RC2 Build Report
+>>"%BUILD_REPORT%" echo =======================================
+>>"%BUILD_REPORT%" echo Finished: %DATE% %TIME%
+>>"%BUILD_REPORT%" echo Installer: MusicLibrary-Setup-2.7.0-x64.exe
+>>"%BUILD_REPORT%" echo SHA256: %INSTALLER_HASH%
+>>"%BUILD_REPORT%" echo Bundled version: %BUNDLED_VERSION%
+>>"%BUILD_REPORT%" echo.
+>>"%BUILD_REPORT%" echo All source regression tests passed.
+>>"%BUILD_REPORT%" echo Bundled executable smoke test passed.
+>>"%BUILD_REPORT%" echo Inno Setup compilation passed.
+>>"%BUILD_REPORT%" echo.
+>>"%BUILD_REPORT%" echo This RC2 installer has not yet been installed on the live system.
+
+>>"%BUILD_LOG%" echo.
+>>"%BUILD_LOG%" echo BUILD COMPLETED
+>>"%BUILD_LOG%" echo Installer SHA256: %INSTALLER_HASH%
+>>"%BUILD_LOG%" echo Finished: %DATE% %TIME%
 
 echo.
 echo ============================================================
 echo BUILD COMPLETED
 echo ============================================================
-echo Installer output:
-echo %CD%\release
-
 echo.
-if not defined MUSIC_LIBRARY_AUTOMATED_BUILD start "" explorer.exe "%CD%\release"
-if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
+echo Installer:
+echo %INSTALLER%
+echo.
+echo SHA256:
+echo %INSTALLER_HASH%
+echo.
+echo IMPORTANT:
+echo Do not install this RC2 yet.
+echo Share BUILD_REPORT_v2.7.0_RC2.txt or the final screen first.
+echo.
+start "" explorer.exe "%CD%\release"
+pause
+exit /b 0
+
+:RUN_TEST
+set "TEST_FILE=%~1"
+set "TEST_NAME=%~2"
+echo [RUN] %TEST_NAME%
+>>"%BUILD_LOG%" echo [RUN] %TEST_NAME%
+python "%TEST_FILE%" >>"%BUILD_LOG%" 2>&1
+if errorlevel 1 (
+  echo [FAILED] %TEST_NAME%
+  >>"%BUILD_LOG%" echo [FAILED] %TEST_NAME%
+  exit /b 1
+)
+echo [PASS] %TEST_NAME%
+>>"%BUILD_LOG%" echo [PASS] %TEST_NAME%
 exit /b 0
 
 :error
 echo.
-echo BUILD FAILED. Review the messages above.
-if not defined MUSIC_LIBRARY_AUTOMATED_BUILD pause
+echo BUILD FAILED. Review:
+echo %BUILD_LOG%
+>>"%BUILD_LOG%" echo BUILD FAILED: %DATE% %TIME%
+pause
 exit /b 1

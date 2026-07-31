@@ -152,47 +152,48 @@ flowchart LR
 プロジェクト本体のライセンスは、GitHub公開者が選択してください。  
 同梱するMutagenのライセンスはアプリ本体の`vendor/MUTAGEN_LICENSE.txt`を参照し、公開リポジトリにも残してください。
 
-<!-- BEGIN WINDOWS-INSTALLER-V2.6.3 -->
+<!-- BEGIN WINDOWS-INSTALLER-V2.7.0 -->
 
 ## Windowsインストーラー版
 
 Windows 10・11（64bit）では、Pythonやコマンド操作なしで使えるWindowsインストーラー版を配布しています。
 
-### v2.6.3
+### v2.7.0
 
-v2.6.3は新機能を追加せず、v2.6.2の安定化を目的とした不具合修正版です。
+v2.7.0では、家族で同じ音楽ライブラリを利用しても、再生回数とお気に入りを利用者ごとに分けて保存できるようになりました。
 
-- 管理画面の起動状態確認URLを修正
-- 停止・終了時に発生する未定義変数エラーを修正
-- ブラウザ上の復旧案内を現行インストーラー版へ更新
-- Windowsの発行元表記を`k-systems202208`へ統一
-- 上記不具合の回帰テストを追加
+- ローカルPCの利用者をオーナーとして識別
+- Tailscale Serve経由の利用者をアカウント単位で識別
+- ローカルオーナーと本人のTailscaleアカウントを確認付きで関連付け
+- 利用者ごとの再生回数・最終再生日時・お気に入り
+- 「★ お気に入りのみ」による絞り込み
+- オーナー向けの利用者管理
+- 既存の共通状態をオーナーへ安全に移行
+- オーナー本人に既存のTailscale側データがある場合も統合
 
 ### ダウンロード
 
-1. [v2.6.3 Release](https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.6.3)を開く
-2. `MusicLibrary-Setup-2.6.3-x64.exe`をダウンロード
-3. インストーラーを実行
-4. 「自宅音楽ライブラリ」を起動
-5. 初回だけMP3フォルダを選択
+1. [v2.7.0 Release](https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.7.0)を開く
+2. `MusicLibrary-Setup-2.7.0-x64.exe`をダウンロード
+3. 自宅音楽ライブラリを停止
+4. インストーラーを実行
+5. 「自宅音楽ライブラリ」を起動
 
-v2.6.2以前をアンインストールせず、そのまま上書き更新できます。
+v2.6.3をアンインストールせず、そのまま上書き更新できます。
 
 ### 主な機能
 
 - MP3・ID3タグ・アートワークの読込み
 - 曲・アーティスト・アルバム検索
-- SQLiteによる再生回数・表記補正管理
+- SQLiteによる表記補正と利用者別状態管理
 - ブラウザ再生、シーク、シャッフル、リピート
-- Tailscale Serveによる外部接続設定
-- 外部URLの自動取得・保存
+- 利用者別の再生回数とお気に入り
+- Tailscale Serveによる外部接続
 - スタートメニュー登録とアンインストール
 
 ### 外出先から利用する
 
 管理画面の「外部接続をかんたん設定」を使用します。
-
-正常なURL：
 
 ```text
 https://PC名.tailnet名.ts.net/music-library-search.html
@@ -213,11 +214,11 @@ MP3：
 利用者が選択した既存フォルダ
 ```
 
-更新インストール後も、再生回数・表記補正・設定・外部URLは保持されます。
+更新インストール後も、library.db、再生回数、お気に入り、表記補正、設定、バックアップ、外部URLは保持されます。
 
 ### 注意
 
-- MP3音源、library.db、Tailscale認証情報は含まれません
+- MP3音源、library.db、Tailscale認証情報は配布物に含まれません
 - Setup.exeは未署名のため、SmartScreenの警告が出る場合があります
 - 自宅PCが停止またはスリープ中は外部利用できません
 
@@ -229,4 +230,4 @@ windows-installer\00_build_installer.bat
 
 をWindows上で実行するとSetup.exeを生成します。
 
-<!-- END WINDOWS-INSTALLER-V2.6.3 -->
+<!-- END WINDOWS-INSTALLER-V2.7.0 -->

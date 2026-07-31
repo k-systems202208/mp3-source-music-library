@@ -10,6 +10,9 @@ SRC = ROOT / "src"
 
 required = [
     SRC / "launcher.py",
+    SRC / "local_auth.py",
+    SRC / "tailscale_identity.py",
+    SRC / "owner_link.py",
     SRC / "remote_access.py",
     SRC / "paths.py",
     SRC / "database.py",
