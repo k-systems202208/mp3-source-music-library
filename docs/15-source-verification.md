@@ -1,67 +1,78 @@
 # 実装確認メモ
 
-このドキュメントは、次の実装パッケージを展開し、コードを確認して作成しています。
+この文書はv2.7.0の説明と実装の対応を示します。
 
-```text
-music_library_mp3_source_sqlite_api_v2_4_playback_modes.zip
-```
+## バージョン
 
-確認した主要ファイル:
+| 説明 | 根拠 |
+|---|---|
+| アプリ2.7.0 | `windows-installer/src/launcher.py`、`paths.py` |
+| サーバー2.7.0 | `server.py`の`server_version` |
+| schema 5 | `database.py`の`SCHEMA_VERSION` |
 
-- `README.txt`
-- `SQLITE-SCHEMA.txt`
-- `database.py`
-- `generate-library.py`
-- `serve-library.py`
-- `music-library-search.html`
-- `library-maintenance.py`
-- `start-music-library.bat`
+## 利用者識別
 
-## 実装コードを正とした事項
+| 説明 | ソース | テスト |
+|---|---|---|
+| ローカル一時トークン | `local_auth.py`、`launcher.py`、`server.py` | `test_local_owner_auth.py` |
+| Cookie12時間 | `local_auth.py`、`server.py` | `test_local_owner_auth.py` |
+| Tailscaleヘッダー | `tailscale_identity.py`、`server.py` | `test_tailscale_identity.py` |
+| Tailscale優先解決 | `server.py::_resolve_current_user` | Tailscale／local authテスト |
+| 匿名時に個人状態を保存しない | `database.py`、`server.py` | `test_user_playback_state.py`、`test_user_favorites.py` |
 
-- `database.py`の`SCHEMA_VERSION = 4`
-- APIサーバー識別子`MusicLibrary/SQLiteAPI2.4`
-- ページサイズ80、API上限200
-- SQLite WAL、busy timeout 30秒
-- Byte Range
-- v2.4の再生モード
-- TSOT／TSOP／TSOA
-- 静的公開禁止対象
+## DBと移行
 
-## 開発前史の確認資料
+| 説明 | ソース | テスト |
+|---|---|---|
+| `users`等の作成 | `database.py::SCHEMA_SQL` | `test_schema_v5_migration.py` |
+| オーナー1人 | 部分ユニーク索引＋検証 | `test_schema_v5_migration.py` |
+| 旧状態をオーナーへ移行 | `_migrate_legacy_user_state` | `test_schema_v5_migration.py` |
+| 移行前バックアップ | `create_pre_v27_migration_backup` | `test_schema_v5_migration.py` |
+| foreign key検査 | `_verify_schema_v5` | `test_schema_v5_migration.py` |
 
-現行チャット開始以前の作業記録として、利用者提供の`cloudeで実装.txt`を確認しました。
+## 個人状態
 
-同資料から反映した事項:
+| 説明 | ソース | テスト |
+|---|---|---|
+| 再生回数 | `record_user_playback` | `test_user_playback_state.py` |
+| お気に入り | `set_user_favorite` | `test_user_favorites.py` |
+| お気に入りのみ | `browse_library`／UI | `test_favorite_filter.py` |
+| 状態の疎化 | `set_user_favorite`の空行削除 | `test_user_favorites.py` |
 
-- iTunesエクスポートXMLを起点としたこと
-- 8,383曲
-- 完全静的・単一HTML・サーバー／DBなしの初期構成
-- カード目録デザイン
-- 曲名・アーティスト・アルバム・作曲者検索
-- ジャンル絞り込みと複数並べ替え
-- アルバム・アーティストのリンク絞り込み
-- フィルターチップ
-- ローマ字曲名を自動変換しない判断
-- 曲名・アーティストのlocalStorage補正
-- Google検索による正式表記確認
-- 英数字タイトル・訂正済みフィルター
-- 3ビュー、ドリルダウン、パンくず
-- JSON外部化要求
+## オーナー統合
 
-これらは現行仕様と混同しないよう、初期要件・開発履歴・要件トレーサビリティとして記載しました。
+| 説明 | ソース | テスト |
+|---|---|---|
+| コード状態機械 | `owner_link.py` | `test_owner_tailscale_link.py` |
+| 統合プレビュー | `get_owner_link_merge_preview` | 同上 |
+| 再生合算・お気に入りOR | `_merge_user_track_state_into_owner` | 同上 |
+| 評価競合停止 | 同上 | 同上 |
+| 関連付け前バックアップ | `create_pre_owner_link_backup` | 同上 |
+| 識別情報移動 | `link_tailscale_identity_to_owner` | 同上 |
 
-## 外部仕様の参照先
+## 利用者管理
 
-ネットワーク・Tailscale手順は、2026-07-19時点で次の公式文書を参照してください。
+| 説明 | ソース | テスト |
+|---|---|---|
+| 一覧 | `list_users_for_management`、`/api/users` | `test_user_management_ui.py` |
+| 停止・再開 | `set_user_active`、`/active` | `test_user_management_ui.py` |
+| ローカル限定 | `_require_local_owner` | 同上 |
+| オーナー停止不可 | `handle_user_active` | 同上 |
 
-- Tailscale Serve: https://tailscale.com/docs/features/tailscale-serve
-- Serve CLI: https://tailscale.com/docs/reference/tailscale-cli/serve
-- Invite external users: https://tailscale.com/docs/features/sharing/how-to/invite-any-user
-- Inviting vs sharing: https://tailscale.com/docs/reference/inviting-vs-sharing
-- Tailnet policy: https://tailscale.com/docs/features/tailnet-policy-file
-- Grants syntax: https://tailscale.com/docs/reference/syntax/grants
-- Microsoft Set-NetConnectionProfile: https://learn.microsoft.com/powershell/module/netconnection/set-netconnectionprofile
-- Microsoft New-NetFirewallRule: https://learn.microsoft.com/powershell/module/netsecurity/new-netfirewallrule
+## 既存機能
 
-外部サービスの画面・コマンド仕様は変更される可能性があります。公開後も参照日を明記し、定期的に更新してください。
+| 説明 | ソース／テスト |
+|---|---|
+| 検索・ページング | `database.py::browse_*`、`server.py` |
+| MP3走査・タグ | `generator.py` |
+| Range配信 | `server.py::send_head` |
+| ランチャー安定性 | `test_launcher_stability.py` |
+| Tailscale URL | `remote_access.py`、`test_remote_access.py`、`test_remote_entry_path.py` |
+| ブラウザ切断 | `test_client_disconnects.py` |
+
+## 文書化上の注意
+
+- `tracks`の旧共通状態列は残っていますが、v2.7.0の利用者状態の正本は`user_track_state`です。
+- 一般的なパスワードログインはありませんが、ローカル一時トークンとTailscaleによる利用者識別は実装済みです。
+- ratingはDB・移行・統合に存在しますが、v2.7.0の操作UIはありません。
+- 曲名・アーティスト補正APIは現行実装でオーナー限定ではありません。

@@ -1,233 +1,192 @@
-﻿# MP3 Source Music Library v2.4
+# MP3 Source Music Library v2.7.0
 
-手元のMP3ファイルを正本として、タグ・アートワーク・再生回数・表記補正をSQLiteで管理し、ブラウザから検索・再生する個人向け音楽ライブラリです。
+手元のMP3ファイルを音源の正本として、タグ・アートワーク・検索用メタデータ・利用者別の再生状態をSQLiteで管理し、Windows PC・スマートフォン・タブレットのブラウザから検索・再生する個人／家庭向け音楽ライブラリです。
 
-> 対象実装: `MP3正本・SQLite API v2.4`  
-> DBスキーマ: version 4  
-> ドキュメント更新日: 2026-07-19
+> 製品バージョン: `2.7.0`<br>
+> DBスキーマ: `5`<br>
+> 対応OS: Windows 10／11 64bit<br>
+> ドキュメント更新日: 2026-08-01
 
+## v2.7.0の主な内容
+
+v2.7.0では、従来はライブラリ全体で共有していた再生回数・最終再生日時・お気に入りを、利用者ごとの状態として保存できるようになりました。
+
+- 自宅PCの管理画面から開いたブラウザをローカルオーナーとして識別
+- Tailscale Serveが付与するログイン情報で外部利用者を識別
+- 現在の利用者を画面右上へ表示
+- 利用者ごとの再生回数・最終再生日時
+- 利用者ごとのお気に入り
+- 「★ お気に入りのみ」による絞り込み
+- ローカルオーナーと本人のTailscaleプロフィールを確認付きで関連付け
+- 関連付け時に双方の個人状態を安全に統合
+- オーナー向け利用者一覧と、非オーナー利用者の利用停止・再開
+- v2.6.3以前の共通状態をオーナーへ移行するDBスキーマ5
 
 ## プロジェクトの起点
 
-このプロジェクトは、**iTunesからエクスポートしたXMLに含まれる8,383曲を、費用をかけずに検索する完全静的Webアプリ**として始まりました。
+このプロジェクトは、iTunesからエクスポートしたXMLに含まれる8,383曲を、費用をかけずに検索する完全静的Webアプリとして始まりました。
 
-最初はXMLをJSONへ変換し、単一HTMLへ埋め込んでブラウザだけで検索していました。その後、外部JSON化、MP3再生、アートワーク、MP3正本化、SQLite API、スマホ・Tailscale利用へ段階的に発展しています。
-
-初期段階から引き継いでいるもの:
-
-- 図書館のカード目録をモチーフにしたUI
-- 曲・アーティスト・アルバムの3ビュー
-- アーティスト→アルバム→曲のドリルダウン
-- パンくずリスト
-- 英数字タイトル・訂正済みの絞り込み
-- 自動変換ではなく確認可能な手動表記補正
-- Google検索による正式表記確認
-- 可能な限り外部の有料サーバーを使わない方針
-
-詳細は[プロジェクトの起点と初期要件](docs/00-project-origin-and-requirements.md)を参照してください。
+その後、外部JSON化、MP3再生、アートワーク、MP3正本化、SQLite API、Windowsインストーラー、LAN利用、Tailscale利用、利用者別状態へ段階的に発展しています。詳細は[プロジェクトの起点と初期要件](docs/00-project-origin-and-requirements.md)を参照してください。
 
 ## 主な特徴
 
 - `Music`フォルダ内の物理MP3ファイル1つを1曲として登録
 - ID3タグ、ファイル名、フォルダ名からメタデータを生成
 - UTF-8／UTF-16／CP932／Latin-1由来の文字化けを補正
-- SQLiteで検索・集計・80件単位のページ取得
+- SQLiteによる検索・集計・80件単位のページ取得
 - 曲名、アーティスト、アルバム、作曲者の検索
+- 曲・アーティスト・アルバムの3ビューとドリルダウン
 - アルファベット索引、五十音索引、漢字・その他分類
+- 曲名・アーティスト名の手動表記補正
 - アートワーク表示と最大化プレーヤー
 - シャッフル、全体リピート、1曲リピート
-- 再生回数と最終再生日時の永続化
-- 曲名・アーティスト名の表記補正
+- MP3のByte Range配信とシーク
 - MP3の移動・改名検出
-- 同一Wi-FiおよびTailscale経由でスマホ・タブレットから利用可能
-- MP3を再エンコードせず配信するため、サーバー処理による音質劣化なし
+- 利用者別の再生回数・最終再生日時・お気に入り
+- 同一Wi-FiおよびTailscale経由で利用可能
+- MP3を再エンコードせず配信するため、サーバー処理による音質変換なし
+- WindowsインストーラーとGUI管理画面
 
 ## システム全体像
 
 ```mermaid
 flowchart LR
-    MP3["Musicフォルダ<br>MP3・画像"] --> GEN["generate-library.py<br>走査・タグ解析"]
-    LEGACY["legacy-library-data.json<br>初回移行用"] -. 高確度一致時のみ .-> GEN
-    GEN --> DB[("library.db<br>SQLite正本")]
-    GEN --> ART[".artwork-cache<br>埋め込み画像"]
-    GEN --> DIAG["診断JSON / CSV"]
-    DB --> API["serve-library.py<br>SQLite API"]
-    ART --> API
-    MP3 --> API
-    API --> UI["music-library-search.html"]
-    UI --> PC["PCブラウザ"]
+    MP3["選択した音楽フォルダ<br>MP3・画像"] --> SCAN["generator.py<br>走査・タグ解析"]
+    LEGACY["legacy-library-data.json<br>旧状態の初回移行補助"] -. 高確度一致時のみ .-> SCAN
+    SCAN --> DB[("library.db<br>SQLite・schema 5")]
+    SCAN --> ART[".artwork-cache<br>埋め込み画像"]
+    SCAN --> DIAG["library-diagnostics<br>JSON / CSV"]
+    DB --> SERVER["server.py<br>検索・状態・管理API"]
+    MP3 --> SERVER
+    ART --> SERVER
+    SERVER --> UI["music-library-search.html"]
+    LAUNCHER["launcher.py<br>Windows管理画面"] --> SERVER
+    LAUNCHER --> LOCAL["ローカルオーナー<br>一時トークン→Cookie"]
+    TS["Tailscale Serve<br>利用者ヘッダー"] --> SERVER
+    UI --> PC["自宅PC"]
     UI --> LAN["同一Wi-Fi端末"]
-    UI --> TS["Tailscale端末"]
+    UI --> REMOTE["Tailscale端末"]
 ```
 
 ## 正本の定義
 
 | 対象 | 正本 |
 |---|---|
-| 音声データ・曲の存在 | `Music`フォルダ内のMP3 |
-| 曲情報・再生回数・補正・スキャン履歴 | `library.db` |
+| 音声データ・曲の存在 | 利用者が選択した音楽フォルダ内のMP3 |
+| 曲・アーティスト・アルバム情報 | `library.db` |
+| 利用者別の再生回数・最終再生日時・お気に入り・評価 | `library.db` の `user_track_state` |
+| 曲名・アーティスト名の表記補正 | `library.db` |
+| 利用者・Tailscale識別情報 | `library.db` の `users`／`user_identities` |
 | 埋め込みアートワークの展開物 | `.artwork-cache` |
 | 旧システムの再生回数・追加日 | `legacy-library-data.json`（初回登録時の補助のみ） |
+
+## インストールと起動
+
+1. GitHub Releasesから`MusicLibrary-Setup-2.7.0-x64.exe`を取得します。
+2. 旧版がインストール済みでも、通常はアンインストールせず上書きします。
+3. スタートメニューの「自宅音楽ライブラリ」を開きます。
+4. MP3が保存されているフォルダを選択します。
+5. 「ライブラリを開始」を押します。
+6. 自動で開いたブラウザから検索・再生します。
+
+利用者データはインストール先とは別の次の場所へ保存されます。
+
+```text
+%LOCALAPPDATA%\MusicLibrary
+```
+
+詳細は[利用マニュアル](docs/06-user-manual.md)を参照してください。
+
+## 利用者の識別
+
+このアプリは一般的なID・パスワード方式のログイン画面を持ちません。代わりに、接続経路に応じて次の方法で利用者を識別します。
+
+| 接続 | 識別方法 | 個人状態の保存 |
+|---|---|---|
+| 管理画面から開いた自宅PC | 管理画面が発行する短時間の一時トークンをCookieへ交換 | オーナーへ保存 |
+| Tailscale Serve | Tailscaleがlocalhostバックエンドへ付与する利用者ヘッダー | Tailscale利用者へ保存 |
+| 識別できない接続 | 匿名 | 検索・再生は可能、個人状態は保存しない |
+
+ローカルオーナーと本人のTailscaleアカウントは、画面上で一時コードを発行し、本人確認後に関連付けます。自動で家族をオーナーへ昇格させることはありません。
+
+## セキュリティ上の位置づけ
+
+- サーバー本体は`127.0.0.1`へバインドし、Tailscale Serveが外部接続を中継
+- ルーターのポート開放、DMZ、Tailscale Funnelは使用しない
+- Tailscale利用者ヘッダーは、localhostへ接続するTailscale Serveから渡された場合だけ信頼
+- ローカルオーナー用Cookieは`HttpOnly`、`SameSite=Strict`、有効期限12時間
+- オーナー関連付けコードは短時間だけ有効で、ローカルオーナーの明示承認が必要
+- オーナーは利用停止にできない
+- 利用者の停止・再開はローカルオーナーだけが実行可能
+- MP3、DB、診断ファイル、個人のTailscale情報をGitHubへ含めない
+
+詳細は[運用・セキュリティ設計](docs/07-operations-security.md)を参照してください。
 
 ## ドキュメント
 
 | 文書 | 内容 |
 |---|---|
-| [文書一覧](docs/00-document-index.md) | 読む順番と対象読者 |
+| [文書一覧](docs/00-document-index.md) | 読む順番、対象読者、v2.7.0更新範囲 |
 | [プロジェクトの起点と初期要件](docs/00-project-origin-and-requirements.md) | iTunes XML版からの開発起点 |
-| [アーキテクチャ構成](docs/01-architecture.md) | 全体構成、配置方式、処理シーケンス |
+| [アーキテクチャ構成](docs/01-architecture.md) | 配置、起動、走査、利用者識別、状態保存 |
 | [アプリ仕様書](docs/02-application-specification.md) | 機能・非機能・制約 |
-| [アプリ詳細設計書](docs/03-detailed-design.md) | モジュール、検索、再生、タグ解析、障害処理 |
-| [APIリファレンス](docs/04-api-reference.md) | HTTP APIとレスポンス |
-| [データベース設計書](docs/05-database-design.md) | SQLiteテーブル・項目・制約 |
-| [利用マニュアル](docs/06-user-manual.md) | PC、LAN、Tailscaleでの利用方法 |
-| [運用・セキュリティ設計](docs/07-operations-security.md) | バックアップ、公開範囲、アクセス制御 |
-| [トラブルシューティング](docs/08-troubleshooting.md) | よくあるエラーと切り分け |
-| [テスト計画書](docs/09-test-plan.md) | 回帰試験・受入試験 |
-| [変更履歴](docs/10-changelog.md) | JSON版からv2.4までの経緯 |
-| [GitHub公開ガイド](docs/11-github-publishing-guide.md) | 公開対象、除外対象、Release作成 |
-| [note投稿原稿](docs/12-note-article.md) | noteへ貼り付けられる記事案 |
-| [ロードマップ](docs/13-roadmap.md) | 今後の拡張候補 |
-| [用語集](docs/14-glossary.md) | 用語の意味 |
-| [要件トレーサビリティ](docs/16-requirements-traceability.md) | 初期要件と現行機能の対応 |
-| [UI／UX設計の変遷](docs/17-ui-ux-design-history.md) | カード目録、補正、ドリルダウンの経緯 |
-| [実装確認メモ](docs/15-source-verification.md) | 対象ソースと公式参照先 |
-| [第三者ライセンス](docs/THIRD_PARTY_NOTICES.md) | Mutagen等の扱い |
+| [アプリ詳細設計書](docs/03-detailed-design.md) | モジュールと処理詳細 |
+| [APIリファレンス](docs/04-api-reference.md) | HTTP API、権限、入出力 |
+| [データベース設計書](docs/05-database-design.md) | schema 5、テーブル、移行・統合 |
+| [利用マニュアル](docs/06-user-manual.md) | インストール、利用者、Tailscale、更新 |
+| [運用・セキュリティ設計](docs/07-operations-security.md) | バックアップ、権限、公開範囲 |
+| [トラブルシューティング](docs/08-troubleshooting.md) | 起動・外部接続・長いパス等 |
+| [テスト計画書](docs/09-test-plan.md) | 自動テスト・実機受入試験 |
+| [変更履歴](docs/10-changelog.md) | 初期版からv2.7.0まで |
+| [GitHub公開ガイド](docs/11-github-publishing-guide.md) | 公開対象、除外、Release運用 |
+| [note投稿原稿](docs/12-note-article.md) | v2.7.0追補記事案 |
+| [ロードマップ](docs/13-roadmap.md) | 完了項目と今後の候補 |
+| [用語集](docs/14-glossary.md) | schema 5・利用者識別を含む用語 |
+| [実装確認メモ](docs/15-source-verification.md) | 文書とソース／テストの対応 |
+| [要件トレーサビリティ](docs/16-requirements-traceability.md) | 要件と実装・試験の対応 |
+| [UI／UX設計の変遷](docs/17-ui-ux-design-history.md) | カード目録から利用者UIまで |
+| [第三者ライセンス](docs/THIRD_PARTY_NOTICES.md) | 同梱ライブラリの通知 |
 
-## クイックスタート
+## GitHubへ公開しないもの
 
-1. WindowsへPython 3をインストールします。
-2. アプリを展開します。
-3. `Music`フォルダへMP3を配置します。
-4. `start-music-library.bat`を実行します。
-5. 自動で開いたブラウザから検索・再生します。
-6. 使用中は黒いコンソール画面を閉じないでください。
-
-## GitHubへ公開する前の重要事項
-
-次のファイルやフォルダは公開しないでください。
-
-- MP3ファイル
+- MP3／音源ファイル
 - `library.db`、`library.db-wal`、`library.db-shm`
 - `.artwork-cache`
-- `Backups`
-- `Exports`
+- `Backups`、`Exports`、`Logs`
+- `config.json`、`remote-url.txt`
 - `legacy-library-data.json`
 - `library-diagnostics.json`、`library-diagnostics.csv`
-- 個人のIPアドレス、Tailscale名、メールアドレスが写った画像
-
-同梱の[`.gitignore`](.gitignore)を利用してください。
-
-## セキュリティ上の位置づけ
-
-アプリ自体にはログイン認証がありません。
-
-- 初期状態は`127.0.0.1`のみで待ち受け、PC内利用に限定
-- 同一Wi-Fiへ公開する場合はWindowsファイアウォールで接続元を制限
-- 外出先利用はTailscale Serveを推奨
-- ルーターのポート開放、DMZ、Tailscale Funnelは使用しない
-- 外部ユーザーをtailnetへ招待する場合は、音楽サーバーだけへ制限するアクセス制御を推奨
+- 実際のTailscaleログイン名、表示名、プロフィール画像URL
+- IPアドレス、メールアドレス、関連付けコード、Cookieが写った画像
 
 ## 対応範囲と制限
 
 ### 実装済み
 
-- Windows上のMP3ライブラリ
-- SQLite API検索
+- Windows上のMP3ライブラリとGUI管理画面
+- SQLite API検索・ドリルダウン
 - PC／スマホ／タブレットのブラウザ再生
-- 同一Wi-Fi・Tailscale経由
-- 複数端末による別曲の同時再生
+- 同一Wi-Fi・Tailscale Serve経由の利用
+- Tailscale単位の利用者識別
+- 利用者別の再生回数・最終再生日時・お気に入り
+- ローカルオーナーと本人Tailscaleプロフィールの関連付け・状態統合
+- オーナー向け利用者管理
 
-### 未実装
+### 未実装・対象外
 
-- アプリ独自のユーザー認証
-- ユーザー別の再生回数・設定・プレイリスト
-- FLAC／AAC等の走査
+- アプリ独自のパスワード認証、パスワード再発行
+- プレイリスト
+- 評価を操作するUI（DB項目と統合ロジックは存在）
+- FLAC／AAC等のライブラリ走査
 - PWAオフライン再生
 - サーバー側トランスコード
 - 公開インターネット向け運用
+- Windowsサービスとしての常駐
+
+## 既知の注意点
+
+Windowsの長いパスが無効な環境では、フルパスが約260文字以上になるMP3が`FileNotFoundError`として診断される場合があります。音楽フォルダを浅い場所へ移す、フォルダ名を短くする、またはWindowsの長いパス設定を確認してください。
 
 ## ライセンス
 
-プロジェクト本体のライセンスは、GitHub公開者が選択してください。  
-同梱するMutagenのライセンスはアプリ本体の`vendor/MUTAGEN_LICENSE.txt`を参照し、公開リポジトリにも残してください。
-
-<!-- BEGIN WINDOWS-INSTALLER-V2.7.0 -->
-
-## Windowsインストーラー版
-
-Windows 10・11（64bit）では、Pythonやコマンド操作なしで使えるWindowsインストーラー版を配布しています。
-
-### v2.7.0
-
-v2.7.0では、家族で同じ音楽ライブラリを利用しても、再生回数とお気に入りを利用者ごとに分けて保存できるようになりました。
-
-- ローカルPCの利用者をオーナーとして識別
-- Tailscale Serve経由の利用者をアカウント単位で識別
-- ローカルオーナーと本人のTailscaleアカウントを確認付きで関連付け
-- 利用者ごとの再生回数・最終再生日時・お気に入り
-- 「★ お気に入りのみ」による絞り込み
-- オーナー向けの利用者管理
-- 既存の共通状態をオーナーへ安全に移行
-- オーナー本人に既存のTailscale側データがある場合も統合
-
-### ダウンロード
-
-1. [v2.7.0 Release](https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.7.0)を開く
-2. `MusicLibrary-Setup-2.7.0-x64.exe`をダウンロード
-3. 自宅音楽ライブラリを停止
-4. インストーラーを実行
-5. 「自宅音楽ライブラリ」を起動
-
-v2.6.3をアンインストールせず、そのまま上書き更新できます。
-
-### 主な機能
-
-- MP3・ID3タグ・アートワークの読込み
-- 曲・アーティスト・アルバム検索
-- SQLiteによる表記補正と利用者別状態管理
-- ブラウザ再生、シーク、シャッフル、リピート
-- 利用者別の再生回数とお気に入り
-- Tailscale Serveによる外部接続
-- スタートメニュー登録とアンインストール
-
-### 外出先から利用する
-
-管理画面の「外部接続をかんたん設定」を使用します。
-
-```text
-https://PC名.tailnet名.ts.net/music-library-search.html
-```
-
-ルーターのポート開放やTailscale Funnelは使用しません。
-
-### データ保存場所
-
-```text
-アプリ本体：
-%LOCALAPPDATA%\Programs\MusicLibrary
-
-管理データ：
-%LOCALAPPDATA%\MusicLibrary
-
-MP3：
-利用者が選択した既存フォルダ
-```
-
-更新インストール後も、library.db、再生回数、お気に入り、表記補正、設定、バックアップ、外部URLは保持されます。
-
-### 注意
-
-- MP3音源、library.db、Tailscale認証情報は配布物に含まれません
-- Setup.exeは未署名のため、SmartScreenの警告が出る場合があります
-- 自宅PCが停止またはスリープ中は外部利用できません
-
-### 開発者向け
-
-```text
-windows-installer\00_build_installer.bat
-```
-
-をWindows上で実行するとSetup.exeを生成します。
-
-<!-- END WINDOWS-INSTALLER-V2.7.0 -->
+プロジェクト本体のライセンスはリポジトリのライセンスファイルを確認してください。同梱する第三者コードの通知は[THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)および`windows-installer/src/vendor/MUTAGEN_LICENSE.txt`を参照してください。

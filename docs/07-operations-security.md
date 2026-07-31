@@ -1,206 +1,130 @@
 # 運用・セキュリティ設計
 
-## 1. 基本方針
+## 1. 保護対象
 
-アプリに独自ログインはありません。次の層で保護します。
+- MP3音源
+- `library.db`
+- 利用者別再生状態
+- 曲名・アーティスト名補正
+- Tailscaleログイン名・表示名・プロフィールURL
+- 外部接続URL
+- バックアップ・診断・ログ
+
+## 2. 信頼境界
+
+### ローカル管理画面
+
+ランチャーはサーバーと制御秘密を共有し、一時トークンを登録します。ブラウザは短時間だけ有効な一時トークンをCookieへ交換します。単にlocalhost URLを知っているだけではローカルオーナーになりません。
+
+### Tailscale Serve
+
+サーバーはlocalhostへバインドし、Tailscale Serveから渡された利用者ヘッダーを使用します。利用者がブラウザから直接送った同名ヘッダーを一般公開サーバーで信頼する設計ではありません。
+
+### 匿名
+
+識別不能な接続は閲覧・再生に限定し、個人状態を保存しません。
+
+## 3. Cookie
 
 ```text
-アプリの静的公開制限
-＋ Windowsファイアウォール
-＋ Tailscale参加者管理
-＋ Tailscaleアクセス制御
-＋ 運用ルール
+music_library_owner_session
+Path=/
+HttpOnly
+SameSite=Strict
+Max-Age=43200
 ```
 
-## 2. 公開方式
+HTTPS属性はlocalhostのHTTP運用との互換上付与していません。外部接続はTailscale ServeのHTTPSを使用しますが、Tailscale利用者はヘッダーで識別します。
 
-| 方式 | 公開範囲 | 推奨 |
-|---|---|---|
-| 127.0.0.1 | PC自身 | 通常 |
-| 0.0.0.0 + Firewall | 同一LAN | 家庭内 |
-| Tailscale Serve | tailnet | 外出先 |
-| ルーターポート開放 | Internet | 禁止 |
-| Tailscale Funnel | Internet | 禁止 |
+## 4. オーナー関連付け
 
-## 3. 守る対象
+- コードは十分な乱数長を持つ
+- DBへ平文保存しないサーバーメモリ上の一時状態
+- 既定5分で期限切れ
+- Tailscale利用者本人だけclaim可能
+- ローカルオーナーだけ承認可能
+- 候補のIDとsubjectを承認時に再照合
+- 評価競合時は自動判断しない
+- 処理前バックアップ
+- 統合・識別移動・候補削除を1トランザクション
 
-- MP3
-- ライブラリ構成
-- 再生履歴・補正
-- ファイルパス
-- Tailscale参加情報
-- メール・端末名
+## 5. 利用者管理
 
-## 4. LAN
+- オーナーは1人
+- オーナーは停止不可
+- 状態変更はローカルオーナー限定
+- Tailscale経由オーナーは一覧閲覧だけ
+- 完全削除ではなく停止を基本とする
 
-- 自宅Wi-Fiのみ
-- TCP 8765のみ
-- `LocalSubnet4`
-- Private優先
-- Publicルールは必要時のみ
-- 公共・ゲストWi-Fiで起動しない
+停止された利用者の既存状態は保持し、再開時に再利用できます。
 
-Group PolicyでPrivateへ変更できない場合、Publicルールが他のPublicネットワークでも適用され得ます。使用後はDisableしてください。
+## 6. ネットワーク
 
-## 5. Tailscale
+推奨:
 
-### Serve
-
-```powershell
-tailscale serve --bg 8765
-tailscale serve status
-tailscale serve reset
+```text
+ブラウザ → Tailscale → Tailscale Serve → 127.0.0.1:8765
 ```
 
-### Funnel禁止
+禁止／非推奨:
 
-Funnelは公開インターネットから接続可能にします。本アプリは認証がないため使用しません。
+- ルーターのポート開放
+- DMZ
+- Tailscale Funnel
+- 接続URLの一般公開
+- Tailscaleアカウントのパスワード共有
 
-### 外部招待
+家族は個別のTailscaleアカウントを使用します。
 
-`Invite external users`で参加したMemberはアクセス制御に従います。allow-allが残る場合、音楽PC以外へ接続できる可能性があります。
+## 7. HTTP防御
 
-## 6. Tailscale Grants最小権限例
-
-> メールとIPを置換し、Preview changesと接続試験を行ってください。  
-> 既存のallow-all grantが残っていると、下の制限を追加しても広い許可が有効です。
-
-```hujson
-{
-  "groups": {
-    "group:music-users": [
-      "family1@example.com",
-      "family2@example.com",
-    ],
-  },
-
-  "hosts": {
-    "music-server": "100.100.100.100",
-  },
-
-  "grants": [
-    {
-      "src": ["group:music-users"],
-      "dst": ["music-server"],
-      "ip": ["tcp:443"],
-    },
-  ],
-}
-```
-
-Tailscale Serveの利用者側はHTTPS 443です。ローカル8765はPC内の転送先です。
-
-管理者例:
-
-```hujson
-{
-  "grants": [
-    {
-      "src": ["owner@example.com"],
-      "dst": ["*"],
-      "ip": ["*"],
-    },
-    {
-      "src": ["group:music-users"],
-      "dst": ["music-server"],
-      "ip": ["tcp:443"],
-    },
-  ],
-}
-```
-
-### 適用
-
-1. Access controlsを開く
-2. 現ポリシーをバックアップ
-3. 正式ログイン名を確認
-4. 音楽PCのTailscale IPv4を確認
-5. Grants編集
-6. Preview
-7. 保存
-8. 音楽URLへ接続
-9. 他PCへの接続が拒否されることを確認
-
-## 7. アプリ内防御
-
-実装済み:
-
-- DB、Python、BAT取得拒否
-- Backups、Exports取得拒否
-- no-store
-- nosniff
-- same-origin referrer
-- POSTサイズ制限
-- SQLバインド
-
-未実装:
-
-- 認証
-- CSRF
-- 更新者記録
-- 権限分離
-- 補正監査ログ
-- レート制限
-
-接続できる利用者は検索・再生・補正ができます。
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: same-origin`
+- API／HTML／JSONは`no-store`
+- DB・WAL・SHM・旧JSON・ソース名を静的配信から遮断
+- メディアパスを許可ルート内へ限定
+- POST本文を完全に読み取ってから権限判定し、Windowsの接続リセットを抑制
 
 ## 8. バックアップ
 
-最低限:
+| 種別 | タイミング | 例 |
+|---|---|---|
+| 日次 | 起動時、当日未作成 | `library-20260801.db` |
+| schema 5移行前 | v2.7.0初回初期化 | `library-pre-v2.7.0-...db` |
+| オーナー関連付け前 | 承認直前 | `library-pre-owner-link-...db` |
+| 手動 | 利用者操作／保守 | 任意 |
 
-- `Music`: 別媒体
-- `library.db`: 日次＋手動
-- ソース: GitHubまたはZIP
-- `.artwork-cache`: 再生成可能
+バックアップは別媒体へ定期コピーすることを推奨します。
 
-重要音源は3-2-1を検討してください。
+## 9. GitHub公開
 
-## 9. 復旧
+公開しない:
 
-1. サーバー停止
-2. 障害DB、WAL、SHMを退避
-3. バックアップをlibrary.dbへ
-4. `check`
-5. 起動
-6. 曲数・再生回数・補正確認
-7. MP3と再同期
+- 音源
+- 実DBとWAL／SHM
+- 利用者データディレクトリ
+- 診断、ログ、バックアップ、設定、外部URL
+- 実利用者名・メール・プロフィールURL
+- 関連付けコード、Cookie、制御秘密
 
-## 10. 更新
+スクリーンショットはダミー利用者・ダミー曲で撮影します。
 
-1. サーバー停止
-2. 手動バックアップ
-3. 旧フォルダ退避
-4. プログラムだけ上書き
-5. Music、DB、cache、Backups維持
-6. 起動
-7. 回帰試験
+## 10. インシデント対応
 
-## 11. 診断の機密性
+### 関連付け先を誤った疑い
 
-診断にはファイル名・フォルダ構成が含まれます。公開Issueへ添付する場合は匿名化します。
+1. ライブラリを停止
+2. `library-pre-owner-link-*.db`を保全
+3. 現在の`library.db`も別名コピー
+4. 操作を続けず差分確認
 
-スクリーンショットで隠すもの:
+### DB移行失敗
 
-- Windowsユーザー名
-- フルパス
-- IP
-- tailnet名
-- メール
-- 端末名
+1. 起動を繰り返さない
+2. `library-pre-v2.7.0-*.db`を保全
+3. エラー画面、Logs、診断を保存
+4. バックアップ復元は確認後に行う
 
-## 12. 著作権
+### Tailscale URL漏えい
 
-- MP3をGitHubへ含めない
-- 実アートワークを含めない
-- 誰でも接続できる形で公開しない
-- 適法に保有する音源を対象にする
-
-## 13. 日常チェック
-
-- 不要なLAN公開がない
-- Serveがtailnet内だけ
-- Funnel無効
-- 不要ユーザー削除
-- バックアップあり
-- 診断エラー増加なし
-- GitHubにprivate dataなし
+URLだけではTailscale認証を通過できませんが、公開情報から削除し、tailnet共有・Grants・端末一覧を確認します。

@@ -4,247 +4,160 @@
 
 | 項目 | 内容 |
 |---|---|
-| DBMS | SQLite |
-| ファイル | `library.db` |
-| スキーマバージョン | 4 |
-| Journal | WAL |
+| ファイル | `%LOCALAPPDATA%\MusicLibrary\library.db` |
+| エンジン | SQLite |
+| 現行スキーマ | 5 |
 | 外部キー | 有効 |
-| busy timeout | 30秒 |
-| 日時 | タイムゾーン付きISO 8601文字列 |
+| 更新方式 | トランザクション |
 
-## 2. ER概要
+## 2. テーブル一覧
 
-```mermaid
-erDiagram
-    ARTISTS ||--o{ TRACKS : "artist_id"
-    ALBUMS ||--o{ TRACKS : "album_id"
-    ARTWORKS ||--o{ TRACKS : "artwork_id"
-    ARTWORKS ||--o{ ALBUMS : "artwork_id"
-    SCAN_RUNS ||--o{ SCAN_ERRORS : "scan_run_id"
-```
+| テーブル | 用途 |
+|---|---|
+| `schema_info` | schemaバージョン、オーナーID、移行完了フラグ |
+| `artists` | アーティスト正規化・表示補正 |
+| `albums` | アルバム正規化・年・アートワーク |
+| `artworks` | 埋め込み／外部画像の索引 |
+| `tracks` | MP3メタデータ、存在、旧共通状態、補正 |
+| `users` | 利用者プロフィール、オーナー、有効状態 |
+| `user_identities` | ローカル／Tailscale識別情報 |
+| `user_track_state` | 利用者別状態 |
+| `scan_runs` | 走査単位の集計 |
+| `scan_errors` | 走査エラー |
 
-## 3. schema_info
+## 3. `users`
 
-| 列 | 型 | 制約 | 内容 |
-|---|---|---|---|
-| key | TEXT | PK | 設定キー |
-| value | TEXT | NOT NULL | 値 |
+| 列 | 内容 |
+|---|---|
+| `id` | `usr_...`形式の内部ID |
+| `display_name` | UI表示名 |
+| `is_owner` | 0／1。部分ユニーク索引で1人だけ |
+| `is_active` | 停止・再開 |
+| `created_at`／`updated_at` | UTC ISO日時 |
+| `last_seen_at` | 最終識別日時 |
 
-主なキー:
+`idx_users_single_owner`により`is_owner=1`は最大1行です。
 
-- `schema_version`
-- `created_by`
-- `catalog_sort_tags_backfilled`
-- `track_sort_tags_backfilled`
+## 4. `user_identities`
 
-## 4. artists
+| 列 | 内容 |
+|---|---|
+| `id` | 安定キー |
+| `user_id` | `users.id` |
+| `provider` | `local_owner`または`tailscale` |
+| `subject` | provider内の安定識別子 |
+| `provider_display_name` | providerから得た表示用情報 |
+| `profile_picture_url` | 検証済みURL |
+| `created_at`／`last_seen_at` | 監査用日時 |
 
-| 列 | 型 | 制約 | 内容 |
-|---|---|---|---|
-| id | TEXT | PK | 安定ID |
-| name | TEXT | NOT NULL | 元タグ名 |
-| normalized_name | TEXT | NOT NULL, UNIQUE | 検索・同一判定 |
-| sort_name | TEXT | NOT NULL | TSOP |
-| display_name_override | TEXT | NULL可 | UI補正 |
-| created_at | TEXT | NOT NULL | 作成日時 |
-| updated_at | TEXT | NOT NULL | 更新日時 |
+`UNIQUE(provider, subject)`により同じTailscaleログインを複数利用者へ割り当てません。
 
-## 5. artworks
-
-画像本体はDBへ格納しません。
-
-| 列 | 型 | 制約 | 内容 |
-|---|---|---|---|
-| id | TEXT | PK | 安定ID |
-| relative_path | TEXT | NOT NULL, UNIQUE | 相対パス |
-| source_type | TEXT | NOT NULL | embedded / external |
-| source_mp3_path | TEXT | NOT NULL | 埋め込み元 |
-| mime_type | TEXT | NOT NULL | MIME |
-| file_hash | TEXT | NOT NULL | SHA-256 |
-| created_at | TEXT | NOT NULL | 作成日時 |
-| updated_at | TEXT | NOT NULL | 更新日時 |
-
-## 6. albums
-
-| 列 | 型 | 制約 | 内容 |
-|---|---|---|---|
-| id | TEXT | PK | 安定ID |
-| title | TEXT | NOT NULL | アルバム名 |
-| normalized_title | TEXT | NOT NULL | 正規化名 |
-| album_artist | TEXT | NOT NULL | TPE2または曲アーティスト |
-| normalized_album_artist | TEXT | NOT NULL | 同一判定 |
-| sort_title | TEXT | NOT NULL | TSOA |
-| year | INTEGER | NULL可 | 年 |
-| artwork_id | TEXT | FK | 代表画像 |
-| created_at | TEXT | NOT NULL | 作成日時 |
-| updated_at | TEXT | NOT NULL | 更新日時 |
-
-一意制約:
+ローカルオーナー識別:
 
 ```text
-(normalized_title, normalized_album_artist)
+provider = local_owner
+subject  = local-owner
 ```
 
-## 7. tracks
+## 5. `user_track_state`
 
-物理MP3ファイル1つにつき1行です。
-
-### 識別・パス
-
-| 列 | 型 | 制約 | 内容 |
-|---|---|---|---|
-| id | TEXT | PK | 曲ID |
-| relative_path | TEXT | NOT NULL, UNIQUE | 相対パス |
-| filename | TEXT | NOT NULL | ファイル名 |
-| audio_file | TEXT | NOT NULL | 配信用パス |
-
-### メタデータ
-
-| 列 | 型 | 内容 |
-|---|---|---|
-| title | TEXT | 元曲名 |
-| normalized_title | TEXT | 正規化曲名 |
-| sort_title | TEXT | TSOT |
-| artist_id | TEXT FK | アーティスト |
-| album_id | TEXT FK | アルバム |
-| album_artist | TEXT | アルバムアーティスト |
-| genre | TEXT | ジャンル |
-| composer | TEXT | 作曲者 |
-| year | INTEGER | 年 |
-| duration_ms | INTEGER | ミリ秒 |
-| track_number | INTEGER | トラック番号 |
-| disc_number | INTEGER | ディスク番号 |
-| kind | TEXT | 種別表示 |
-
-### ファイル状態
-
-| 列 | 型 | 内容 |
-|---|---|---|
-| file_size | INTEGER | バイト |
-| modified_time_ns | INTEGER | 更新日時ns |
-| content_signature | TEXT | 移動検出署名 |
-| artwork_id | TEXT FK | 画像 |
-| metadata_source_json | TEXT | 取得元 |
-
-例:
-
-```json
-{
-  "title": "tag",
-  "artist": "filename",
-  "album": "folder"
-}
-```
-
-### 履歴
-
-| 列 | 型 | 制約 |
-|---|---|---|
-| play_count | INTEGER | 0以上 |
-| date_added | TEXT | NOT NULL |
-| last_played_at | TEXT | NOT NULL |
-| favorite | INTEGER | 0/1、予約 |
-| rating | INTEGER | NULLまたは0～5、予約 |
-
-### 補正
+複合主キーは`(user_id, track_id)`です。
 
 | 列 | 内容 |
 |---|---|
-| title_override | 曲名補正 |
-| artist_override | 将来の曲単位補正用 |
-| album_override | 将来機能用 |
+| `favorite` | 0／1 |
+| `rating` | NULLまたは0～5 |
+| `play_count` | 0以上 |
+| `last_played_at` | UTC ISO日時または空 |
+| `created_at`／`updated_at` | 状態作成・更新日時 |
 
-### 移行・状態
+索引:
 
-| 列 | 内容 |
-|---|---|
-| legacy_id | 旧JSON ID |
-| legacy_match_method | 照合方式 |
-| last_scanned_at | 最終確認 |
-| is_available | 1=存在、0=未検出 |
-| created_at | DB作成日時 |
-| updated_at | 最終更新 |
+- `(user_id, play_count DESC)`
+- `(user_id, last_played_at DESC)`
+- `(user_id, favorite)`
 
-## 8. scan_runs
+状態がすべて空の場合は行を削除し、疎なテーブルとして維持します。
 
-| 列 | 内容 |
-|---|---|
-| id | スキャンID |
-| started_at | 開始 |
-| completed_at | 完了 |
-| status | running / completed / completed_with_errors / failed |
-| mp3_files | 検出MP3数 |
-| loaded | 登録数 |
-| errors | エラー数 |
-| cache_hits | 再解析省略数 |
-| details_json | 詳細統計 |
+## 6. `tracks`の旧共通状態
 
-## 9. scan_errors
+`tracks`には互換性とschema 5移行のため、`play_count`、`last_played_at`、`favorite`、`rating`が残っています。v2.7.0の利用者別表示・更新の正本は`user_track_state`です。
 
-| 列 | 内容 |
-|---|---|
-| id | ID |
-| scan_run_id | 対象スキャン |
-| severity | info / warning / error |
-| category | 分類 |
-| relative_path | 相対パス |
-| message | 内容 |
-| occurred_at | 発生日時 |
+これら旧列を安易に削除すると旧版DBの移行や互換処理へ影響するため、将来のschema変更で明示的に扱います。
 
-scan_runs削除時はCASCADEです。
+## 7. schema 5移行
 
-## 10. インデックス
+### 事前条件
 
-| 名前 | 列 | 用途 |
-|---|---|---|
-| idx_tracks_available | is_available | 表示対象 |
-| idx_tracks_title | normalized_title | 曲名検索 |
-| idx_tracks_artist | artist_id | アーティスト |
-| idx_tracks_album | album_id | アルバム |
-| idx_tracks_order | album_id, disc_number, track_number, normalized_title | アルバム内順 |
-| idx_tracks_signature | content_signature | 移動検出 |
-| idx_tracks_modified | modified_time_ns | 差分 |
-| idx_tracks_available_title | is_available, normalized_title | 表示曲名検索 |
-| idx_tracks_available_artist | is_available, artist_id | アーティスト曲 |
-| idx_tracks_available_album | is_available, album_id | アルバム曲 |
-| idx_scan_errors_run | scan_run_id | 診断 |
+- DBがアプリより新しいschemaでない
+- 未処理トランザクションがない
+- 移行前バックアップを作成・検証できる
 
-## 11. 更新規則
+### 処理
 
-スキャン開始:
+1. 新規テーブル・索引を作成
+2. 既存開発版向けの加算的列移行
+3. オーナーが0人なら作成、2人以上なら中止
+4. ローカルオーナー識別情報を作成・照合
+5. `tracks`の旧共通状態をオーナーの`user_track_state`へコピー
+6. 件数と全項目の一致を検査
+7. `PRAGMA foreign_key_check`
+8. `schema_version=5`を保存
+9. コミット
 
-```sql
-UPDATE tracks SET is_available = 0;
-```
+失敗時はロールバックします。
 
-検出した曲だけ1へ戻します。
-
-再解析時も次を維持します。
-
-- play_count
-- date_added
-- favorite
-- rating
-- last_played_at
-- override
-- created_at
-
-表示値:
+### バックアップ名
 
 ```text
-overrideがあればoverride、なければ元値
+Backups\library-pre-v2.7.0-YYYYMMDD-HHMMSS.db
 ```
 
-## 12. バックアップ・復旧
+## 8. オーナー関連付け時の統合
 
-SQLite Online Backup APIで整合したコピーを作ります。
+### 事前検査
 
-復旧:
+- 候補利用者が存在・有効
+- 対象Tailscale識別情報が候補に属する
+- 候補の識別情報が想定件数
+- 日時を解釈可能
+- 評価競合がない
 
-1. サーバー停止
-2. 現DB、WAL、SHMを退避
-3. バックアップを`library.db`としてコピー
-4. `library-maintenance.py check`
-5. 通常起動しMP3と再同期
+### 統合
 
-`Music`はDBバックアップへ含まれません。
+| 状態 | 結果 |
+|---|---|
+| オーナー側だけ | 維持 |
+| 候補側だけ | オーナーへ移動 |
+| 両側の再生回数 | 合算 |
+| 両側の最終再生日時 | 新しい方 |
+| 両側のお気に入り | OR |
+| 評価片側のみ | 設定済み側 |
+| 評価同値 | 維持 |
+| 評価異値 | 全処理中止 |
+
+識別情報移動、候補プロフィール削除、外部キー検査まで同じトランザクションで行います。
+
+バックアップ名:
+
+```text
+Backups\library-pre-owner-link-YYYYMMDD-HHMMSS.db
+```
+
+## 9. 通常バックアップ
+
+起動時に同日のバックアップがなければ作成します。
+
+```text
+Backups\library-YYYYMMDD.db
+```
+
+バックアップはSQLiteとして開けること、整合性検査が通ること、元DBと曲件数が一致することを確認します。
+
+## 10. 削除方針
+
+- MP3削除・不在: `tracks.is_available=0`
+- 利用者停止: `users.is_active=0`
+- 利用者完全削除: UIでは提供しない
+- オーナー: 削除・停止不可
+- オーナー統合後の空候補プロフィール: 関連付けトランザクション内で削除

@@ -1,24 +1,19 @@
-﻿自宅音楽ライブラリ v2.7.0
-発行元・バージョン確認
+自宅音楽ライブラリ v2.7.0
+発行元・製品情報確認
 ================================
 
-発行元:
-k-systems202208
+[ ] ProductName: 自宅音楽ライブラリ
+[ ] ProductVersion: 2.7.0
+[ ] FileVersion: 2.7.0
+[ ] Publisher: k-systems202208
+[ ] x64インストーラー
+[ ] AppIdは従来版と同一
+[ ] MusicLibrary-Setup-2.7.0-x64.exe
+[ ] README・Release Notesはschema 5を記載
+[ ] 旧v2.4／schema 4の現行表記がない
 
-確認箇所:
-・installer\MusicLibrary.iss
-・build\version_info.txt
-・管理画面のバージョン
-・MusicLibrary.exe --version
-・Setup.exeのファイル名
-
-期待値:
-・発行元 k-systems202208
-・バージョン 2.7.0
-・MusicLibrary-Setup-2.7.0-x64.exe
-
-AppId:
-{DDF12346-0D38-4D31-A4AF-27B406C91D8A}
-
-AppIdはv2.6.3から変更しません。
-これにより上書き更新として認識されます。
+コード署名
+----------
+コード署名証明書は未導入です。
+SmartScreenの「不明な発行元」は発行元文字列の不一致ではなく、
+署名がないことによる表示です。
