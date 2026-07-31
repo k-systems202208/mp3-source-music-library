@@ -11,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 import webbrowser
 
@@ -20,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "自宅音楽ライブラリ"
-APP_VERSION = "2.6.2"
+APP_VERSION = "2.6.3"
 APP_ID = "MusicLibrary"
 DEFAULT_PORT = 8765
 
@@ -58,11 +59,25 @@ def free_port(preferred: int = DEFAULT_PORT) -> int:
     raise RuntimeError("利用できるローカルポートが見つかりませんでした。")
 
 
-def health_ok(url: str) -> bool:
+def build_health_url(url: str) -> str:
+    """Return the server health endpoint for either a page URL or a root URL."""
     if not url:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return ""
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "/api/health", "", ""))
+
+
+def health_ok(url: str) -> bool:
+    endpoint = build_health_url(url)
+    if not endpoint:
         return False
     try:
-        with urllib.request.urlopen(url.rstrip("/") + "/api/health", timeout=1.0) as response:
+        with urllib.request.urlopen(endpoint, timeout=1.0) as response:
             return response.status == 200
     except Exception:
         return False
@@ -633,7 +648,7 @@ class LauncherWindow:
         self.current_url = ""
         self.remote_url = str(self.config.get("remoteUrl") or "")
         self.remote_busy = False
-        self.auto_remote_setup = auto_remote_setup
+        self.auto_remote_setup = False
         self.auto_remote_setup_started = False
         self.status_var.set("停止しました")
         self.set_running_controls(False)

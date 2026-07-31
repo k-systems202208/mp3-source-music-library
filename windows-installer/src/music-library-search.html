@@ -1266,7 +1266,7 @@
   }
 
   function errorHtml(error){
-    return `<div class="empty-state"><div class="stamp-big">API ERROR</div><p>SQLite検索APIからデータを取得できませんでした。</p><p>${escapeHtml(error && error.message ? error.message : String(error))}</p><p>黒いサーバー画面を閉じ、start-music-library.batから再起動してください。</p></div>`;
+    return `<div class="empty-state"><div class="stamp-big">API ERROR</div><p>SQLite検索APIからデータを取得できませんでした。</p><p>${escapeHtml(error && error.message ? error.message : String(error))}</p><p>管理画面へ戻り、「停止」を押してから「ライブラリを開始」を押してください。改善しない場合は、管理画面を閉じ、スタートメニューの「自宅音楽ライブラリ」から再起動してください。</p></div>`;
   }
 
   function emptyStateHtml(){

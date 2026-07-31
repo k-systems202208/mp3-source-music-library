@@ -152,20 +152,31 @@ flowchart LR
 プロジェクト本体のライセンスは、GitHub公開者が選択してください。  
 同梱するMutagenのライセンスはアプリ本体の`vendor/MUTAGEN_LICENSE.txt`を参照し、公開リポジトリにも残してください。
 
-<!-- BEGIN WINDOWS-INSTALLER-V2.6.2 -->
+<!-- BEGIN WINDOWS-INSTALLER-V2.6.3 -->
 
 ## Windowsインストーラー版
 
-Windows 10・11（64bit）では、Pythonやコマンド操作なしで使える
-Windowsインストーラー版を配布しています。
+Windows 10・11（64bit）では、Pythonやコマンド操作なしで使えるWindowsインストーラー版を配布しています。
+
+### v2.6.3
+
+v2.6.3は新機能を追加せず、v2.6.2の安定化を目的とした不具合修正版です。
+
+- 管理画面の起動状態確認URLを修正
+- 停止・終了時に発生する未定義変数エラーを修正
+- ブラウザ上の復旧案内を現行インストーラー版へ更新
+- Windowsの発行元表記を`k-systems202208`へ統一
+- 上記不具合の回帰テストを追加
 
 ### ダウンロード
 
-1. [最新のRelease](https://github.com/k-systems202208/mp3-source-music-library/releases/latest)を開く
-2. `MusicLibrary-Setup-*-x64.exe`をダウンロード
+1. [v2.6.3 Release](https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.6.3)を開く
+2. `MusicLibrary-Setup-2.6.3-x64.exe`をダウンロード
 3. インストーラーを実行
 4. 「自宅音楽ライブラリ」を起動
 5. 初回だけMP3フォルダを選択
+
+v2.6.2以前をアンインストールせず、そのまま上書き更新できます。
 
 ### 主な機能
 
@@ -218,4 +229,4 @@ windows-installer\00_build_installer.bat
 
 をWindows上で実行するとSetup.exeを生成します。
 
-<!-- END WINDOWS-INSTALLER-V2.6.2 -->
+<!-- END WINDOWS-INSTALLER-V2.6.3 -->

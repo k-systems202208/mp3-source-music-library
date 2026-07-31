@@ -1,7 +1,7 @@
-#define MyAppName "自宅音楽ライブラリ"
+﻿#define MyAppName "自宅音楽ライブラリ"
 #define MyAppEnglishName "Music Library"
-#define MyAppVersion "2.6.2"
-#define MyAppPublisher "tojiii"
+#define MyAppVersion "2.6.3"
+#define MyAppPublisher "k-systems202208"
 #define MyAppExeName "MusicLibrary.exe"
 #define MyAppId "{{DDF12346-0D38-4D31-A4AF-27B406C91D8A}"
 

@@ -1,10 +1,10 @@
-自宅音楽ライブラリ v2.6.2
+自宅音楽ライブラリ v2.6.3
 配布用インストーラーの作成方法
 ================================
 
 完成物
 ------
-release\MusicLibrary-Setup-2.6.2-x64.exe
+release\MusicLibrary-Setup-2.6.3-x64.exe
 
 この1ファイルを利用者へ配布します。
 利用者側にPythonやInno Setupは不要です。
@@ -28,14 +28,15 @@ Inno Setupがない場合:
 1. ビルド専用Python環境を作成
 2. PyInstallerを導入
 3. Pythonソースを検査
-4. v2.6.2の構成とバージョンを検査
+4. v2.6.3の構成とバージョンを検査
 5. 通信切断処理を検査
 6. Tailscale外部接続処理を検査
 7. 外部URL入口パスを検査
-8. Python不要のMusicLibrary.exeを作成
-9. 空の音楽フォルダで起動検査
-10. Inno SetupでSetup.exeを作成
-11. releaseフォルダを開く
+8. 起動確認URLと停止処理の回帰テスト
+9. Python不要のMusicLibrary.exeを作成
+10. 空の音楽フォルダで起動検査
+11. Inno SetupでSetup.exeを作成
+12. releaseフォルダを開く
 
 成功時の主な表示
 ----------------
@@ -43,12 +44,13 @@ Build sanity check passed.
 Client disconnect tests passed.
 Remote access parsing tests passed.
 Remote entry-path tests passed.
+Launcher stability regression tests passed.
 BUILD COMPLETED
 
 配布前の基本確認
 ----------------
 ・インストールできる
-・管理画面にv2.6.2と表示される
+・管理画面にv2.6.3と表示される
 ・初回に音楽フォルダを選べる
 ・曲を検索・再生・シークできる
 ・シャッフルとリピートが動作する
@@ -56,7 +58,7 @@ BUILD COMPLETED
 ・アンインストール後も利用者データが残る
 ・WinError 10054のTracebackが表示されない
 
-v2.6.2 外部接続確認
+v2.6.3 外部接続確認
 -------------------
 ・管理画面に外部接続欄が表示される
 ・Tailscale未導入時に公式ページを開ける

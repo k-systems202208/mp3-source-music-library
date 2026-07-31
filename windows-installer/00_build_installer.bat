@@ -50,6 +50,8 @@ python "tests\test_remote_access.py"
 if errorlevel 1 goto :error
 python "tests\test_remote_entry_path.py"
 if errorlevel 1 goto :error
+python "tests\test_launcher_stability.py"
+if errorlevel 1 goto :error
 
 echo Building application bundle...
 if exist "dist\MusicLibrary" rmdir /s /q "dist\MusicLibrary"

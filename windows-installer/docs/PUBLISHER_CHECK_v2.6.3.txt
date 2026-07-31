@@ -1,0 +1,16 @@
+﻿自宅音楽ライブラリ v2.6.3
+発行元表記確認
+================================
+
+正式な発行元：
+k-systems202208
+
+確認対象：
+・installer/MusicLibrary.iss の MyAppPublisher
+・build/version_info.txt の CompanyName
+・Windows「インストールされているアプリ」の発行元
+・MusicLibrary.exeの詳細情報
+
+公開条件：
+・上記の全項目がk-systems202208で統一されていること
+・正式な発行元以外の表記が公開ファイルに残っていないこと
