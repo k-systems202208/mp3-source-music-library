@@ -15,6 +15,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from paths import RESOURCE_ROOT, resolve_virtual_path
+import backup_restore
 from typing import Any, BinaryIO
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -91,6 +92,10 @@ LOCAL_OWNER_EXCHANGE_ROUTE = "/api/local-auth/exchange"
 CURRENT_USER_ROUTE = "/api/current-user"
 USERS_ROUTE = "/api/users"
 HOME_ROUTE = "/api/home"
+BACKUPS_ROUTE = "/api/backups"
+BACKUPS_CREATE_ROUTE = "/api/backups/create"
+BACKUPS_RESTORE_ROUTE = "/api/backups/restore"
+BACKUPS_CANCEL_RESTORE_ROUTE = "/api/backups/restore/cancel"
 OWNER_LINK_START_ROUTE = "/api/owner-link/start"
 OWNER_LINK_CLAIM_ROUTE = "/api/owner-link/claim"
 OWNER_LINK_STATUS_ROUTE = "/api/owner-link/status"
@@ -248,6 +253,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         if parsed.path == HOME_ROUTE:
             self.handle_home(parsed.query)
             return
+        if parsed.path == BACKUPS_ROUTE:
+            self.handle_backups()
+            return
         if parsed.path == OWNER_LINK_STATUS_ROUTE:
             self.handle_owner_link_status(parsed.query)
             return
@@ -290,6 +298,15 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == OWNER_LINK_CANCEL_ROUTE:
             self.handle_owner_link_cancel()
+            return
+        if parsed.path == BACKUPS_CREATE_ROUTE:
+            self.handle_backup_create()
+            return
+        if parsed.path == BACKUPS_RESTORE_ROUTE:
+            self.handle_backup_restore()
+            return
+        if parsed.path == BACKUPS_CANCEL_RESTORE_ROUTE:
+            self.handle_backup_restore_cancel()
             return
         match = USER_ACTIVE_ROUTE.fullmatch(parsed.path)
         if match:
@@ -501,6 +518,82 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                 "user": result,
             }
         )
+
+    def handle_backups(self) -> None:
+        owner = self._require_local_owner()
+        if owner is None:
+            return
+        try:
+            backups = backup_restore.list_backups()
+            pending = backup_restore.pending_restore()
+            status = backup_restore.restore_status()
+            current = backup_restore.inspect_database(DATABASE_PATH)
+            self.send_json(
+                {
+                    "viewer": owner,
+                    "database": {
+                        "name": DATABASE_PATH.name,
+                        **current,
+                    },
+                    "backups": backups,
+                    "pendingRestore": pending,
+                    "restoreStatus": status,
+                }
+            )
+        except Exception as exc:
+            self.send_json(
+                {"error": f"バックアップ情報を取得できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_backup_create(self) -> None:
+        owner = self._require_local_owner()
+        if owner is None:
+            return
+        try:
+            item = backup_restore.create_manual_backup()
+            self.send_json({"created": True, "backup": item}, HTTPStatus.CREATED)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"バックアップを作成できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_backup_restore(self) -> None:
+        owner = self._require_local_owner()
+        if owner is None:
+            return
+        try:
+            body = self.read_json_body()
+            backup_name = str(body.get("backupName") or "")
+            confirmation = str(body.get("confirmation") or "")
+            if confirmation != "RESTORE":
+                raise ValueError("復元確認が一致しません。")
+            request = backup_restore.schedule_restore(backup_name)
+            self.send_json(
+                {
+                    "scheduled": True,
+                    "request": request,
+                    "message": "次回起動時に復元します。アプリを終了して、もう一度開始してください。",
+                },
+                HTTPStatus.ACCEPTED,
+            )
+        except FileNotFoundError as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except ValueError as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"復元を予約できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_backup_restore_cancel(self) -> None:
+        owner = self._require_local_owner()
+        if owner is None:
+            return
+        cancelled = backup_restore.cancel_restore()
+        self.send_json({"cancelled": cancelled})
 
     def _require_tailscale_candidate(self) -> tuple[dict[str, Any], str] | None:
         identity = parse_tailscale_identity(self.headers)

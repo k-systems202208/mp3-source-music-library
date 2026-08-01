@@ -743,6 +743,53 @@
     height:54px;
   }
 
+  .backup-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+    margin-top:10px;
+  }
+  .backup-summary-card{
+    padding:10px 11px;
+    border:1px solid var(--card-edge);
+    border-radius:5px;
+    background:var(--paper);
+  }
+  .backup-summary-card strong{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:15px;
+  }
+  .backup-summary-card small{
+    display:block;
+    margin-top:3px;
+    color:var(--ink-soft);
+    font-size:10px;
+  }
+  .backup-list{
+    display:grid;
+    gap:8px;
+    margin-top:12px;
+  }
+  .backup-card{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:10px;
+    align-items:center;
+    padding:11px 12px;
+    border:1px solid var(--card-edge);
+    border-radius:5px;
+    background:var(--paper);
+  }
+  .backup-card.invalid{border-color:#c86c63;background:#f7e8e5;}
+  .backup-card.pending{border-color:var(--brass);background:rgba(169,132,60,.11);}
+  .backup-name{font-family:'JetBrains Mono', monospace;font-size:12px;font-weight:700;overflow-wrap:anywhere;}
+  .backup-meta{margin-top:4px;color:var(--ink-soft);font-size:11px;line-height:1.55;}
+  .backup-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;}
+  .backup-badge{border:1px solid var(--card-edge);border-radius:999px;padding:2px 7px;font-size:9px;font-weight:700;}
+  .backup-badge.valid{color:#2f5b2b;border-color:#8fb184;}
+  .backup-badge.invalid{color:#7d2822;border-color:#c86c63;}
+
   @media (max-width:600px){
     body.player-active .wrap{padding-bottom:220px;}
     .catalog-index-row{grid-template-columns:1fr; gap:3px;}
@@ -1449,6 +1496,9 @@
     }
     .managed-user{grid-template-columns:1fr;}
     .managed-user .user-action-btn{width:100%;}
+    .backup-summary-grid{grid-template-columns:1fr;}
+    .backup-card{grid-template-columns:1fr;}
+    .backup-card .user-action-btn{width:100%;}
   }
 
   ::selection{background:var(--brass); color:var(--paper);}
@@ -1606,6 +1656,19 @@
       <div class="user-list" id="userList"></div>
       <div class="user-message" id="userManagementMessage" hidden></div>
     </section>
+
+    <section class="user-section" id="backupSection" hidden>
+      <h3>バックアップ・復元</h3>
+      <p>現在のデータベースを安全に複製し、過去のバックアップから次回起動時に復元できます。復元操作は自宅PCのローカルオーナーだけが実行できます。</p>
+      <div class="backup-summary-grid" id="backupSummary"></div>
+      <div class="user-actions">
+        <button type="button" class="user-action-btn" id="backupCreateButton">今すぐバックアップ</button>
+        <button type="button" class="user-action-btn secondary" id="backupReloadButton">一覧を更新</button>
+        <button type="button" class="user-action-btn danger" id="backupCancelRestoreButton" hidden>復元予約を取消</button>
+      </div>
+      <div class="user-message" id="backupMessage" hidden></div>
+      <div class="backup-list" id="backupList"></div>
+    </section>
   </section>
 </div>
 
@@ -1658,6 +1721,10 @@
   const STATS_API_URL = './api/stats';
   const CURRENT_USER_API_URL = './api/current-user';
   const USERS_API_URL = './api/users';
+  const BACKUPS_API_URL = './api/backups';
+  const BACKUPS_CREATE_API_URL = './api/backups/create';
+  const BACKUPS_RESTORE_API_URL = './api/backups/restore';
+  const BACKUPS_CANCEL_RESTORE_API_URL = './api/backups/restore/cancel';
   const OWNER_LINK_START_API_URL = './api/owner-link/start';
   const OWNER_LINK_CLAIM_API_URL = './api/owner-link/claim';
   const OWNER_LINK_STATUS_API_URL = './api/owner-link/status';
@@ -1767,6 +1834,13 @@
     userManagementNote: document.getElementById('userManagementNote'),
     userList: document.getElementById('userList'),
     userManagementMessage: document.getElementById('userManagementMessage'),
+    backupSection: document.getElementById('backupSection'),
+    backupSummary: document.getElementById('backupSummary'),
+    backupCreateButton: document.getElementById('backupCreateButton'),
+    backupReloadButton: document.getElementById('backupReloadButton'),
+    backupCancelRestoreButton: document.getElementById('backupCancelRestoreButton'),
+    backupMessage: document.getElementById('backupMessage'),
+    backupList: document.getElementById('backupList'),
   };
 
   let stats = null;
@@ -1788,6 +1862,7 @@
   let ownerLinkCodeValue = '';
   let ownerLinkCandidateValue = null;
   let ownerLinkPollTimer = null;
+  let backupData = null;
 
   function escapeHtml(value){
     return String(value || '').replace(/[&<>"']/g, c => ({
@@ -2095,6 +2170,7 @@
     );
     els.ownerLinkSection.hidden = !owner;
     els.userManagementSection.hidden = !owner;
+    els.backupSection.hidden = !(owner && currentUser.provider === 'local_owner');
     updateFavoriteButtons();
     updateFavoriteFilterButton();
 
@@ -2173,11 +2249,164 @@
     }
   }
 
+  function backupKindLabel(kind){
+    return ({
+      manual:'手動',
+      daily:'日次',
+      pre_restore:'復元前',
+      pre_owner_link:'関連付け前',
+      pre_migration:'移行前',
+      other:'その他',
+    })[kind] || 'その他';
+  }
+
+  function formatBytes(value){
+    const bytes = Number(value || 0);
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function formatBackupDate(value){
+    if (!value) return '日時不明';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('ja-JP');
+  }
+
+  function renderBackups(payload){
+    backupData = payload || {};
+    const database = backupData.database || {};
+    const backups = Array.isArray(backupData.backups) ? backupData.backups : [];
+    const validCount = backups.filter(item => item.valid).length;
+    els.backupSummary.innerHTML = `
+      <div class="backup-summary-card"><strong>${Number(database.trackCount || 0).toLocaleString()}</strong><small>現在の収録曲</small></div>
+      <div class="backup-summary-card"><strong>${backups.length.toLocaleString()}</strong><small>バックアップ件数</small></div>
+      <div class="backup-summary-card"><strong>${validCount.toLocaleString()}</strong><small>復元可能</small></div>`;
+
+    const pendingName = backupData.pendingRestore && backupData.pendingRestore.backupName
+      ? String(backupData.pendingRestore.backupName)
+      : '';
+    els.backupCancelRestoreButton.hidden = !pendingName;
+    if (pendingName) {
+      setMessage(
+        els.backupMessage,
+        `「${pendingName}」を次回起動時に復元する予約があります。アプリを終了して、もう一度開始すると復元されます。`,
+      );
+    } else if (backupData.restoreStatus && backupData.restoreStatus.state === 'restored') {
+      setMessage(
+        els.backupMessage,
+        `前回起動時に「${backupData.restoreStatus.backupName || ''}」から復元しました。復元前DBは「${backupData.restoreStatus.preRestoreBackupName || ''}」として保存されています。`,
+        'success',
+      );
+    } else if (backupData.restoreStatus && backupData.restoreStatus.state === 'error') {
+      setMessage(
+        els.backupMessage,
+        `前回の復元に失敗しました。${backupData.restoreStatus.error || ''}`,
+        'error',
+      );
+    } else {
+      setMessage(els.backupMessage, '');
+    }
+
+    if (!backups.length) {
+      els.backupList.innerHTML = '<div class="user-message">バックアップはまだありません。</div>';
+      return;
+    }
+
+    els.backupList.innerHTML = backups.map(item => {
+      const pending = pendingName && pendingName === item.name;
+      const valid = Boolean(item.valid);
+      const error = item.error ? `<br>${escapeHtml(item.error)}` : '';
+      return `
+        <article class="backup-card ${valid ? '' : 'invalid'} ${pending ? 'pending' : ''}">
+          <div>
+            <div class="backup-name">${escapeHtml(item.name)}</div>
+            <div class="backup-meta">${formatBackupDate(item.modifiedAt)} · ${formatBytes(item.sizeBytes)} · ${Number(item.trackCount || 0).toLocaleString()}曲${error}</div>
+            <div class="backup-badges">
+              <span class="backup-badge">${backupKindLabel(item.kind)}</span>
+              <span class="backup-badge ${valid ? 'valid' : 'invalid'}">${valid ? '検証済み' : '復元不可'}</span>
+              ${pending ? '<span class="backup-badge">復元予約中</span>' : ''}
+            </div>
+          </div>
+          ${valid && !pending ? `<button type="button" class="user-action-btn secondary" data-restore-backup="${escapeHtml(item.name)}">この状態へ復元</button>` : ''}
+        </article>`;
+    }).join('');
+  }
+
+  async function loadBackups(){
+    if (!currentUser || currentUser.provider !== 'local_owner' || !currentUser.isOwner) return;
+    els.backupReloadButton.disabled = true;
+    try {
+      const payload = await fetchJson(BACKUPS_API_URL);
+      renderBackups(payload);
+    } catch (error) {
+      els.backupList.innerHTML = '';
+      setMessage(els.backupMessage, `バックアップ一覧を取得できませんでした。${error.message}`, 'error');
+    } finally {
+      els.backupReloadButton.disabled = false;
+    }
+  }
+
+  async function createBackup(){
+    els.backupCreateButton.disabled = true;
+    setMessage(els.backupMessage, 'バックアップを作成しています。');
+    try {
+      const payload = await fetchJson(BACKUPS_CREATE_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:'{}',
+      });
+      setMessage(els.backupMessage, `「${payload.backup.name}」を作成し、整合性を確認しました。`, 'success');
+      await loadBackups();
+    } catch (error) {
+      setMessage(els.backupMessage, `バックアップを作成できませんでした。${error.message}`, 'error');
+    } finally {
+      els.backupCreateButton.disabled = false;
+    }
+  }
+
+  async function scheduleBackupRestore(name){
+    const first = confirm(`「${name}」の状態へ復元します。\n\n現在のDBは復元前バックアップとして保存されます。\n復元はアプリを終了し、次に開始した時に実行されます。\n\n続けますか？`);
+    if (!first) return;
+    const typed = prompt('誤操作防止のため「復元」と入力してください。', '');
+    if (typed !== '復元') {
+      alert('入力が一致しないため、復元を予約しませんでした。');
+      return;
+    }
+    try {
+      const payload = await fetchJson(BACKUPS_RESTORE_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({backupName:name, confirmation:'RESTORE'}),
+      });
+      setMessage(els.backupMessage, payload.message || '次回起動時の復元を予約しました。', 'success');
+      await loadBackups();
+    } catch (error) {
+      setMessage(els.backupMessage, `復元を予約できませんでした。${error.message}`, 'error');
+    }
+  }
+
+  async function cancelBackupRestore(){
+    if (!confirm('次回起動時の復元予約を取り消しますか？')) return;
+    try {
+      await fetchJson(BACKUPS_CANCEL_RESTORE_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:'{}',
+      });
+      setMessage(els.backupMessage, '復元予約を取り消しました。', 'success');
+      await loadBackups();
+    } catch (error) {
+      setMessage(els.backupMessage, `復元予約を取り消せませんでした。${error.message}`, 'error');
+    }
+  }
+
   async function openUserModal(){
     els.userModal.hidden = false;
     try {
       await loadCurrentUser();
       await loadManagedUsers();
+      await loadBackups();
     } catch (error) {
       updateCurrentUserUi(null);
       setMessage(
@@ -3596,6 +3825,13 @@
   els.userList.addEventListener('click', event => {
     const button = event.target.closest('button[data-user-active-id]');
     if (button) void updateUserActive(button);
+  });
+  els.backupCreateButton.addEventListener('click', () => void createBackup());
+  els.backupReloadButton.addEventListener('click', () => void loadBackups());
+  els.backupCancelRestoreButton.addEventListener('click', () => void cancelBackupRestore());
+  els.backupList.addEventListener('click', event => {
+    const button = event.target.closest('button[data-restore-backup]');
+    if (button) void scheduleBackupRestore(button.dataset.restoreBackup || '');
   });
 
   loadPlaybackSettings();

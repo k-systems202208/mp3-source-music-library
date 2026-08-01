@@ -182,6 +182,33 @@ def worker_main(args: argparse.Namespace) -> int:
                 "startedAt": datetime.now().isoformat(timespec="seconds"),
             })
 
+            import backup_restore
+
+            restore_result = backup_restore.apply_pending_restore(data_root)
+            if restore_result:
+                if restore_result.get("state") == "restored":
+                    print(
+                        "SQLite restore         : "
+                        f"{restore_result.get('backupName', '')}"
+                    )
+                    if restore_result.get("preRestoreBackupName"):
+                        print(
+                            "Pre-restore backup    : Backups\\"
+                            f"{restore_result.get('preRestoreBackupName')}"
+                        )
+                else:
+                    print(
+                        "WARNING: 予約された復元に失敗しました: "
+                        f"{restore_result.get('error', 'unknown error')}"
+                    )
+                    if restore_result.get("rolledBack"):
+                        print("SQLite rollback        : 復元前DBへ戻しました。")
+                    elif restore_result.get("rollbackError"):
+                        print(
+                            "WARNING: rollback      : "
+                            f"{restore_result.get('rollbackError')}"
+                        )
+
             import generator
 
             result = int(generator.main() or 0)
