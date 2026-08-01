@@ -14,8 +14,9 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from paths import RESOURCE_ROOT, resolve_virtual_path
+from paths import DATA_ROOT, RESOURCE_ROOT, resolve_virtual_path
 import backup_restore
+import update_check
 from typing import Any, BinaryIO
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -96,6 +97,7 @@ BACKUPS_ROUTE = "/api/backups"
 BACKUPS_CREATE_ROUTE = "/api/backups/create"
 BACKUPS_RESTORE_ROUTE = "/api/backups/restore"
 BACKUPS_CANCEL_RESTORE_ROUTE = "/api/backups/restore/cancel"
+UPDATE_STATUS_ROUTE = "/api/update-status"
 OWNER_LINK_START_ROUTE = "/api/owner-link/start"
 OWNER_LINK_CLAIM_ROUTE = "/api/owner-link/claim"
 OWNER_LINK_STATUS_ROUTE = "/api/owner-link/status"
@@ -255,6 +257,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == BACKUPS_ROUTE:
             self.handle_backups()
+            return
+        if parsed.path == UPDATE_STATUS_ROUTE:
+            self.handle_update_status(parsed.query)
             return
         if parsed.path == OWNER_LINK_STATUS_ROUTE:
             self.handle_owner_link_status(parsed.query)
@@ -518,6 +523,32 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                 "user": result,
             }
         )
+
+    def handle_update_status(self, query_string: str) -> None:
+        owner = self._require_owner()
+        if owner is None:
+            return
+        params = parse_qs(query_string, keep_blank_values=True)
+        force = str((params.get("force") or [""])[0]).strip().casefold() in {
+            "1", "true", "yes", "on"
+        }
+        try:
+            status = update_check.check_for_update(
+                data_root=DATA_ROOT,
+                current_version=update_check.CURRENT_VERSION,
+                force=force,
+            )
+            self.send_json({"viewer": owner, **status})
+        except Exception as exc:
+            self.send_json(
+                {
+                    "error": (
+                        "新版情報を確認できませんでした: "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                },
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
 
     def handle_backups(self) -> None:
         owner = self._require_local_owner()

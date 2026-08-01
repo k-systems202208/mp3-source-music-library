@@ -790,6 +790,72 @@
   .backup-badge.valid{color:#2f5b2b;border-color:#8fb184;}
   .backup-badge.invalid{color:#7d2822;border-color:#c86c63;}
 
+  .update-banner{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:14px;
+    align-items:center;
+    margin:12px 0 0;
+    padding:14px 16px;
+    border:1px solid var(--brass);
+    border-left:5px solid var(--brass);
+    border-radius:6px;
+    background:linear-gradient(135deg, rgba(169,132,60,.17), rgba(239,232,216,.72));
+    box-shadow:0 4px 16px rgba(54,42,18,.08);
+  }
+  .update-banner[hidden]{display:none;}
+  .update-banner-copy{min-width:0;}
+  .update-banner-kicker{
+    display:block;
+    margin-bottom:3px;
+    color:var(--brass-deep);
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.12em;
+  }
+  .update-banner-title{
+    display:block;
+    font-size:14px;
+    line-height:1.45;
+    overflow-wrap:anywhere;
+  }
+  .update-banner-note{
+    display:block;
+    margin-top:3px;
+    color:var(--ink-soft);
+    font-size:11px;
+    line-height:1.5;
+  }
+  .update-banner-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end;}
+  .update-release-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:34px;
+    padding:7px 11px;
+    border:1px solid var(--stamp);
+    border-radius:4px;
+    background:var(--stamp);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    text-decoration:none;
+  }
+  .update-release-link:hover{filter:brightness(.94);}
+  .update-release-link[hidden]{display:none;}
+  .update-status-card{
+    margin-top:10px;
+    padding:12px;
+    border:1px solid var(--card-edge);
+    border-radius:5px;
+    background:var(--paper);
+  }
+  .update-status-main{font-size:13px;font-weight:700;line-height:1.55;}
+  .update-status-meta{margin-top:4px;color:var(--ink-soft);font-size:11px;line-height:1.55;overflow-wrap:anywhere;}
+  .update-status-card.available{border-color:var(--brass);background:rgba(169,132,60,.08);}
+  .update-status-card.error{border-color:#c86c63;background:#f7e8e5;}
+
   @media (max-width:600px){
     body.player-active .wrap{padding-bottom:220px;}
     .catalog-index-row{grid-template-columns:1fr; gap:3px;}
@@ -1499,6 +1565,10 @@
     .backup-summary-grid{grid-template-columns:1fr;}
     .backup-card{grid-template-columns:1fr;}
     .backup-card .user-action-btn{width:100%;}
+    .update-banner{grid-template-columns:1fr;}
+    .update-banner-actions{justify-content:flex-start;}
+    .update-banner-actions .user-action-btn,
+    .update-banner-actions .update-release-link{width:100%;}
   }
 
   ::selection{background:var(--brass); color:var(--paper);}
@@ -1524,6 +1594,18 @@
     <button type="button" class="view-tab" data-view="artists">アーティスト</button>
     <button type="button" class="view-tab" data-view="albums">アルバム</button>
   </div>
+
+  <aside class="update-banner" id="updateBanner" hidden aria-live="polite">
+    <div class="update-banner-copy">
+      <span class="update-banner-kicker">NEW RELEASE</span>
+      <strong class="update-banner-title" id="updateBannerTitle">新しいバージョンがあります。</strong>
+      <span class="update-banner-note" id="updateBannerNote"></span>
+    </div>
+    <div class="update-banner-actions">
+      <a class="update-release-link" id="updateBannerReleaseLink" href="#" target="_blank" rel="noopener noreferrer">リリースページを開く</a>
+      <button type="button" class="user-action-btn secondary" id="updateBannerDismissButton">後で</button>
+    </div>
+  </aside>
 
   <main class="home-panel" id="homePanel">
     <section class="home-hero">
@@ -1593,7 +1675,7 @@
 
 </div>
 
-<footer>DATE FIRST ISSUED · 2026-07-18 — ライブラリホーム・利用者別お気に入り／再生履歴・SQLite API検索・ブラウザプレーヤー</footer>
+<footer>DATE FIRST ISSUED · 2026-07-18 — ライブラリホーム・新版通知・利用者別お気に入り／再生履歴・SQLite API検索・ブラウザプレーヤー</footer>
 
 
 <div class="user-modal" id="userModal" hidden role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
@@ -1669,6 +1751,20 @@
       <div class="user-message" id="backupMessage" hidden></div>
       <div class="backup-list" id="backupList"></div>
     </section>
+
+    <section class="user-section" id="updateSection" hidden>
+      <h3>新版通知</h3>
+      <p>GitHubの最新の正式リリースを1日1回確認します。確認に失敗しても、音楽ライブラリの起動・検索・再生には影響しません。</p>
+      <div class="update-status-card" id="updateStatusCard" aria-live="polite">
+        <div class="update-status-main" id="updateStatusMain">新版情報を確認しています…</div>
+        <div class="update-status-meta" id="updateStatusMeta"></div>
+      </div>
+      <div class="user-actions">
+        <button type="button" class="user-action-btn secondary" id="updateCheckButton">今すぐ確認</button>
+        <a class="update-release-link" id="updateReleaseLink" href="#" target="_blank" rel="noopener noreferrer" hidden>リリースページを開く</a>
+      </div>
+      <div class="user-message" id="updateMessage" hidden></div>
+    </section>
   </section>
 </div>
 
@@ -1725,6 +1821,8 @@
   const BACKUPS_CREATE_API_URL = './api/backups/create';
   const BACKUPS_RESTORE_API_URL = './api/backups/restore';
   const BACKUPS_CANCEL_RESTORE_API_URL = './api/backups/restore/cancel';
+  const UPDATE_STATUS_API_URL = './api/update-status';
+  const UPDATE_DISMISS_KEY_PREFIX = 'music-library-dismissed-update-';
   const OWNER_LINK_START_API_URL = './api/owner-link/start';
   const OWNER_LINK_CLAIM_API_URL = './api/owner-link/claim';
   const OWNER_LINK_STATUS_API_URL = './api/owner-link/status';
@@ -1841,6 +1939,18 @@
     backupCancelRestoreButton: document.getElementById('backupCancelRestoreButton'),
     backupMessage: document.getElementById('backupMessage'),
     backupList: document.getElementById('backupList'),
+    updateBanner: document.getElementById('updateBanner'),
+    updateBannerTitle: document.getElementById('updateBannerTitle'),
+    updateBannerNote: document.getElementById('updateBannerNote'),
+    updateBannerReleaseLink: document.getElementById('updateBannerReleaseLink'),
+    updateBannerDismissButton: document.getElementById('updateBannerDismissButton'),
+    updateSection: document.getElementById('updateSection'),
+    updateStatusCard: document.getElementById('updateStatusCard'),
+    updateStatusMain: document.getElementById('updateStatusMain'),
+    updateStatusMeta: document.getElementById('updateStatusMeta'),
+    updateCheckButton: document.getElementById('updateCheckButton'),
+    updateReleaseLink: document.getElementById('updateReleaseLink'),
+    updateMessage: document.getElementById('updateMessage'),
   };
 
   let stats = null;
@@ -1863,6 +1973,8 @@
   let ownerLinkCandidateValue = null;
   let ownerLinkPollTimer = null;
   let backupData = null;
+  let updateData = null;
+  let updateRequestSerial = 0;
 
   function escapeHtml(value){
     return String(value || '').replace(/[&<>"']/g, c => ({
@@ -2171,6 +2283,8 @@
     els.ownerLinkSection.hidden = !owner;
     els.userManagementSection.hidden = !owner;
     els.backupSection.hidden = !(owner && currentUser.provider === 'local_owner');
+    els.updateSection.hidden = !owner;
+    if (!owner) els.updateBanner.hidden = true;
     updateFavoriteButtons();
     updateFavoriteFilterButton();
 
@@ -2187,6 +2301,9 @@
   async function loadCurrentUser(){
     const user = await fetchJson(CURRENT_USER_API_URL);
     updateCurrentUserUi(user);
+    if (user && user.authenticated && user.isOwner) {
+      void loadUpdateStatus();
+    }
     return user;
   }
 
@@ -2401,12 +2518,149 @@
     }
   }
 
+  function updateDismissed(latestVersion){
+    if (!latestVersion) return false;
+    try {
+      return localStorage.getItem(`${UPDATE_DISMISS_KEY_PREFIX}${latestVersion}`) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function dismissUpdateBanner(){
+    const latest = updateData && updateData.latestVersion ? String(updateData.latestVersion) : '';
+    if (latest) {
+      try { localStorage.setItem(`${UPDATE_DISMISS_KEY_PREFIX}${latest}`, '1'); } catch (_) {}
+    }
+    els.updateBanner.hidden = true;
+  }
+
+  function formatUpdateDate(value){
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('ja-JP');
+  }
+
+  function formatUpdateCheckTime(value){
+    const date = value ? new Date(value) : new Date();
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('ja-JP', {
+      hour:'2-digit',
+      minute:'2-digit',
+      hour12:false,
+    });
+  }
+
+  function updateCheckCompletedMessage(payload){
+    const time = formatUpdateCheckTime(payload && payload.checkedAt);
+    return time
+      ? `最新版情報を確認しました。（${time}）`
+      : '最新版情報を確認しました。';
+  }
+
+  function applyUpdateLink(element, url){
+    const value = String(url || '');
+    const valid = value.startsWith('https://github.com/k-systems202208/mp3-source-music-library/releases');
+    element.hidden = !valid;
+    if (valid) element.href = value;
+    else element.removeAttribute('href');
+  }
+
+  function renderUpdateStatus(payload, {manual=false} = {}){
+    updateData = payload || {};
+    const current = String(updateData.currentVersion || '不明');
+    const latest = String(updateData.latestVersion || '');
+    const available = Boolean(updateData.updateAvailable && latest);
+    const source = String(updateData.source || '');
+    const error = String(updateData.error || '');
+    const preview = source === 'preview';
+
+    els.updateStatusCard.classList.toggle('available', available);
+    els.updateStatusCard.classList.toggle('error', source === 'error' && !latest);
+    applyUpdateLink(els.updateReleaseLink, updateData.releaseUrl);
+    applyUpdateLink(els.updateBannerReleaseLink, updateData.releaseUrl);
+
+    if (available) {
+      els.updateStatusMain.textContent = `新しいバージョン v${latest} が公開されています。`;
+      const detail = [
+        `現在 v${current}`,
+        updateData.publishedAt ? `公開 ${formatUpdateDate(updateData.publishedAt)}` : '',
+        source === 'cache' ? '前回の確認結果' : '',
+        source === 'stale-cache' ? '以前の確認結果（今回は通信できませんでした）' : '',
+        preview ? 'プレビュー用の模擬通知' : '',
+      ].filter(Boolean).join(' · ');
+      els.updateStatusMeta.textContent = detail;
+      els.updateBannerTitle.textContent = `新しいバージョン v${latest} が公開されています。`;
+      els.updateBannerNote.textContent = preview
+        ? `現在 v${current} · これは画面確認用の模擬通知です。`
+        : `現在 v${current} · 更新内容とインストーラーはGitHub Releaseで確認できます。`;
+      els.updateBanner.hidden = updateDismissed(latest);
+      setMessage(
+        els.updateMessage,
+        error
+          ? `新版は確認済みですが、今回はGitHubへ接続できませんでした。${error}`
+          : manual ? updateCheckCompletedMessage(updateData) : '',
+        error ? 'error' : manual ? 'success' : '',
+      );
+      return;
+    }
+
+    els.updateBanner.hidden = true;
+    if (source === 'error' && !latest) {
+      els.updateStatusMain.textContent = `現在のバージョンは v${current} です。`;
+      els.updateStatusMeta.textContent = 'GitHubへ接続できず、最新版かどうか確認できませんでした。音楽ライブラリは通常どおり利用できます。';
+      setMessage(els.updateMessage, error, 'error');
+      return;
+    }
+
+    els.updateStatusMain.textContent = `v${current} は最新版です。`;
+    els.updateStatusMeta.textContent = [
+      updateData.checkedAt ? `確認 ${formatUpdateDate(updateData.checkedAt)}` : '',
+      preview ? 'プレビュー用の確認結果' : '',
+    ].filter(Boolean).join(' · ');
+    setMessage(
+      els.updateMessage,
+      error
+        ? `前回の情報を表示しています。${error}`
+        : manual ? updateCheckCompletedMessage(updateData) : '',
+      error ? 'error' : manual ? 'success' : '',
+    );
+  }
+
+  async function loadUpdateStatus({force=false} = {}){
+    if (!currentUser || !currentUser.authenticated || !currentUser.isOwner) return;
+    const serial = ++updateRequestSerial;
+    els.updateCheckButton.disabled = true;
+    if (force) {
+      els.updateStatusMain.textContent = 'GitHubの最新リリースを確認しています…';
+      els.updateStatusMeta.textContent = '';
+      setMessage(els.updateMessage, '');
+    }
+    try {
+      const payload = await fetchJson(`${UPDATE_STATUS_API_URL}${force ? '?force=1' : ''}`);
+      if (serial !== updateRequestSerial) return;
+      renderUpdateStatus(payload, {manual:force});
+    } catch (error) {
+      if (serial !== updateRequestSerial) return;
+      renderUpdateStatus({
+        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.1',
+        latestVersion: '',
+        updateAvailable: false,
+        source: 'error',
+        error: error.message,
+      }, {manual:force});
+    } finally {
+      if (serial === updateRequestSerial) els.updateCheckButton.disabled = false;
+    }
+  }
+
   async function openUserModal(){
     els.userModal.hidden = false;
     try {
       await loadCurrentUser();
       await loadManagedUsers();
       await loadBackups();
+      await loadUpdateStatus();
     } catch (error) {
       updateCurrentUserUi(null);
       setMessage(
@@ -3833,6 +4087,8 @@
     const button = event.target.closest('button[data-restore-backup]');
     if (button) void scheduleBackupRestore(button.dataset.restoreBackup || '');
   });
+  els.updateCheckButton.addEventListener('click', () => void loadUpdateStatus({force:true}));
+  els.updateBannerDismissButton.addEventListener('click', dismissUpdateBanner);
 
   loadPlaybackSettings();
   updatePlaybackModeControls();
