@@ -1155,6 +1155,7 @@ def _base_track_conditions(
     album_key: str = "",
     global_album_title: str = "",
     favorite_only: bool = False,
+    played_only: bool = False,
     user_id: str | None = None,
 ) -> tuple[list[str], list[Any]]:
     conditions = ["t.is_available = 1"]
@@ -1199,6 +1200,16 @@ def _base_track_conditions(
             ")"
         )
         params.append(str(user_id or ""))
+    if played_only:
+        conditions.append(
+            "EXISTS ("
+            "SELECT 1 FROM user_track_state played_state "
+            "WHERE played_state.user_id = ? "
+            "AND played_state.track_id = t.id "
+            "AND played_state.play_count > 0"
+            ")"
+        )
+        params.append(str(user_id or ""))
 
     return conditions, params
 
@@ -1215,8 +1226,9 @@ def _track_order(sort: str, *, album_context: bool) -> str:
             f"{ALBUM_EXPR} COLLATE NOCASE, COALESCE(t.disc_number, 0), "
             f"COALESCE(t.track_number, 0), {TITLE_EXPR} COLLATE NOCASE"
         ),
-        "plays": f"COALESCE(uts.play_count, 0) DESC, {TITLE_EXPR} COLLATE NOCASE",
-        "added": f"t.date_added DESC, {TITLE_EXPR} COLLATE NOCASE",
+        "plays": f"COALESCE(uts.play_count, 0) DESC, COALESCE(uts.last_played_at, '') DESC, {TITLE_EXPR} COLLATE NOCASE",
+        "recent": f"COALESCE(uts.last_played_at, '') DESC, COALESCE(uts.play_count, 0) DESC, {TITLE_EXPR} COLLATE NOCASE",
+        "added": f"COALESCE(NULLIF(t.date_added, ''), t.created_at) DESC, {TITLE_EXPR} COLLATE NOCASE",
         "title": f"catalog_sort_key({TITLE_SORT_EXPR}) COLLATE NOCASE, {TITLE_EXPR} COLLATE NOCASE, {ARTIST_EXPR} COLLATE NOCASE",
     }
     return orders.get(sort, orders["title"])
@@ -1237,6 +1249,7 @@ def browse_tracks(
     index_key: str = "",
     user_id: str | None = None,
     favorite_only: bool = False,
+    played_only: bool = False,
 ) -> dict[str, Any]:
     limit = _bounded_page_size(limit)
     offset = max(0, int(offset))
@@ -1250,6 +1263,7 @@ def browse_tracks(
         album_key=album_key,
         global_album_title=global_album_title,
         favorite_only=favorite_only,
+        played_only=played_only,
         user_id=user_id,
     )
     base_where_sql = " AND ".join(conditions)
@@ -1321,6 +1335,7 @@ def browse_tracks(
         "indexKey": index_key,
         "indexCounts": index_counts,
         "favoriteOnly": bool(favorite_only),
+        "playedOnly": bool(played_only),
     }
 
 
@@ -1596,6 +1611,7 @@ def browse_library(
     index_key: str = "",
     user_id: str | None = None,
     favorite_only: bool = False,
+    played_only: bool = False,
 ) -> dict[str, Any]:
     if view == "artists":
         return browse_artists(
@@ -1631,6 +1647,7 @@ def browse_library(
             index_key=index_key,
             user_id=user_id,
             favorite_only=favorite_only,
+            played_only=played_only,
         )
     if view == "album_tracks":
         if not album_title:
@@ -1647,6 +1664,7 @@ def browse_library(
             index_key=index_key,
             user_id=user_id,
             favorite_only=favorite_only,
+            played_only=played_only,
         )
     if view != "songs":
         raise ValueError(f"unsupported view: {view}")
@@ -1661,7 +1679,66 @@ def browse_library(
         index_key=index_key,
         user_id=user_id,
         favorite_only=favorite_only,
+        played_only=played_only,
     )
+
+
+
+def library_home(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str | None = None,
+    section_limit: int = 8,
+) -> dict[str, Any]:
+    """Return the small, user-aware collections used by the library home.
+
+    The server resolves ``user_id`` from the local-owner session or Tailscale
+    identity. Anonymous clients receive only the shared recently-added section;
+    personal playback and favorite state is never inferred from request input.
+    """
+    section_limit = max(1, min(int(section_limit), 24))
+    normalized_user_id = str(user_id or "").strip()
+    authenticated = bool(normalized_user_id)
+
+    def section(
+        *,
+        sort: str,
+        favorite_only: bool = False,
+        played_only: bool = False,
+    ) -> dict[str, Any]:
+        if (favorite_only or played_only) and not authenticated:
+            return {
+                "items": [],
+                "total": 0,
+                "sort": sort,
+                "favoriteOnly": bool(favorite_only),
+                "playedOnly": bool(played_only),
+            }
+        result = browse_tracks(
+            connection,
+            limit=section_limit,
+            offset=0,
+            sort=sort,
+            user_id=normalized_user_id or None,
+            favorite_only=favorite_only,
+            played_only=played_only,
+        )
+        return {
+            "items": result["items"],
+            "total": int(result["total"]),
+            "sort": sort,
+            "favoriteOnly": bool(favorite_only),
+            "playedOnly": bool(played_only),
+        }
+
+    return {
+        "authenticated": authenticated,
+        "sectionLimit": section_limit,
+        "recentlyPlayed": section(sort="recent", played_only=True),
+        "favorites": section(sort="title", favorite_only=True),
+        "mostPlayed": section(sort="plays", played_only=True),
+        "recentlyAdded": section(sort="added"),
+    }
 
 
 def get_track_by_path(connection: sqlite3.Connection, relative_path: str) -> sqlite3.Row | None:

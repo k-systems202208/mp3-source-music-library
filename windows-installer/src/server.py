@@ -40,6 +40,7 @@ from database import (
     DATABASE_PATH,
     database,
     browse_library,
+    library_home,
     database_stats,
     get_available_tracks,
     record_user_playback,
@@ -89,6 +90,7 @@ LOCAL_OWNER_TOKEN_ROUTE = "/api/local-auth/token"
 LOCAL_OWNER_EXCHANGE_ROUTE = "/api/local-auth/exchange"
 CURRENT_USER_ROUTE = "/api/current-user"
 USERS_ROUTE = "/api/users"
+HOME_ROUTE = "/api/home"
 OWNER_LINK_START_ROUTE = "/api/owner-link/start"
 OWNER_LINK_CLAIM_ROUTE = "/api/owner-link/claim"
 OWNER_LINK_STATUS_ROUTE = "/api/owner-link/status"
@@ -242,6 +244,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == USERS_ROUTE:
             self.handle_users()
+            return
+        if parsed.path == HOME_ROUTE:
+            self.handle_home(parsed.query)
             return
         if parsed.path == OWNER_LINK_STATUS_ROUTE:
             self.handle_owner_link_status(parsed.query)
@@ -757,6 +762,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                     index_key=index_key,
                     user_id=user_id,
                     favorite_only=self._query_bool(parameters, "favoriteOnly"),
+                    played_only=self._query_bool(parameters, "playedOnly"),
                 )
             self.send_json(result)
         except ValueError as exc:
@@ -764,6 +770,38 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             self.send_json(
                 {"error": f"SQLite検索に失敗しました: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_home(self, query_string: str) -> None:
+        try:
+            parameters = parse_qs(query_string, keep_blank_values=True)
+            limit = self._query_int(
+                parameters,
+                "limit",
+                8,
+                minimum=1,
+                maximum=24,
+            )
+            current_user = self._resolve_current_user()
+            user_id = (
+                str(current_user["id"])
+                if bool(current_user.get("authenticated"))
+                else None
+            )
+            with database() as connection:
+                initialize_database(connection)
+                result = library_home(
+                    connection,
+                    user_id=user_id,
+                    section_limit=limit,
+                )
+            self.send_json(result)
+        except ValueError as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"ライブラリホームを取得できませんでした: {type(exc).__name__}: {exc}"},
                 HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>音楽ライブラリ検索 — Music Library Catalog</title>
+<title>自宅音楽ライブラリ — Music Library Catalog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -829,6 +829,300 @@
   .empty-state p{margin:4px 0; font-size:13px;}
 
 
+  /* ---- Library home ---- */
+  .home-panel{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:18px;
+  }
+  #homeSections{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+  }
+  .home-panel[hidden]{display:none;}
+  .controls[hidden],
+  #results[hidden],
+  #sentinel[hidden],
+  .loadmore[hidden]{display:none;}
+  .home-hero{
+    position:relative;
+    overflow:hidden;
+    display:grid;
+    grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);
+    gap:20px;
+    padding:22px;
+    border:1px solid var(--card-edge);
+    border-left:5px solid var(--brass);
+    border-radius:7px;
+    background:linear-gradient(135deg, rgba(250,246,236,.98), rgba(231,223,201,.86));
+    box-shadow:0 3px 14px var(--shadow);
+  }
+  .home-hero::after{
+    content:"";
+    position:absolute;
+    width:170px;
+    height:170px;
+    right:-80px;
+    bottom:-100px;
+    border:1px solid rgba(169,132,60,.26);
+    border-radius:50%;
+  }
+  .home-kicker{
+    margin:0 0 6px;
+    color:var(--stamp);
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.14em;
+  }
+  .home-greeting{
+    margin:0;
+    font-family:'Shippori Mincho',serif;
+    font-size:clamp(22px,4vw,31px);
+    line-height:1.35;
+  }
+  .home-summary{
+    margin:8px 0 0;
+    color:var(--ink-soft);
+    font-size:13px;
+    line-height:1.65;
+  }
+  .home-stats{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+  }
+  .home-stat{
+    min-width:0;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:5px;
+    background:rgba(250,246,236,.72);
+  }
+  .home-stat strong{
+    display:block;
+    color:var(--ink);
+    font-family:'JetBrains Mono',monospace;
+    font-size:18px;
+    line-height:1.2;
+  }
+  .home-stat span{
+    display:block;
+    margin-top:3px;
+    color:var(--ink-faint);
+    font-size:10px;
+  }
+  .home-quick-links{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:9px;
+  }
+  .home-quick-btn{
+    min-height:48px;
+    border:1px solid var(--card-edge);
+    border-bottom:3px solid var(--card-edge);
+    border-radius:6px;
+    background:var(--card);
+    color:var(--ink);
+    cursor:pointer;
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;
+  }
+  .home-quick-btn:hover:not(:disabled){
+    transform:translateY(-1px);
+    border-color:var(--brass);
+    box-shadow:0 3px 10px var(--shadow);
+  }
+  .home-quick-btn:disabled{opacity:.45;cursor:not-allowed;}
+  .home-auth-note{
+    margin:0;
+    padding:12px 15px;
+    border:1px dashed var(--brass);
+    border-radius:5px;
+    background:rgba(255,248,221,.55);
+    color:var(--ink-soft);
+    font-size:12px;
+    line-height:1.65;
+  }
+  .home-section{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+  }
+  .home-section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:end;
+    gap:14px;
+    margin-bottom:9px;
+  }
+  .home-section-title{
+    margin:0;
+    font-family:'Shippori Mincho',serif;
+    font-size:20px;
+  }
+  .home-section-note{
+    margin:2px 0 0;
+    color:var(--ink-faint);
+    font-size:11px;
+  }
+  .home-section-more{
+    flex:0 0 auto;
+    border:none;
+    border-bottom:1px dotted var(--brass-deep);
+    background:transparent;
+    color:var(--brass-deep);
+    cursor:pointer;
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    padding:2px 0;
+  }
+  .home-section-more:hover{color:var(--stamp);border-color:var(--stamp);}
+  .home-track-row{
+    display:flex;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    gap:11px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    overscroll-behavior-inline:contain;
+    scroll-snap-type:x proximity;
+    padding:2px 2px 10px;
+    scrollbar-width:thin;
+  }
+  .home-track-card{
+    position:relative;
+    flex:0 0 clamp(178px,23%,218px);
+    min-width:0;
+    scroll-snap-align:start;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid var(--card-edge);
+    border-radius:6px;
+    background:var(--card);
+    box-shadow:0 2px 8px rgba(36,57,43,.09);
+  }
+  .home-track-artwork{
+    position:relative;
+    aspect-ratio:1;
+    overflow:hidden;
+    background:linear-gradient(145deg,var(--paper-deep),var(--line));
+  }
+  .home-track-artwork img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .home-track-placeholder{
+    width:100%;
+    height:100%;
+    display:grid;
+    place-items:center;
+    color:rgba(36,57,43,.38);
+    font-family:'Shippori Mincho',serif;
+    font-size:44px;
+  }
+  .home-track-actions{
+    position:absolute;
+    left:8px;
+    right:8px;
+    bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    pointer-events:none;
+  }
+  .home-play-btn,
+  .home-favorite-btn{
+    pointer-events:auto;
+    width:37px;
+    height:37px;
+    display:grid;
+    place-items:center;
+    border:1px solid rgba(250,246,236,.65);
+    border-radius:50%;
+    background:rgba(36,57,43,.9);
+    color:var(--paper);
+    cursor:pointer;
+    font-family:inherit;
+    line-height:1;
+    box-shadow:0 2px 8px rgba(0,0,0,.28);
+  }
+  .home-play-btn{font-size:14px;padding-left:2px;}
+  .home-play-btn.playing{background:var(--stamp);}
+  .home-favorite-btn{font-size:20px;}
+  .home-favorite-btn.active{background:#fff8dd;color:var(--brass-deep);border-color:var(--brass);}
+  .home-favorite-btn:disabled{opacity:.45;cursor:not-allowed;}
+  .home-favorite-btn.busy{cursor:progress;opacity:.65;}
+  .home-track-copy{
+    min-width:0;
+    padding:11px 12px 12px;
+  }
+  .home-track-title{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--ink);
+    font-size:13.5px;
+    font-weight:700;
+  }
+  .home-track-meta{
+    min-height:34px;
+    margin-top:4px;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    color:var(--ink-soft);
+    font-size:11px;
+    line-height:1.5;
+  }
+  .home-track-plays{
+    display:block;
+    margin-top:6px;
+    color:var(--ink-faint);
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;
+  }
+  .home-section-empty{
+    padding:24px 18px;
+    border:1px dashed var(--line);
+    border-radius:6px;
+    background:rgba(250,246,236,.5);
+    color:var(--ink-soft);
+    font-size:12px;
+    text-align:center;
+  }
+  .home-loading{
+    padding:48px 20px;
+    border:1px dashed var(--line);
+    border-radius:6px;
+    color:var(--ink-soft);
+    text-align:center;
+  }
+
+  @media (max-width:700px){
+    .home-hero{grid-template-columns:1fr;}
+    .home-quick-links{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .home-track-card{flex-basis:min(72vw,218px);}
+  }
+
+
   .sort-row{
     display:flex;
     justify-content:flex-end;
@@ -1170,15 +1464,35 @@
       <span class="user-chip-label" id="userChipLabel">利用者を確認中…</span>
     </button>
     <p class="plate-eyebrow">Card Catalog · No.290E9547</p>
-    <h1>音楽ライブラリ検索</h1>
+    <h1 id="pageTitle">自宅音楽ライブラリ</h1>
     <p class="sub" id="totalSub">読み込み中…</p>
   </header>
 
   <div class="view-tabs">
+    <button type="button" class="view-tab" data-view="home">ホーム</button>
     <button type="button" class="view-tab" data-view="songs">曲名</button>
     <button type="button" class="view-tab" data-view="artists">アーティスト</button>
     <button type="button" class="view-tab" data-view="albums">アルバム</button>
   </div>
+
+  <main class="home-panel" id="homePanel">
+    <section class="home-hero">
+      <div>
+        <p class="home-kicker">LIBRARY HOME</p>
+        <h2 class="home-greeting" id="homeGreeting">ライブラリを準備しています…</h2>
+        <p class="home-summary" id="homeSummary">お気に入りや再生履歴から、すぐに聴きたい曲へ移動できます。</p>
+      </div>
+      <div class="home-stats" id="homeStats" aria-label="ライブラリ統計"></div>
+    </section>
+    <nav class="home-quick-links" aria-label="ライブラリの主要画面">
+      <button type="button" class="home-quick-btn" data-home-view="songs">すべての曲</button>
+      <button type="button" class="home-quick-btn" data-home-view="artists">アーティスト</button>
+      <button type="button" class="home-quick-btn" data-home-view="albums">アルバム</button>
+      <button type="button" class="home-quick-btn" id="homeFavoritesShortcut" data-home-view="favorites">★ お気に入り</button>
+    </nav>
+    <p class="home-auth-note" id="homeAuthNote" hidden>利用者を確認できないため、最近再生した曲・お気に入り・よく聴く曲は表示していません。管理画面または本人のTailscale接続から開いてください。</p>
+    <div id="homeSections" class="home-loading">ライブラリホームを読み込んでいます…</div>
+  </main>
 
   <div class="controls">
     <div class="search-row">
@@ -1197,6 +1511,7 @@
         <option value="artist">アーティスト順</option>
         <option value="album">アルバム順</option>
         <option value="plays">再生回数順</option>
+        <option value="recent">最近再生順</option>
         <option value="added">追加日順</option>
       </select>
     </div>
@@ -1228,7 +1543,7 @@
 
 </div>
 
-<footer>DATE FIRST ISSUED · 2026-07-18 — MP3正本・SQLite API検索・ページ取得・最大化プレーヤー・シャッフル／リピート・曲名／アーティスト／アルバム索引</footer>
+<footer>DATE FIRST ISSUED · 2026-07-18 — ライブラリホーム・利用者別お気に入り／再生履歴・SQLite API検索・ブラウザプレーヤー</footer>
 
 
 <div class="user-modal" id="userModal" hidden role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
@@ -1247,7 +1562,7 @@
 
     <section class="user-section" id="anonymousUserSection" hidden>
       <h3>個人機能は利用できません</h3>
-      <p>管理画面からブラウザを開くか、利用者本人のTailscaleアカウントで接続してください。未識別の状態では、将来追加するお気に入りや個人別再生回数を保存しません。</p>
+      <p>管理画面からブラウザを開くか、利用者本人のTailscaleアカウントで接続してください。未識別の状態では、お気に入りや個人別再生回数を保存しません。</p>
     </section>
 
     <section class="user-section" id="tailscaleClaimSection" hidden>
@@ -1339,6 +1654,7 @@
 <script>
 (async function(){
   const BROWSE_API_URL = './api/browse';
+  const HOME_API_URL = './api/home';
   const STATS_API_URL = './api/stats';
   const CURRENT_USER_API_URL = './api/current-user';
   const USERS_API_URL = './api/users';
@@ -1357,7 +1673,7 @@
   const KANA_INDEX_KEYS = ['あ','か','さ','た','な','は','ま','や','ら','わ','他'];
 
   const state = {
-    view: 'songs',
+    view: 'home',
     selectedArtistKey: null,
     selectedArtistLabel: '',
     selectedAlbumKey: null,
@@ -1370,6 +1686,15 @@
   };
 
   const els = {
+    pageTitle: document.getElementById('pageTitle'),
+    homePanel: document.getElementById('homePanel'),
+    homeGreeting: document.getElementById('homeGreeting'),
+    homeSummary: document.getElementById('homeSummary'),
+    homeStats: document.getElementById('homeStats'),
+    homeAuthNote: document.getElementById('homeAuthNote'),
+    homeFavoritesShortcut: document.getElementById('homeFavoritesShortcut'),
+    homeSections: document.getElementById('homeSections'),
+    controls: document.querySelector('.controls'),
     search: document.getElementById('search'),
     results: document.getElementById('results'),
     resultCount: document.getElementById('resultCount'),
@@ -1458,6 +1783,8 @@
   const idMap = new Map();
 
   let currentUser = null;
+  let homeData = null;
+  let homeRequestSerial = 0;
   let ownerLinkCodeValue = '';
   let ownerLinkCandidateValue = null;
   let ownerLinkPollTimer = null;
@@ -1511,6 +1838,7 @@
   }
 
   function determineRenderKind(){
+    if (state.view === 'home') return 'home';
     if (state.view === 'songs') return 'song';
     if (state.view === 'artists' && !state.selectedArtistKey) return 'artist';
     if (state.view === 'artists' && state.selectedArtistKey && !state.selectedAlbumKey) return 'album';
@@ -1586,9 +1914,16 @@
   }
 
   function updateViewTabs(){
+    const home = state.view === 'home';
     document.querySelectorAll('.view-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === state.view);
     });
+    els.homePanel.hidden = !home;
+    els.controls.hidden = home;
+    els.results.hidden = home;
+    els.sentinel.hidden = home;
+    els.loadmoreMsg.hidden = home;
+    els.pageTitle.textContent = home ? '自宅音楽ライブラリ' : '音楽ライブラリ検索';
     els.toggleRow.style.display = isSongLevel() ? 'flex' : 'none';
     const albumDetail = renderKind === 'song-in-album' || renderKind === 'song-in-album-global';
     els.sortRow.style.display = isSongLevel() && !albumDetail ? 'flex' : 'none';
@@ -2097,10 +2432,186 @@
     }
   }
 
+  function homeStatHtml(value, label){
+    return `<div class="home-stat"><strong>${Number(value || 0).toLocaleString()}</strong><span>${escapeHtml(label)}</span></div>`;
+  }
+
+  function homeTrackCardHtml(track, sectionKey){
+    const artwork = track.artworkUrl
+      ? `<img src="${escapeHtml(track.artworkUrl)}" alt="" loading="lazy">`
+      : '<div class="home-track-placeholder" aria-hidden="true">♪</div>';
+    const meta = [track.artist, track.album].filter(Boolean).join(' · ') || 'アーティスト・アルバム情報なし';
+    const authenticated = Boolean(currentUser && currentUser.authenticated);
+    return `
+      <article class="home-track-card" data-id="${escapeHtml(track.id)}" data-home-section="${escapeHtml(sectionKey)}">
+        <div class="home-track-artwork">
+          ${artwork}
+          <div class="home-track-actions">
+            <button type="button" class="home-play-btn" data-action="play" title="再生" aria-label="再生">▶</button>
+            <button type="button" class="home-favorite-btn${track.favorite ? ' active' : ''}" data-action="favorite" aria-pressed="${track.favorite ? 'true' : 'false'}" aria-label="${track.favorite ? 'お気に入りから外す' : 'お気に入りに追加'}" title="${authenticated ? (track.favorite ? 'お気に入りから外す' : 'お気に入りに追加') : '利用者を確認できないためお気に入りを保存できません'}"${authenticated ? '' : ' disabled'}>${track.favorite ? '★' : '☆'}</button>
+          </div>
+        </div>
+        <div class="home-track-copy">
+          <div class="home-track-title" title="${escapeHtml(track.name || '(無題)')}">${escapeHtml(track.name || '(無題)')}</div>
+          <div class="home-track-meta">${escapeHtml(meta)}</div>
+          <span class="home-track-plays plays">再生 ${Number(track.playCount || 0).toLocaleString()}回</span>
+        </div>
+      </article>`;
+  }
+
+  function homeSectionHtml(key, title, note, section, moreLabel){
+    const items = section && Array.isArray(section.items) ? section.items : [];
+    const more = moreLabel && Number(section && section.total || 0) > 0
+      ? `<button type="button" class="home-section-more" data-home-more="${escapeHtml(key)}">${escapeHtml(moreLabel)}</button>`
+      : '';
+    const content = items.length
+      ? `<div class="home-track-row">${items.map(track => homeTrackCardHtml(track, key)).join('')}</div>`
+      : `<div class="home-section-empty">${escapeHtml(note)}</div>`;
+    return `
+      <section class="home-section" data-home-section-wrap="${escapeHtml(key)}">
+        <div class="home-section-head">
+          <div>
+            <h3 class="home-section-title">${escapeHtml(title)}</h3>
+            <p class="home-section-note">${escapeHtml(Number(section && section.total || 0).toLocaleString())}曲</p>
+          </div>
+          ${more}
+        </div>
+        ${content}
+      </section>`;
+  }
+
+  function prepareHomeSection(section){
+    const value = section && typeof section === 'object' ? section : {};
+    const items = Array.isArray(value.items) ? value.items.map(prepareTrack) : [];
+    return {...value, items};
+  }
+
+  function renderHome(){
+    const authenticated = Boolean(currentUser && currentUser.authenticated);
+    const name = authenticated ? String(currentUser.displayName || '利用者') : '';
+    els.homeGreeting.textContent = authenticated ? `おかえりなさい、${name}` : '自宅の音楽を、すぐ手元に';
+    els.homeSummary.textContent = authenticated
+      ? '最近の再生、お気に入り、よく聴く曲から続きを選べます。'
+      : '曲・アーティスト・アルバムを探すか、最近追加した曲から再生できます。';
+    els.homeAuthNote.hidden = authenticated;
+    els.homeFavoritesShortcut.disabled = !authenticated;
+    els.homeStats.innerHTML = [
+      homeStatHtml(stats && stats.availableTracks, 'ライブラリ収録曲'),
+      homeStatHtml(stats && stats.favoriteTracks, 'お気に入り'),
+      homeStatHtml(stats && stats.totalPlays, 'あなたの再生回数'),
+      homeStatHtml(stats && stats.artworkTracks, 'アートワークあり'),
+    ].join('');
+
+    if (!homeData) {
+      els.homeSections.innerHTML = '<div class="home-loading">ライブラリホームを読み込んでいます…</div>';
+      return;
+    }
+
+    const sections = [];
+    if (authenticated) {
+      sections.push(homeSectionHtml(
+        'recentlyPlayed',
+        '最近再生した曲',
+        '再生履歴はまだありません。曲を最後まで再生すると、ここへ表示されます。',
+        homeData.recentlyPlayed,
+        '再生履歴順で見る',
+      ));
+      sections.push(homeSectionHtml(
+        'favorites',
+        'お気に入り',
+        'お気に入りはまだありません。曲の★を押すと、ここへ表示されます。',
+        homeData.favorites,
+        'すべて見る',
+      ));
+      sections.push(homeSectionHtml(
+        'mostPlayed',
+        'よく聴く曲',
+        '再生回数が記録されると、よく聴く曲がここへ並びます。',
+        homeData.mostPlayed,
+        '再生回数順で見る',
+      ));
+    }
+    sections.push(homeSectionHtml(
+      'recentlyAdded',
+      '最近追加した曲',
+      '表示できる曲がありません。音楽フォルダとスキャン結果を確認してください。',
+      homeData.recentlyAdded,
+      '追加日順で見る',
+    ));
+    els.homeSections.className = '';
+    els.homeSections.innerHTML = sections.join('');
+    updateFavoriteButtons();
+    updatePlayButtons();
+  }
+
+  async function loadHome(){
+    const serial = ++homeRequestSerial;
+    updateViewTabs();
+    els.homeSections.className = 'home-loading';
+    els.homeSections.textContent = 'ライブラリホームを読み込んでいます…';
+    try {
+      const payload = await fetchJson(`${HOME_API_URL}?limit=8`);
+      if (serial !== homeRequestSerial || state.view !== 'home') return;
+      homeData = {
+        authenticated:Boolean(payload.authenticated),
+        recentlyPlayed:prepareHomeSection(payload.recentlyPlayed),
+        favorites:prepareHomeSection(payload.favorites),
+        mostPlayed:prepareHomeSection(payload.mostPlayed),
+        recentlyAdded:prepareHomeSection(payload.recentlyAdded),
+      };
+      renderHome();
+    } catch (error) {
+      if (serial !== homeRequestSerial) return;
+      console.error('ライブラリホームの読込エラー:', error);
+      els.homeSections.className = 'home-section-empty';
+      els.homeSections.textContent = `ライブラリホームを取得できませんでした。${error.message}`;
+    }
+  }
+
+  function openBrowseView(view, {sort = 'title', favoritesOnly = false} = {}){
+    state.view = view;
+    state.selectedArtistKey = null;
+    state.selectedArtistLabel = '';
+    state.selectedAlbumKey = null;
+    state.selectedAlbumTitle = '';
+    state.filterFavoritesOnly = Boolean(favoritesOnly);
+    state.sort = sort;
+    state.indexKey = '';
+    els.search.value = '';
+    void reloadBrowse();
+  }
+
+  function captureHomePlaybackContext(sectionKey, trackId){
+    if (!homeData || !homeData[sectionKey]) return;
+    const section = homeData[sectionKey];
+    const offset = section.items.findIndex(item => String(item.id) === String(trackId));
+    if (offset < 0 || Number(section.total || 0) <= 0) return;
+    const params = new URLSearchParams({
+      view:'songs',
+      sort:String(section.sort || 'title'),
+      latinOnly:'0',
+      correctedOnly:'0',
+    });
+    if (section.favoriteOnly) params.set('favoriteOnly', '1');
+    if (section.playedOnly) params.set('playedOnly', '1');
+    playbackContext = {
+      baseParams:params.toString(),
+      total:Number(section.total || section.items.length),
+      currentOffset:offset,
+    };
+    if (shuffleEnabled) resetShuffleOrder(offset);
+    else {
+      shuffleOrder = [];
+      shufflePosition = -1;
+    }
+    updatePlaybackModeControls();
+  }
+
   async function loadStats(){
     stats = await fetchJson(STATS_API_URL);
     els.totalSub.textContent = `MP3ライブラリ ${Number(stats.availableTracks || 0).toLocaleString()} 曲 · アートワーク ${Number(stats.artworkTracks || 0).toLocaleString()} 曲 · SQLite APIページ取得`;
     updateFavoriteFilterButton();
+    if (state.view === 'home') renderHome();
   }
 
   function updateResultSummary(){
@@ -2430,18 +2941,21 @@
       console.warn('再生回数を保存できませんでした:', error);
       track.playCount = Number(track.playCount || 0) + 1;
     }
-    els.results.querySelectorAll('.card[data-id]').forEach(card => {
+    document.querySelectorAll('.card[data-id], .home-track-card[data-id]').forEach(card => {
       if (card.dataset.id !== track.id) return;
       const plays = card.querySelector('.plays');
       if (plays) plays.textContent = `再生 ${Number(track.playCount || 0).toLocaleString()}回`;
     });
+    if (state.view === 'home') {
+      try { await loadHome(); } catch (_) {}
+    }
   }
 
 
   function updateFavoriteButtons(){
     const authenticated = Boolean(currentUser && currentUser.authenticated);
-    els.results.querySelectorAll('button[data-action="favorite"]').forEach(button => {
-      const card = button.closest('.card[data-id]');
+    document.querySelectorAll('button[data-action="favorite"]').forEach(button => {
+      const card = button.closest('.card[data-id], .home-track-card[data-id]');
       const track = card ? idMap.get(card.dataset.id) : null;
       if (!track) return;
       const active = Boolean(track.favorite);
@@ -2483,7 +2997,8 @@
       } catch (statsError) {
         console.warn('お気に入り件数を更新できませんでした:', statsError);
       }
-      if (state.filterFavoritesOnly && !track.favorite) await reloadBrowse();
+      if (state.view === 'home') await loadHome();
+      else if (state.filterFavoritesOnly && !track.favorite) await reloadBrowse();
     } catch (error) {
       alert(`お気に入りを保存できませんでした。\n${error.message}`);
     } finally {
@@ -2493,8 +3008,8 @@
   }
 
   function updatePlayButtons(){
-    els.results.querySelectorAll('button[data-action="play"]').forEach(button => {
-      const card = button.closest('.card[data-id]');
+    document.querySelectorAll('button[data-action="play"]').forEach(button => {
+      const card = button.closest('.card[data-id], .home-track-card[data-id]');
       const active = card && card.dataset.id === currentTrackId;
       const playing = active && !els.audioPlayer.paused && !els.audioPlayer.ended;
       button.textContent = playing ? 'Ⅱ' : '▶';
@@ -2790,16 +3305,58 @@
 
   document.querySelectorAll('.view-tab').forEach(button => {
     button.addEventListener('click', () => {
-      state.view = button.dataset.view;
-      state.selectedArtistKey = null;
-      state.selectedArtistLabel = '';
-      state.selectedAlbumKey = null;
-      state.selectedAlbumTitle = '';
-      state.sort = 'title';
-      state.indexKey = '';
-      els.search.value = '';
-      void reloadBrowse();
+      const view = String(button.dataset.view || 'home');
+      if (view === 'home') {
+        state.view = 'home';
+        state.filterFavoritesOnly = false;
+        state.indexKey = '';
+        els.search.value = '';
+        void loadHome();
+        return;
+      }
+      openBrowseView(view);
     });
+  });
+
+  els.homePanel.addEventListener('click', event => {
+    const shortcut = event.target.closest('button[data-home-view]');
+    if (shortcut) {
+      const view = String(shortcut.dataset.homeView || 'songs');
+      if (view === 'favorites') openBrowseView('songs', {favoritesOnly:true});
+      else openBrowseView(view);
+      return;
+    }
+
+    const more = event.target.closest('button[data-home-more]');
+    if (more) {
+      const key = String(more.dataset.homeMore || '');
+      if (key === 'favorites') openBrowseView('songs', {favoritesOnly:true});
+      else if (key === 'recentlyPlayed') openBrowseView('songs', {sort:'recent'});
+      else if (key === 'mostPlayed') openBrowseView('songs', {sort:'plays'});
+      else if (key === 'recentlyAdded') openBrowseView('songs', {sort:'added'});
+      return;
+    }
+
+    const favoriteButton = event.target.closest('button[data-action="favorite"]');
+    if (favoriteButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (favoriteButton.disabled) return;
+      const card = favoriteButton.closest('.home-track-card[data-id]');
+      const track = card ? idMap.get(card.dataset.id) : null;
+      if (track) void setTrackFavorite(track, !track.favorite, favoriteButton);
+      return;
+    }
+
+    const playButton = event.target.closest('button[data-action="play"]');
+    if (playButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const card = playButton.closest('.home-track-card[data-id]');
+      if (!card) return;
+      captureHomePlaybackContext(String(card.dataset.homeSection || ''), card.dataset.id);
+      void toggleTrackPlayback(card.dataset.id);
+    }
   });
 
   els.catalogIndex.addEventListener('click', event => {
@@ -3060,13 +3617,19 @@
 
   try {
     await loadStats();
-    await reloadBrowse();
+    if (state.view === 'home') await loadHome();
+    else await reloadBrowse();
   } catch (error) {
     console.error('初期化エラー:', error);
     els.totalSub.textContent = 'SQLite APIへ接続できませんでした';
     els.resultCount.textContent = '読込エラー';
     els.totalTime.textContent = '—';
-    els.results.innerHTML = errorHtml(error);
+    if (state.view === 'home') {
+      els.homeSections.className = 'home-section-empty';
+      els.homeSections.textContent = `初期化できませんでした。${error.message}`;
+    } else {
+      els.results.innerHTML = errorHtml(error);
+    }
   }
 })();
 
