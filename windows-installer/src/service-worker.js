@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'music-library-shell-v2.7.3';
+const CACHE_VERSION = 'music-library-shell-v2.7.4';
 const OFFLINE_URL = './offline.html';
 const APP_SHELL = [
   './music-library-search.html',

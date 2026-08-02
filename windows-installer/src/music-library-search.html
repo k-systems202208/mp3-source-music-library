@@ -3107,7 +3107,7 @@
     els.pwaGuideText.textContent = guide;
 
     if (PWA_PREVIEW_MODE) {
-      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.3 RCのTailscale URLで確認します。');
+      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.4 RCのTailscale URLで確認します。');
     } else if (provider === 'tailscale') {
       setMessage(els.pwaInstallMessage, 'この接続先を追加すると、Tailscale接続時にホーム画面から直接開けます。', 'success');
     } else if (provider === 'local_owner' || isLocalPwaOrigin()) {
@@ -3617,7 +3617,7 @@
     } catch (error) {
       if (serial !== updateRequestSerial) return;
       renderUpdateStatus({
-        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.3',
+        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.4',
         latestVersion: '',
         updateAvailable: false,
         source: 'error',

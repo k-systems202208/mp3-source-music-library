@@ -1,31 +1,40 @@
-Music Library v2.7.3 Release Source Validation
+﻿Music Library v2.7.4 Release Source Validation
 ==============================================
 
 Base source:
-- v2.7.3 RC1
-- Installed over v2.7.2 on 2026-08-02
-- iPhone home-screen acceptance completed
+- v2.7.4 RC2
+- Built and installed over v2.7.4 RC1 on 2026-08-02
+- Long-path and startup-auth acceptance completed
+- RC2 startup-auth integration commit: c40ce19
 
 Validated areas:
 - Windows batch launcher integrity
 - Python source compilation
 - Existing functional regression suite
-- PWA manifest and application icons
-- Service Worker cache exclusions
-- Smartphone install guidance
-- Responsive smartphone layout
-- Static-file MIME and cache headers
-- Tailscale HTTPS connection labels
+- Windows local and UNC long-path conversion
+- Long-path scan, metadata, artwork and range playback
+- Read-only live long-path probe workflow
+- Copied-DB full-scan and state-preservation workflow
+- PWA and smartphone layout regression tests
+- Repeated startup owner-authentication handoff
 - Bundled executable smoke test
 - Inno Setup compilation
 
+Real data results:
+- 8,480 MP3 files and library records
+- 201 long-path files loaded
+- 0 scan errors and 0 long-path errors
+- 364-character maximum path
+- 7,708 artwork entries
+- Existing track IDs and user state preserved
+
 Documentation finalized for release:
 - Installer README and repository README section
-- v2.7.3 release notes
+- v2.7.4 release notes
 - User, install, build and remote-access guides
 - Manual acceptance result
 - GitHub Release configuration
-- Mobile-home design and release scope
-- Document index and version check
+- Long-path and startup-auth formal specifications
+- Release scope, document index and version check
 
 The release automation regenerates FILE_MANIFEST_SHA256.txt after applying the documentation overlay, then reruns the complete build and regression process.

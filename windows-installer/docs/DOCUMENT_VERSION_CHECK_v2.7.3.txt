@@ -1,33 +1,22 @@
-自宅音楽ライブラリ v2.7.3
+﻿自宅音楽ライブラリ v2.7.3
 文書バージョン確認
-================================
+========================================
 
-製品バージョン:
+製品バージョン
 2.7.3
 
-DBスキーマ:
-6（v2.7.2から変更なし）
-
-インストーラー:
+インストーラー
 MusicLibrary-Setup-2.7.3-x64.exe
 
-最新版文書:
-・README.md
+主要文書
 ・RELEASE_NOTES_v2.7.3.md
-・docs\DOCUMENT_INDEX_v2.7.3.md
-・docs\INSTALL_INFO.txt
-・docs\README_BUILD.txt
 ・docs\README_USER.txt
 ・docs\REMOTE_ACCESS_USER.txt
 ・docs\REMOTE_ACCESS_FAMILY.txt
 ・docs\MANUAL_TEST_v2.7.3.txt
 ・docs\GITHUB_RELEASE_2.7.3.txt
-・docs\RELEASE_SCOPE_v2.7.3.md
-・docs\MOBILE_HOME_v2.7.3.md
-
-履歴文書:
 ・docs\RC1_v2.7.3_SCOPE.md
 ・docs\MOBILE_HOME_v2.7.3_PHASE1.md
-・v2.7.2以前の工程・Release文書
 
-公開済みv2.7.2のタグとReleaseは変更しません。
+DBスキーマ
+6（v2.7.2から変更なし）

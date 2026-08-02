@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-CURRENT_VERSION = "2.7.3"
+CURRENT_VERSION = "2.7.4"
 GITHUB_REPOSITORY = "k-systems202208/mp3-source-music-library"
 GITHUB_API_URL = (
     f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases?per_page=100"
@@ -112,7 +112,7 @@ def _default_fetch(url: str, timeout: float) -> list[dict[str, Any]]:
         url,
         headers={
             "Accept": "application/vnd.github+json",
-            "User-Agent": "MusicLibrary-UpdateChecker/2.7.3",
+            "User-Agent": "MusicLibrary-UpdateChecker/2.7.4",
             "X-GitHub-Api-Version": "2022-11-28",
         },
         method="GET",

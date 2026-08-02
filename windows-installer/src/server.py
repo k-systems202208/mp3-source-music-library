@@ -125,7 +125,7 @@ BLOCKED_STATIC_NAMES = {
 class MusicLibraryHandler(SimpleHTTPRequestHandler):
     """SQLite API and UTF-8 static server with MP3 byte-range support."""
 
-    server_version = "MusicLibrary/SQLiteAPI2.7.3"
+    server_version = "MusicLibrary/SQLiteAPI2.7.4"
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
         ".html": "text/html; charset=utf-8",
@@ -458,7 +458,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
 
         # Chrome on Windows can occasionally leave the very first automatic
         # startup navigation on a body-less 303 response in a perpetual
-        # loading state. Complete the cookie exchange with a tiny HTML
+        # loading state.  Complete the cookie exchange with a tiny HTML
         # handoff page instead. JavaScript performs an immediate replace, the
         # meta refresh is a no-script fallback, and the explicit close avoids
         # a half-open startup connection being mistaken for a still-loading
