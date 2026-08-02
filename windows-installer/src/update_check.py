@@ -11,9 +11,11 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-CURRENT_VERSION = "2.7.0"
+CURRENT_VERSION = "2.7.1"
 GITHUB_REPOSITORY = "k-systems202208/mp3-source-music-library"
-GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/latest"
+GITHUB_API_URL = (
+    f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases?per_page=100"
+)
 GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_REPOSITORY}/releases"
 CACHE_FILENAME = "update-status.json"
 CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -105,12 +107,12 @@ def _cache_is_fresh(cache: dict[str, Any], now: datetime, ttl_seconds: int) -> b
     return 0 <= age < max(0, int(ttl_seconds))
 
 
-def _default_fetch(url: str, timeout: float) -> dict[str, Any]:
+def _default_fetch(url: str, timeout: float) -> list[dict[str, Any]]:
     request = urllib.request.Request(
         url,
         headers={
             "Accept": "application/vnd.github+json",
-            "User-Agent": "MusicLibrary-UpdateChecker/2.7.0",
+            "User-Agent": "MusicLibrary-UpdateChecker/2.7.1",
             "X-GitHub-Api-Version": "2022-11-28",
         },
         method="GET",
@@ -129,9 +131,38 @@ def _default_fetch(url: str, timeout: float) -> dict[str, Any]:
         value = json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise UpdateCheckError("GitHub response was not valid JSON") from exc
-    if not isinstance(value, dict):
-        raise UpdateCheckError("GitHub response had an unexpected shape")
-    return value
+    if not isinstance(value, list):
+        raise UpdateCheckError("GitHub release list had an unexpected shape")
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _select_latest_published_release(value: Any) -> dict[str, Any]:
+    """Select the highest semantic-version Release, including prereleases.
+
+    Drafts are excluded. When the same semantic version appears more than once,
+    a full release is preferred over a prerelease, then the newest publication
+    timestamp is preferred.
+    """
+    if not isinstance(value, list):
+        raise UpdateCheckError("GitHub release list had an unexpected shape")
+
+    candidates: list[tuple[tuple[int, int, int], bool, str, dict[str, Any]]] = []
+    for item in value:
+        if not isinstance(item, dict) or bool(item.get("draft")):
+            continue
+        tag = str(item.get("tag_name") or "").strip()
+        try:
+            version = parse_version(tag)
+        except ValueError:
+            continue
+        published_at = str(item.get("published_at") or "")
+        candidates.append((version, not bool(item.get("prerelease")), published_at, item))
+
+    if not candidates:
+        raise UpdateCheckError(
+            "GitHub did not return a published semantic-version Release"
+        )
+    return max(candidates, key=lambda candidate: candidate[:3])[3]
 
 
 def _preview_result(current_version: str, now: datetime) -> dict[str, Any] | None:
@@ -151,6 +182,7 @@ def _preview_result(current_version: str, now: datetime) -> dict[str, Any] | Non
         "publishedAt": isoformat_utc(now),
         "checkedAt": isoformat_utc(now),
         "updateAvailable": is_newer_version(latest, current_version),
+        "isPrerelease": False,
         "source": "preview",
         "repository": GITHUB_REPOSITORY,
         "error": "",
@@ -178,6 +210,7 @@ def _result_from_release(
         "publishedAt": str(release.get("published_at") or ""),
         "checkedAt": isoformat_utc(checked_at),
         "updateAvailable": is_newer_version(latest, current_version),
+        "isPrerelease": bool(release.get("prerelease")),
         "source": "network",
         "repository": repository,
         "error": "",
@@ -193,10 +226,14 @@ def check_for_update(
     timeout: float = REQUEST_TIMEOUT_SECONDS,
     repository: str = GITHUB_REPOSITORY,
     api_url: str = GITHUB_API_URL,
-    fetch: Callable[[str, float], dict[str, Any]] | None = None,
+    fetch: Callable[[str, float], Any] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Return latest stable release information without making startup depend on GitHub.
+    """Return the newest published GitHub Release without making startup depend on GitHub.
+
+    The repository's release process publishes Releases with GitHub's prerelease flag,
+    so the checker reads the published Release list instead of the full-release-only endpoint. Drafts
+    are ignored and the highest valid semantic version is selected.
 
     Successful responses are cached under the application data directory. A failed
     network request returns the most recent successful cache when one exists; otherwise
@@ -216,11 +253,13 @@ def check_for_update(
         result["currentVersion"] = normalized_version(current_version)
         latest = str(result.get("latestVersion") or "")
         result["updateAvailable"] = bool(latest) and is_newer_version(latest, current_version)
+        result["isPrerelease"] = bool(result.get("isPrerelease"))
         return result
 
     actual_fetch = fetch or _default_fetch
     try:
-        release = actual_fetch(api_url, timeout)
+        releases = actual_fetch(api_url, timeout)
+        release = _select_latest_published_release(releases)
         result = _result_from_release(
             release,
             current_version=current_version,
@@ -236,6 +275,7 @@ def check_for_update(
             result["source"] = "stale-cache"
             result["error"] = message
             result["currentVersion"] = normalized_version(current_version)
+            result["isPrerelease"] = bool(result.get("isPrerelease"))
             latest = str(result.get("latestVersion") or "")
             try:
                 result["updateAvailable"] = bool(latest) and is_newer_version(
@@ -253,6 +293,7 @@ def check_for_update(
             "publishedAt": "",
             "checkedAt": isoformat_utc(checked_at),
             "updateAvailable": False,
+            "isPrerelease": False,
             "source": "error",
             "repository": repository,
             "error": message,

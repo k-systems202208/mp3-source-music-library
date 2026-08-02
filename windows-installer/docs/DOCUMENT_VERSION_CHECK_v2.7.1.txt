@@ -1,0 +1,25 @@
+﻿自宅音楽ライブラリ v2.7.1
+文書・バージョン整合性確認
+================================
+
+実行時バージョン:
+2.7.1
+
+確認対象:
+・src\paths.py
+・src\launcher.py
+・src\server.py
+・src\update_check.py
+・installer\MusicLibrary.iss
+・build\version_info.txt
+・00_build_installer.bat
+・04_prepare_release_assets.ps1
+・RELEASE_NOTES_v2.7.1.md
+・docs\README_USER.txt
+・docs\INSTALL_INFO.txt
+・docs\MANUAL_TEST_v2.7.1.txt
+・docs\GITHUB_RELEASE_2.7.1.txt
+
+注意:
+library-pre-v2.7.0-*は、スキーマ5導入前の移行バックアップ名として意図的に維持します。
+公開済みのRELEASE_NOTES_v2.7.0.mdやv2.7.0関連仕様書も履歴として維持します。

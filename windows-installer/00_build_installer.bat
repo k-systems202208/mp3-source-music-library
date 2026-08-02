@@ -2,13 +2,13 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-set "BUILD_LOG=%CD%\release\BUILD_LOG_v2.7.0_RC2.txt"
-set "BUILD_REPORT=%CD%\release\BUILD_REPORT_v2.7.0_RC2.txt"
-set "INSTALLER=%CD%\release\MusicLibrary-Setup-2.7.0-x64.exe"
-set "HASH_FILE=%CD%\release\MusicLibrary-Setup-2.7.0-x64_SHA256.txt"
+set "BUILD_LOG=%CD%\release\BUILD_LOG_v2.7.1_RC2.txt"
+set "BUILD_REPORT=%CD%\release\BUILD_REPORT_v2.7.1_RC2.txt"
+set "INSTALLER=%CD%\release\MusicLibrary-Setup-2.7.1-x64.exe"
+set "HASH_FILE=%CD%\release\MusicLibrary-Setup-2.7.1-x64_SHA256.txt"
 
 if not exist "release" mkdir "release"
-> "%BUILD_LOG%" echo Music Library v2.7.0 RC2 Build Log
+> "%BUILD_LOG%" echo Music Library v2.7.1 RC2 Build Log
 >>"%BUILD_LOG%" echo ======================================
 >>"%BUILD_LOG%" echo Started: %DATE% %TIME%
 >>"%BUILD_LOG%" echo Package: %CD%
@@ -16,11 +16,11 @@ if not exist "release" mkdir "release"
 
 echo.
 echo ============================================================
-echo Music Library v2.7.0 RC2 installer build
+echo Music Library v2.7.1 RC2 installer build
 echo ============================================================
 echo.
 echo This step builds the installer only.
-echo Do not install it until the next verification step.
+echo Do not install it until the build report has been reviewed.
 echo.
 
 set "PYTHON_CMD="
@@ -37,6 +37,10 @@ if not defined PYTHON_CMD (
   pause
   exit /b 1
 )
+
+echo Verifying package files...
+%PYTHON_CMD% "tests\verify_package_manifest.py" >>"%BUILD_LOG%" 2>&1
+if errorlevel 1 goto :error
 
 if not exist ".venv-build\Scripts\python.exe" (
   echo Creating build environment...
@@ -83,6 +87,14 @@ call :RUN_TEST "tests\test_user_favorites.py" "User favorites"
 if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_favorite_filter.py" "Favorite filter"
 if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_library_home.py" "Library home"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_library_home_layout.py" "Library home layout"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_backup_restore.py" "Backup and restore"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_update_notification.py" "Update notification including prereleases"
+if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_release_candidate.py" "Release candidate consistency"
 if errorlevel 1 goto :error
 
@@ -100,9 +112,9 @@ if not exist "dist\MusicLibrary\MusicLibrary.exe" (
 
 echo Checking bundled version...
 for /f "delims=" %%V in ('"dist\MusicLibrary\MusicLibrary.exe" --version') do set "BUNDLED_VERSION=%%V"
-if not "%BUNDLED_VERSION%"=="2.7.0" (
-  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.0".
-  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.0".>>"%BUILD_LOG%"
+if not "%BUNDLED_VERSION%"=="2.7.1" (
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.1".
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.1".>>"%BUILD_LOG%"
   goto :error
 )
 
@@ -142,21 +154,21 @@ if exist "%INSTALLER%" del /q "%INSTALLER%"
 if errorlevel 1 goto :error
 
 if not exist "%INSTALLER%" (
-  echo ERROR: The v2.7.0 installer was not created.
-  echo ERROR: The v2.7.0 installer was not created.>>"%BUILD_LOG%"
+  echo ERROR: The v2.7.1 installer was not created.
+  echo ERROR: The v2.7.1 installer was not created.>>"%BUILD_LOG%"
   goto :error
 )
 
 echo Calculating SHA-256...
-powershell.exe -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath '%INSTALLER%').Hash.ToLower(); Set-Content -LiteralPath '%HASH_FILE%' -Value ($h + '  MusicLibrary-Setup-2.7.0-x64.exe') -Encoding ascii; Write-Output $h" > "%TEMP%\music-library-v270-hash.txt"
+powershell.exe -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath '%INSTALLER%').Hash.ToLower(); Set-Content -LiteralPath '%HASH_FILE%' -Value ($h + '  MusicLibrary-Setup-2.7.1-x64.exe') -Encoding ascii; Write-Output $h" > "%TEMP%\music-library-v271-hash.txt"
 if errorlevel 1 goto :error
-set /p "INSTALLER_HASH="<"%TEMP%\music-library-v270-hash.txt"
-del /q "%TEMP%\music-library-v270-hash.txt" >nul 2>&1
+set /p "INSTALLER_HASH="<"%TEMP%\music-library-v271-hash.txt"
+del /q "%TEMP%\music-library-v271-hash.txt" >nul 2>&1
 
-> "%BUILD_REPORT%" echo Music Library v2.7.0 RC2 Build Report
+> "%BUILD_REPORT%" echo Music Library v2.7.1 RC2 Build Report
 >>"%BUILD_REPORT%" echo =======================================
 >>"%BUILD_REPORT%" echo Finished: %DATE% %TIME%
->>"%BUILD_REPORT%" echo Installer: MusicLibrary-Setup-2.7.0-x64.exe
+>>"%BUILD_REPORT%" echo Installer: MusicLibrary-Setup-2.7.1-x64.exe
 >>"%BUILD_REPORT%" echo SHA256: %INSTALLER_HASH%
 >>"%BUILD_REPORT%" echo Bundled version: %BUNDLED_VERSION%
 >>"%BUILD_REPORT%" echo.
@@ -184,7 +196,7 @@ echo %INSTALLER_HASH%
 echo.
 echo IMPORTANT:
 echo Do not install this RC2 yet.
-echo Share BUILD_REPORT_v2.7.0_RC2.txt or the final screen first.
+echo Share BUILD_REPORT_v2.7.1_RC2.txt or the final screen first.
 echo.
 start "" explorer.exe "%CD%\release"
 pause

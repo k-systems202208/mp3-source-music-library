@@ -16,6 +16,8 @@ required = [
     SRC / "remote_access.py",
     SRC / "paths.py",
     SRC / "database.py",
+    SRC / "backup_restore.py",
+    SRC / "update_check.py",
     SRC / "generator.py",
     SRC / "server.py",
     SRC / "music-library-search.html",

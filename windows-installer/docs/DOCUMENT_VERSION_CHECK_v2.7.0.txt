@@ -1,17 +1,25 @@
-自宅音楽ライブラリ v2.7.0
-文書バージョン整合性確認
+﻿自宅音楽ライブラリ v2.7.0
+文書・プログラムのバージョン確認
 ================================
 
-[ ] 製品バージョン 2.7.0
-[ ] DBスキーマ 5
-[ ] ユーザー別再生回数は実装済み
-[ ] お気に入りは実装済み
-[ ] ローカルオーナー認証を記載
-[ ] Tailscale利用者識別を記載
-[ ] オーナー関連付けと状態統合を記載
-[ ] 匿名では個人状態を保存しない
-[ ] 評価UIは未実装と記載
-[ ] 長いWindowsパスを既知の注意として記載
-[ ] 旧バッチ版を通常利用手順にしていない
-[ ] Funnel／ポート開放を推奨していない
-[ ] 個人情報・MP3・実DBを公開対象にしていない
+現行バージョン:
+2.7.0
+
+確認対象:
+・src\paths.py
+・src\launcher.py
+・src\server.py
+・installer\MusicLibrary.iss
+・build\version_info.txt
+・README.md
+・RELEASE_NOTES_v2.7.0.md
+・docs\INSTALL_INFO.txt
+・docs\README_BUILD.txt
+・docs\README_USER.txt
+・docs\REMOTE_ACCESS_USER.txt
+・docs\REMOTE_ACCESS_FAMILY.txt
+・docs\MANUAL_TEST_v2.7.0.txt
+・docs\GITHUB_RELEASE_2.7.0.txt
+
+旧版の説明として必要な箇所を除き、
+現在版の表示は2.7.0へ統一します。

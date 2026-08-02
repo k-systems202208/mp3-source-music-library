@@ -1,0 +1,30 @@
+Music Library v2.7.1 RC2 Build Package Validation
+==================================================
+
+[PASS] Python production source compiles
+[PASS] Browser JavaScript syntax check (Node.js)
+[PASS] HTML duplicate-id check
+[PASS] Existing playback, remote access, launcher, schema, owner, Tailscale, user state, and favorite regression tests
+[PASS] Library home database/API/UI contract tests
+[PASS] Library home layout contract tests
+[PASS] Backup and restore functional/API/authorization tests
+[PASS] Update notification reads the published Release list instead of the full-release-only endpoint
+[PASS] Prerelease-only repository policy test using v2.7.0, v2.6.3, v2.6.2, and v2.6.1
+[PASS] Draft and non-semantic Release tags are excluded
+[PASS] Highest semantic version is selected independent of API list order
+[PASS] Update notification cache, offline fallback, owner-only API, and UI feedback tests
+[PASS] v2.7.1 version consistency across application, server, updater, executable metadata, installer, build script, and release assets
+[PASS] Existing AppId retained for over-installation
+[PASS] SQLite schema remains version 5
+[PASS] Historic library-pre-v2.7.0 migration backup naming retained intentionally
+[PASS] No MP3, SQLite database, executable, log, private key, or user-specific absolute path included
+[PASS] Package file manifest generated and verified
+[PASS] ZIP integrity verified
+
+Windows-only steps not executed in this Linux validation environment:
+- PyInstaller creation of MusicLibrary.exe
+- Bundled executable smoke test
+- Inno Setup compilation of MusicLibrary-Setup-2.7.1-x64.exe
+
+Those Windows-only steps are performed by 00_build_installer.bat on the target PC.
+The RC2 installer must not be installed until its build report is reviewed.

@@ -1,4 +1,4 @@
-# MP3 Source Music Library v2.7.0
+﻿# MP3 Source Music Library v2.7.0
 
 手元のMP3ファイルを音源の正本として、タグ・アートワーク・検索用メタデータ・利用者別の再生状態をSQLiteで管理し、Windows PC・スマートフォン・タブレットのブラウザから検索・再生する個人／家庭向け音楽ライブラリです。
 
@@ -190,3 +190,89 @@ Windowsの長いパスが無効な環境では、フルパスが約260文字以�
 ## ライセンス
 
 プロジェクト本体のライセンスはリポジトリのライセンスファイルを確認してください。同梱する第三者コードの通知は[THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)および`windows-installer/src/vendor/MUTAGEN_LICENSE.txt`を参照してください。
+
+<!-- BEGIN WINDOWS-INSTALLER-V2.7.1 -->
+
+## Windowsインストーラー版
+
+Windows 10・11（64bit）では、Pythonやコマンド操作なしで使えるWindowsインストーラー版を配布しています。
+
+### v2.7.1
+
+v2.7.1では、起動直後に使えるライブラリホームと、オーナー向けのバックアップ・復元、新版通知を追加しました。
+
+- 最近再生した曲・お気に入り・よく聴く曲・最近追加した曲をホームに表示
+- すべての曲・アーティスト・アルバム・お気に入りへのショートカット
+- 利用者ごとの再生回数・お気に入りを維持
+- オーナー画面から手動バックアップを作成
+- バックアップの整合性、収録曲数、スキーマを確認
+- 二段階確認後、次回起動時に安全に復元
+- 復元直前の自動バックアップ
+- GitHubの公開済みReleaseを1日1回確認
+- プレリリース設定のReleaseにも対応
+- 新版確認に失敗しても起動・検索・再生を継続
+
+### ダウンロード
+
+1. [v2.7.1 Release](https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.7.1)を開く
+2. `MusicLibrary-Setup-2.7.1-x64.exe`をダウンロード
+3. 自宅音楽ライブラリを終了
+4. インストーラーを実行
+5. 「自宅音楽ライブラリ」を起動
+
+v2.7.0をアンインストールせず、そのまま上書き更新できます。
+
+### 主な機能
+
+- MP3・ID3タグ・アートワークの読込み
+- ライブラリホーム
+- 曲・アーティスト・アルバム検索
+- SQLiteによる表記補正と利用者別状態管理
+- ブラウザ再生、シーク、シャッフル、リピート
+- 利用者別の再生回数とお気に入り
+- バックアップ・復元画面
+- 新版通知
+- Tailscale Serveによる外部接続
+- スタートメニュー登録とアンインストール
+
+### 外出先から利用する
+
+管理画面の「外部接続をかんたん設定」を使用します。
+
+```text
+https://PC名.tailnet名.ts.net/music-library-search.html
+```
+
+ルーターのポート開放やTailscale Funnelは使用しません。
+
+### データ保存場所
+
+```text
+アプリ本体：
+%LOCALAPPDATA%\Programs\MusicLibrary
+
+管理データ：
+%LOCALAPPDATA%\MusicLibrary
+
+MP3：
+利用者が選択した既存フォルダ
+```
+
+更新インストール後も、library.db、再生回数、お気に入り、表記補正、設定、バックアップ、外部URLは保持されます。
+
+### 注意
+
+- MP3音源、library.db、Tailscale認証情報は配布物に含まれません
+- Setup.exeは未署名のため、SmartScreenの警告が出る場合があります
+- 自宅PCが停止またはスリープ中は外部利用できません
+- 新版通知は自動ダウンロードや自動インストールを行いません
+
+### 開発者向け
+
+```text
+windows-installer\00_build_installer.bat
+```
+
+をWindows上で実行するとSetup.exeを生成します。
+
+<!-- END WINDOWS-INSTALLER-V2.7.1 -->

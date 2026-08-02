@@ -1,42 +1,34 @@
-自宅音楽ライブラリ v2.7.0
-GitHub Release確認
+﻿自宅音楽ライブラリ v2.7.0
+GitHub Release準備
 ================================
 
-公開内容
---------
+タグ:
+v2.7.0
+
+タイトル:
+自宅音楽ライブラリ v2.7.0
+
+本文:
+RELEASE_NOTES_v2.7.0.mdを使用します。
+
+添付:
 ・MusicLibrary-Setup-2.7.0-x64.exe
-・SHA-256
+・SHA256SUMS.txt
+・README_USER.txt
+・REMOTE_ACCESS_USER.txt
+・REMOTE_ACCESS_FAMILY.txt
 ・RELEASE_NOTES_v2.7.0.md
-・ソース・設計書・テスト
 
-主な機能
---------
-・DB schema 5
-・ローカルオーナー
-・Tailscale利用者識別
-・利用者別再生回数／お気に入り
-・オーナー関連付けと個人状態統合
-・利用者停止／再開
+公開前の必須条件:
+・RC1インストーラーのビルド成功
+・v2.6.3からの実機上書き更新成功
+・スキーマ5移行前バックアップ確認
+・ローカルオーナー確認
+・Tailscale家族利用者確認
+・利用者別再生回数確認
+・利用者別お気に入り確認
+・オーナー本人の既存個人データ統合確認
+・既存の検索・再生機能確認
+・Setup.exeのSHA-256確認
 
-公開禁止
---------
-・MP3
-・library.db、WAL、SHM
-・Backups、Logs、診断
-・config.json、remote-url.txt
-・実利用者名、メール、Tailscale情報
-・関連付けコード、Cookie、秘密情報
-
-確認
-----
-・全回帰試験PASS
-・EXEスモークPASS
-・Inno Setup PASS
-・実機上書きPASS
-・schema移行PASS
-・ローカルオーナーPASS
-・Tailscale PASS
-・関連付け・状態共有PASS
-
-公開済みv2.7.0タグを文書修正のために移動しないこと。
-文書修正はmainへ追加コミットします。
+実機確認が完了するまではGitHub Releaseを公開しません。

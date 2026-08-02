@@ -1,0 +1,23 @@
+﻿自宅音楽ライブラリ v2.7.1
+GitHub Release作成メモ
+================================
+
+タグ:
+v2.7.1
+
+Releaseタイトル:
+自宅音楽ライブラリ v2.7.1
+
+本文:
+RELEASE_NOTES_v2.7.1.mdを使用します。
+
+添付ファイル:
+・MusicLibrary-Setup-2.7.1-x64.exe
+・SHA256SUMS.txt
+・README_USER.txt
+・REMOTE_ACCESS_USER.txt
+・REMOTE_ACCESS_FAMILY.txt
+・RELEASE_NOTES_v2.7.1.md
+
+RCのインストール確認とTailscale確認が完了するまで、
+タグ・Releaseを作成しません。

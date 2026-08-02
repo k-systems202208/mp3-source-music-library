@@ -1754,7 +1754,7 @@
 
     <section class="user-section" id="updateSection" hidden>
       <h3>新版通知</h3>
-      <p>GitHubの最新の正式リリースを1日1回確認します。確認に失敗しても、音楽ライブラリの起動・検索・再生には影響しません。</p>
+      <p>GitHubの公開済みRelease（プレリリース設定を含む）を1日1回確認します。確認に失敗しても、音楽ライブラリの起動・検索・再生には影響しません。</p>
       <div class="update-status-card" id="updateStatusCard" aria-live="polite">
         <div class="update-status-main" id="updateStatusMain">新版情報を確認しています…</div>
         <div class="update-status-meta" id="updateStatusMeta"></div>
@@ -2587,6 +2587,7 @@
         updateData.publishedAt ? `公開 ${formatUpdateDate(updateData.publishedAt)}` : '',
         source === 'cache' ? '前回の確認結果' : '',
         source === 'stale-cache' ? '以前の確認結果（今回は通信できませんでした）' : '',
+        updateData.isPrerelease ? 'GitHub上はプレリリース設定' : '',
         preview ? 'プレビュー用の模擬通知' : '',
       ].filter(Boolean).join(' · ');
       els.updateStatusMeta.textContent = detail;
@@ -2613,9 +2614,18 @@
       return;
     }
 
-    els.updateStatusMain.textContent = `v${current} は最新版です。`;
+    const currentParts = current.split('.').map(Number);
+    const latestParts = latest.split('.').map(Number);
+    const currentIsNewer = latest && currentParts.length === 3 && latestParts.length === 3
+      && currentParts.every(Number.isFinite) && latestParts.every(Number.isFinite)
+      && currentParts.some((value, index) => value !== latestParts[index])
+      && currentParts.join('.').localeCompare(latestParts.join('.'), undefined, {numeric:true}) > 0;
+    els.updateStatusMain.textContent = currentIsNewer
+      ? `現在の v${current} は、公開済み最新版 v${latest} より新しい版です。`
+      : `v${current} は最新版です。`;
     els.updateStatusMeta.textContent = [
       updateData.checkedAt ? `確認 ${formatUpdateDate(updateData.checkedAt)}` : '',
+      updateData.isPrerelease ? '公開済みReleaseはGitHub上でプレリリース設定' : '',
       preview ? 'プレビュー用の確認結果' : '',
     ].filter(Boolean).join(' · ');
     setMessage(

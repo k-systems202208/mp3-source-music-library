@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 APP_ID = "MusicLibrary"
-APP_VERSION = "2.7.0"
+APP_VERSION = "2.7.1"
 
 
 def resource_root() -> Path:

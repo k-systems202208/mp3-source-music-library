@@ -69,7 +69,13 @@ def owner_cookie(port: int, secret: str) -> str:
         connection.close()
 
 
-def fake_release(version: str = "2.8.0") -> dict:
+def fake_release(
+    version: str = "2.8.0",
+    *,
+    prerelease: bool = False,
+    draft: bool = False,
+    published_at: str = "2026-08-02T00:00:00Z",
+) -> dict:
     return {
         "tag_name": f"v{version}",
         "name": f"Music Library v{version}",
@@ -77,13 +83,23 @@ def fake_release(version: str = "2.8.0") -> dict:
             "https://github.com/k-systems202208/"
             f"mp3-source-music-library/releases/tag/v{version}"
         ),
-        "published_at": "2026-08-02T00:00:00Z",
-        "draft": False,
-        "prerelease": False,
+        "published_at": published_at,
+        "draft": draft,
+        "prerelease": prerelease,
     }
 
 
+def release_list(latest: str = "2.8.0") -> list[dict]:
+    return [
+        fake_release(latest, prerelease=True),
+        fake_release("2.7.0", prerelease=True, published_at="2026-07-31T00:00:00Z"),
+    ]
+
+
 def test_version_and_url_validation() -> None:
+    assert update_check.CURRENT_VERSION == "2.7.1"
+    assert update_check.GITHUB_API_URL.endswith("/releases?per_page=100")
+    assert "/releases/latest" not in update_check.GITHUB_API_URL
     assert update_check.parse_version("v2.7.1") == (2, 7, 1)
     assert update_check.is_newer_version("2.8.0", "2.7.1") is True
     assert update_check.is_newer_version("2.7.1", "2.7.1") is False
@@ -92,13 +108,59 @@ def test_version_and_url_validation() -> None:
     assert update_check.safe_release_url("https://evil.example/releases/v2.8.0") == ""
 
 
+def test_release_selection_includes_prereleases_and_excludes_drafts() -> None:
+    selected = update_check._select_latest_published_release(
+        [
+            fake_release("9.0.0", draft=True),
+            {"tag_name": "nightly", "draft": False, "prerelease": True},
+            fake_release("2.6.3", prerelease=True),
+            fake_release("2.7.0", prerelease=True),
+        ]
+    )
+    assert selected["tag_name"] == "v2.7.0"
+    assert selected["prerelease"] is True
+
+    # Selection is semantic-version based rather than relying on API list order.
+    selected = update_check._select_latest_published_release(
+        [fake_release("2.8.0", prerelease=True), fake_release("2.10.0", prerelease=True)]
+    )
+    assert selected["tag_name"] == "v2.10.0"
+
+    # A full release wins over a prerelease when tags normalize to the same version.
+    selected = update_check._select_latest_published_release(
+        [
+            fake_release("3.0.0-rc1", prerelease=True, published_at="2026-09-02T00:00:00Z"),
+            fake_release("3.0.0", prerelease=False, published_at="2026-09-01T00:00:00Z"),
+        ]
+    )
+    assert selected["tag_name"] == "v3.0.0"
+
+
+def test_prerelease_only_repository_matches_real_release_policy() -> None:
+    result = update_check.check_for_update(
+        data_root=IMPORT_ROOT / "prerelease-only",
+        current_version="2.7.1",
+        fetch=lambda *_: [
+            fake_release("2.7.0", prerelease=True),
+            fake_release("2.6.3", prerelease=True),
+            fake_release("2.6.2", prerelease=True),
+            fake_release("2.6.1", prerelease=True),
+        ],
+        now=datetime(2026, 8, 1, 4, 20, tzinfo=timezone.utc),
+    )
+    assert result["source"] == "network"
+    assert result["latestVersion"] == "2.7.0"
+    assert result["isPrerelease"] is True
+    assert result["updateAvailable"] is False
+
+
 def test_network_result_and_cache() -> None:
     root = IMPORT_ROOT / "cache"
     calls: list[tuple[str, float]] = []
 
-    def fetch(url: str, timeout: float) -> dict:
+    def fetch(url: str, timeout: float) -> list[dict]:
         calls.append((url, timeout))
-        return fake_release("2.8.0")
+        return release_list("2.8.0")
 
     now = datetime(2026, 8, 1, 1, 0, tzinfo=timezone.utc)
     result = update_check.check_for_update(
@@ -109,6 +171,7 @@ def test_network_result_and_cache() -> None:
     )
     assert result["updateAvailable"] is True
     assert result["latestVersion"] == "2.8.0"
+    assert result["isPrerelease"] is True
     assert result["source"] == "network"
     assert len(calls) == 1
     assert (root / update_check.CACHE_FILENAME).is_file()
@@ -121,6 +184,7 @@ def test_network_result_and_cache() -> None:
     )
     assert cached["source"] == "cache"
     assert cached["updateAvailable"] is True
+    assert cached["isPrerelease"] is True
 
 
 def test_force_and_stale_cache_fallback() -> None:
@@ -129,7 +193,7 @@ def test_force_and_stale_cache_fallback() -> None:
     update_check.check_for_update(
         data_root=root,
         current_version="2.7.1",
-        fetch=lambda *_: fake_release("2.8.0"),
+        fetch=lambda *_: release_list("2.8.0"),
         now=now,
     )
 
@@ -201,6 +265,7 @@ def test_http_route_requires_owner_and_honors_force() -> None:
             "publishedAt": "2026-08-02T00:00:00Z",
             "checkedAt": "2026-08-02T01:00:00Z",
             "updateAvailable": True,
+            "isPrerelease": True,
             "source": "network",
             "repository": update_check.GITHUB_REPOSITORY,
             "error": "",
@@ -256,12 +321,15 @@ def test_frontend_contains_owner_only_update_ui() -> None:
         "./api/update-status",
         "loadUpdateStatus({force:true})",
         "els.updateSection.hidden = !owner",
-        "rel=\"noopener noreferrer\"",
+        'rel="noopener noreferrer"',
         "music-library-dismissed-update-",
         "プレビュー用の模擬通知",
         "最新版情報を確認しました。",
         "updateCheckCompletedMessage",
         "renderUpdateStatus(payload, {manual:force})",
+        "公開済みRelease（プレリリース設定を含む）",
+        "公開済み最新版 v${latest} より新しい版です。",
+        "GitHub上はプレリリース設定",
     ]
     for marker in required:
         assert marker in html, marker
@@ -270,6 +338,8 @@ def test_frontend_contains_owner_only_update_ui() -> None:
 
 def main() -> int:
     test_version_and_url_validation()
+    test_release_selection_includes_prereleases_and_excludes_drafts()
+    test_prerelease_only_repository_matches_real_release_policy()
     test_network_result_and_cache()
     test_force_and_stale_cache_fallback()
     test_no_cache_failure_is_non_fatal()

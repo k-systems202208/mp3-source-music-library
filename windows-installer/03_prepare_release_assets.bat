@@ -1,6 +1,6 @@
 @echo off
 setlocal
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp004_prepare_release_assets.ps1" -Version "2.7.0"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp004_prepare_release_assets.ps1" -Version "2.7.1"
 if errorlevel 1 (
   echo.
   echo Release asset preparation failed.
