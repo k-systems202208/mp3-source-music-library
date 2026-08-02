@@ -173,9 +173,17 @@ def test_http_flow() -> None:
             "GET",
             f"/api/local-auth/exchange?token={token}",
         )
-        assert status == 303
-        assert payload == b""
-        assert headers["location"] == "/music-library-search.html"
+        assert status == 200
+        handoff_html = payload.decode("utf-8")
+        assert "window.location.replace(target)" in handoff_html
+        assert 'http-equiv="refresh"' in handoff_html
+        assert 'href="/music-library-search.html"' in handoff_html
+        assert token not in handoff_html
+        assert headers["content-type"] == "text/html; charset=utf-8"
+        assert headers["connection"].casefold() == "close"
+        assert "no-store" in headers["cache-control"]
+        assert "script-src 'unsafe-inline'" in headers["content-security-policy"]
+        assert headers["x-frame-options"] == "DENY"
         set_cookie = headers["set-cookie"]
         assert f"{SESSION_COOKIE_NAME}=" in set_cookie
         assert "Path=/" in set_cookie

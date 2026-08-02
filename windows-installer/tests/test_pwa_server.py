@@ -54,20 +54,18 @@ with tempfile.TemporaryDirectory(prefix="music-library-pwa-") as temp:
         target = "/music-library-search.html"
         url = base + "/api/local-auth/exchange?" + urllib.parse.urlencode({"token": token, "next": target})
 
-        class NoRedirect(urllib.request.HTTPRedirectHandler):
-            def redirect_request(self, req, fp, code, msg, headers, newurl):
-                return None
-
-        opener = urllib.request.build_opener(NoRedirect)
-        try:
-            opener.open(url, timeout=5)
-            raise AssertionError("Expected a redirect response")
-        except urllib.error.HTTPError as exc:
-            assert exc.code == 303
-            assert exc.headers.get("Location") == target
+        with urllib.request.urlopen(url, timeout=5) as response:
+            handoff = response.read().decode("utf-8")
+            assert response.status == 200
+            assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
+            assert response.headers.get("Connection", "").casefold() == "close"
+            assert "window.location.replace(target)" in handoff
+            assert 'http-equiv="refresh"' in handoff
+            assert target in handoff
+            assert token not in handoff
     finally:
         httpd.shutdown()
         httpd.server_close()
         thread.join(timeout=5)
 
-print("PWA static serving, MIME, cache-header and safe production redirect tests passed.")
+print("PWA static serving, MIME, cache-header and safe startup handoff tests passed.")

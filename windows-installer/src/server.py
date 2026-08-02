@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 import re
@@ -454,8 +455,51 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             return
 
         session = self.local_owner_auth.issue_session()
-        self.send_response(HTTPStatus.SEE_OTHER)
-        self.send_header("Location", safe_next)
+
+        # Chrome on Windows can occasionally leave the very first automatic
+        # startup navigation on a body-less 303 response in a perpetual
+        # loading state. Complete the cookie exchange with a tiny HTML
+        # handoff page instead. JavaScript performs an immediate replace, the
+        # meta refresh is a no-script fallback, and the explicit close avoids
+        # a half-open startup connection being mistaken for a still-loading
+        # document.
+        target_json = (
+            json.dumps(safe_next, ensure_ascii=False)
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("&", "\\u0026")
+        )
+        target_html = html.escape(safe_next, quote=True)
+        body = (
+            "<!doctype html><html lang=\"ja\"><head>"
+            "<meta charset=\"utf-8\">"
+            f"<meta http-equiv=\"refresh\" content=\"0;url={target_html}\">"
+            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+            "<title>自宅音楽ライブラリを開いています</title>"
+            "<style>html{font-family:system-ui,sans-serif;color-scheme:light dark}"
+            "body{display:grid;min-height:100vh;margin:0;place-items:center}"
+            "main{max-width:34rem;padding:2rem;text-align:center}"
+            "a{font-weight:700}</style></head><body><main>"
+            "<p>自宅音楽ライブラリを開いています…</p>"
+            f"<p><a href=\"{target_html}\">画面が切り替わらない場合はこちら</a></p>"
+            "</main><script>"
+            f"const target={target_json};"
+            "try{window.location.replace(target)}catch(_){window.location.href=target}"
+            "setTimeout(()=>{if(location.pathname.includes('/api/local-auth/exchange'))"
+            "location.href=target},500);"
+            "</script></body></html>"
+        ).encode("utf-8")
+
+        self.close_connection = True
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Connection", "close")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'none'; script-src 'unsafe-inline'; "
+            "style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+        )
+        self.send_header("X-Frame-Options", "DENY")
         self.send_header(
             "Set-Cookie",
             (
@@ -464,8 +508,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                 "HttpOnly; SameSite=Strict"
             ),
         )
-        self.send_header("Content-Length", "0")
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
+        self.wfile.write(body)
 
     def handle_current_user(self) -> None:
         try:

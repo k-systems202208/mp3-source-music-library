@@ -91,7 +91,7 @@ def owner_cookie(port: int, secret: str) -> str:
         connection.request("GET", f"/api/local-auth/exchange?token={token}")
         response = connection.getresponse()
         response.read()
-        assert response.status == 303
+        assert response.status == 200
         value = dict((key.casefold(), value) for key, value in response.getheaders())["set-cookie"]
         assert SESSION_COOKIE_NAME in value
         return value.split(";", 1)[0]

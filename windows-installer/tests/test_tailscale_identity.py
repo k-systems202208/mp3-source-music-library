@@ -106,7 +106,7 @@ def get_owner_cookie(port: int, control_secret: str) -> str:
             "GET",
             f"/api/local-auth/exchange?token={token}",
         )
-        assert status == 303
+        assert status == 200
         set_cookie = response_headers["set-cookie"]
         assert f"{SESSION_COOKIE_NAME}=" in set_cookie
         return set_cookie.split(";", 1)[0]
