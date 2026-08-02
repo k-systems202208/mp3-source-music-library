@@ -42,6 +42,18 @@ from paths import (
     media_relative_path,
     resolve_virtual_path,
 )
+from long_paths import (
+    exists_path,
+    is_file_path,
+    is_long_path,
+    mkdir_path,
+    open_path,
+    path_length,
+    read_bytes_path,
+    stat_path,
+    walk_path,
+    write_bytes_path,
+)
 
 ensure_data_directories()
 VENDOR_DIR = RESOURCE_ROOT / "vendor"
@@ -220,7 +232,7 @@ def parse_id3v2_fallback(path: Path) -> tuple[dict[str, Any], tuple[bytes, str] 
     """Small dependency-free fallback for files Mutagen cannot parse."""
     tags: dict[str, Any] = {}
     artwork: tuple[bytes, str] | None = None
-    with path.open("rb") as file:
+    with open_path(path, "rb") as file:
         header = file.read(10)
         if len(header) < 10 or header[:3] != b"ID3":
             return tags, artwork
@@ -271,7 +283,7 @@ def parse_id3v2_fallback(path: Path) -> tuple[dict[str, Any], tuple[bytes, str] 
 
 def parse_id3v1(path: Path) -> dict[str, str]:
     try:
-        with path.open("rb") as file:
+        with open_path(path, "rb") as file:
             file.seek(-128, os.SEEK_END)
             block = file.read(128)
         if block[:3] != b"TAG":
@@ -313,7 +325,8 @@ def parse_with_mutagen(path: Path) -> tuple[dict[str, Any], tuple[bytes, str] | 
     notes: list[str] = []
     tags = None
     try:
-        tags = ID3(path)
+        with open_path(path, "rb") as file:
+            tags = ID3(file)
     except ID3NoHeaderError:
         tags = None
     except Exception as exc:
@@ -343,7 +356,8 @@ def parse_with_mutagen(path: Path) -> tuple[dict[str, Any], tuple[bytes, str] | 
 
     duration_ms = 0
     try:
-        audio = MP3(path)
+        with open_path(path, "rb") as file:
+            audio = MP3(file)
         if audio.info and audio.info.length:
             duration_ms = int(round(float(audio.info.length) * 1000))
     except Exception as exc:
@@ -355,8 +369,8 @@ def parse_with_mutagen(path: Path) -> tuple[dict[str, Any], tuple[bytes, str] | 
 def detect_audio_duration_ms_fallback(path: Path) -> int:
     """Estimate duration from the first MPEG frame when Mutagen cannot read it."""
     try:
-        size = path.stat().st_size
-        with path.open("rb") as file:
+        size = stat_path(path).st_size
+        with open_path(path, "rb") as file:
             head = file.read(min(size, 256 * 1024))
         start = 0
         if head[:3] == b"ID3" and len(head) >= 10:
@@ -545,8 +559,8 @@ def scan_files() -> tuple[list[Path], list[Path], list[DiagnosticRow]]:
     mp3_files: list[Path] = []
     image_files: list[Path] = []
     diagnostics: list[DiagnosticRow] = []
-    if not MUSIC_ROOT.exists():
-        MUSIC_ROOT.mkdir(parents=True, exist_ok=True)
+    if not exists_path(MUSIC_ROOT):
+        mkdir_path(MUSIC_ROOT, parents=True, exist_ok=True)
         diagnostics.append(
             DiagnosticRow(
                 "warning",
@@ -562,7 +576,7 @@ def scan_files() -> tuple[list[Path], list[Path], list[DiagnosticRow]]:
             DiagnosticRow("error", "scan_error", getattr(error, "filename", "") or "", str(error))
         )
 
-    for dirpath, _, filenames in os.walk(MUSIC_ROOT, onerror=onerror, followlinks=False):
+    for dirpath, _, filenames in walk_path(MUSIC_ROOT, onerror=onerror):
         directory = Path(dirpath)
         for filename in filenames:
             path = directory / filename
@@ -608,7 +622,7 @@ def content_signature(path: Path, file_size: int) -> str:
     """
     digest = hashlib.sha256()
     digest.update(str(file_size).encode("ascii"))
-    with path.open("rb") as file:
+    with open_path(path, "rb") as file:
         head = file.read(64 * 1024)
         digest.update(head)
         if file_size > 64 * 1024:
@@ -651,7 +665,7 @@ def load_legacy_items(diagnostics: list[DiagnosticRow]) -> list[dict[str, Any]]:
 def artwork_file_hash(path: Path) -> str:
     try:
         digest = hashlib.sha256()
-        with path.open("rb") as file:
+        with open_path(path, "rb") as file:
             while True:
                 block = file.read(1024 * 1024)
                 if not block:
@@ -684,6 +698,10 @@ def main() -> int:
         "errors": 0,
         "cacheHits": 0,
         "movedFiles": 0,
+        "longPathFiles": 0,
+        "longPathLoaded": 0,
+        "longPathErrors": 0,
+        "maxPathLength": 0,
         "tagTitle": 0,
         "filenameTitle": 0,
         "artworkFound": 0,
@@ -734,8 +752,13 @@ def main() -> int:
 
         for index, path in enumerate(mp3_files, 1):
             relative_path = safe_rel(path)
+            absolute_length = path_length(path)
+            long_path = is_long_path(path)
+            stats["maxPathLength"] = max(stats["maxPathLength"], absolute_length)
+            if long_path:
+                stats["longPathFiles"] += 1
             try:
-                stat = path.stat()
+                stat = stat_path(path)
                 existing_row = existing_by_path.get(relative_path)
 
                 # SQLite itself is the metadata cache. Unchanged files do not
@@ -750,7 +773,7 @@ def main() -> int:
                     cached_artwork = str(existing_row["artwork_relative_path"] or "")
                     cached_source = str(existing_row["artwork_source_type"] or "")
                     if cached_source == "embedded":
-                        artwork_unchanged = bool(cached_artwork) and (resolve_virtual_path(cached_artwork) or Path()).is_file()
+                        artwork_unchanged = bool(cached_artwork) and is_file_path(resolve_virtual_path(cached_artwork) or Path())
                     elif cached_source == "external":
                         current_external = find_external_artwork(path, images_by_dir)
                         current_artwork = safe_rel(current_external) if current_external else ""
@@ -777,6 +800,8 @@ def main() -> int:
                     update_stats_from_track(stats, cached_track)
                     stats["cacheHits"] += 1
                     stats["loaded"] += 1
+                    if long_path:
+                        stats["longPathLoaded"] += 1
                     if index % 500 == 0:
                         connection.commit()
                         print(f"  {index:,} / {len(mp3_files):,}")
@@ -855,8 +880,8 @@ def main() -> int:
                     image_data, mime = embedded
                     extension = artwork_extension(mime, image_data)
                     artwork_path = ARTWORK_CACHE / f"{track_id}{extension}"
-                    if not artwork_path.exists() or artwork_path.read_bytes() != image_data:
-                        artwork_path.write_bytes(image_data)
+                    if not exists_path(artwork_path) or read_bytes_path(artwork_path) != image_data:
+                        write_bytes_path(artwork_path, image_data)
                     artwork_relative_path = safe_rel(artwork_path)
                     artwork_source = "embedded"
                     artwork_mime = mime
@@ -1010,6 +1035,8 @@ def main() -> int:
                         stats["externalArtwork"] += 1
                 update_stats_from_track(stats, track)
                 stats["loaded"] += 1
+                if long_path:
+                    stats["longPathLoaded"] += 1
 
                 if index % 250 == 0:
                     connection.commit()
@@ -1017,6 +1044,8 @@ def main() -> int:
                     print(f"  {index:,} / {len(mp3_files):,}")
             except Exception as exc:
                 stats["errors"] += 1
+                if long_path:
+                    stats["longPathErrors"] += 1
                 diagnostic = DiagnosticRow(
                     "error", "mp3_read_error", relative_path, f"{type(exc).__name__}: {exc}"
                 )
@@ -1101,7 +1130,7 @@ def main() -> int:
 
         # Remove embedded artwork that is no longer referenced by an available MP3.
         for artwork_path in ARTWORK_CACHE.iterdir():
-            if artwork_path.is_file() and safe_rel(artwork_path) not in referenced_embedded_artwork:
+            if is_file_path(artwork_path) and safe_rel(artwork_path) not in referenced_embedded_artwork:
                 try:
                     artwork_path.unlink()
                 except OSError:
@@ -1135,6 +1164,10 @@ def main() -> int:
     print(f"Legacy metadata repair : {stats['legacyMetadataRepairs']:,}")
     print(f"SQLite cache hits      : {stats['cacheHits']:,}")
     print(f"Moves detected         : {stats['movedFiles']:,}")
+    print(f"Long paths found       : {stats['longPathFiles']:,}")
+    print(f"Long paths loaded      : {stats['longPathLoaded']:,}")
+    print(f"Long path errors       : {stats['longPathErrors']:,}")
+    print(f"Maximum path length    : {stats['maxPathLength']:,}")
     print("Library generation completed.")
     return 0
 

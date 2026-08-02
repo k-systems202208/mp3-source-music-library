@@ -15,6 +15,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from paths import DATA_ROOT, RESOURCE_ROOT, resolve_virtual_path
+from long_paths import is_dir_path, open_path
 import backup_restore
 import update_check
 from typing import Any, BinaryIO
@@ -1214,12 +1215,14 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             return None
 
         resolved = resolve_virtual_path(decoded_path)
-        path = str(resolved) if resolved is not None else ""
-        if os.path.isdir(path):
+        path = resolved if resolved is not None else Path()
+        if resolved is not None and is_dir_path(path):
             return super().send_head()
 
         try:
-            file = open(path, "rb")
+            if resolved is None:
+                raise FileNotFoundError(decoded_path)
+            file = open_path(path, "rb")
         except OSError:
             self.send_error(HTTPStatus.NOT_FOUND, "File not found")
             return None
@@ -1227,7 +1230,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         try:
             stat = os.fstat(file.fileno())
             size = stat.st_size
-            content_type = self.guess_type(path)
+            content_type = self.guess_type(str(path))
             range_header = self.headers.get("Range", "").strip()
             parsed_range = self._parse_range(range_header, size) if range_header else None
 
