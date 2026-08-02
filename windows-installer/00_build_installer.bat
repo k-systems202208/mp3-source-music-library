@@ -2,13 +2,13 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-set "BUILD_LOG=%CD%\release\BUILD_LOG_v2.7.1_RC2.txt"
-set "BUILD_REPORT=%CD%\release\BUILD_REPORT_v2.7.1_RC2.txt"
-set "INSTALLER=%CD%\release\MusicLibrary-Setup-2.7.1-x64.exe"
-set "HASH_FILE=%CD%\release\MusicLibrary-Setup-2.7.1-x64_SHA256.txt"
+set "BUILD_LOG=%CD%\release\BUILD_LOG_v2.7.2_RC1.txt"
+set "BUILD_REPORT=%CD%\release\BUILD_REPORT_v2.7.2_RC1.txt"
+set "INSTALLER=%CD%\release\MusicLibrary-Setup-2.7.2-x64.exe"
+set "HASH_FILE=%CD%\release\MusicLibrary-Setup-2.7.2-x64_SHA256.txt"
 
 if not exist "release" mkdir "release"
-> "%BUILD_LOG%" echo Music Library v2.7.1 RC2 Build Log
+> "%BUILD_LOG%" echo Music Library v2.7.2 RC1 Build Log
 >>"%BUILD_LOG%" echo ======================================
 >>"%BUILD_LOG%" echo Started: %DATE% %TIME%
 >>"%BUILD_LOG%" echo Package: %CD%
@@ -16,7 +16,7 @@ if not exist "release" mkdir "release"
 
 echo.
 echo ============================================================
-echo Music Library v2.7.1 RC2 installer build
+echo Music Library v2.7.2 RC1 installer build
 echo ============================================================
 echo.
 echo This step builds the installer only.
@@ -61,6 +61,8 @@ echo Checking Python source...
 python -m compileall -q "src" >>"%BUILD_LOG%" 2>&1
 if errorlevel 1 goto :error
 
+call :RUN_TEST "tests\test_windows_batch_launchers.py" "Windows batch launchers"
+if errorlevel 1 goto :error
 call :RUN_TEST "tests\build_sanity.py" "Build sanity"
 if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_client_disconnects.py" "Client disconnects"
@@ -71,7 +73,7 @@ call :RUN_TEST "tests\test_remote_entry_path.py" "Remote entry path"
 if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_launcher_stability.py" "Launcher stability"
 if errorlevel 1 goto :error
-call :RUN_TEST "tests\test_schema_v5_migration.py" "Schema v5 migration"
+call :RUN_TEST "tests\test_schema_v5_migration.py" "Schema v5 to v6 migration"
 if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_local_owner_auth.py" "Local owner authentication"
 if errorlevel 1 goto :error
@@ -95,6 +97,16 @@ call :RUN_TEST "tests\test_backup_restore.py" "Backup and restore"
 if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_update_notification.py" "Update notification including prereleases"
 if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_skin_persistence.py" "Skin persistence and schema v6"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_skin_preview.py" "Skin UI contract"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_skin_preview_layout.py" "Skin responsive layout"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_skin_stat_cards.py" "Skin stat cards"
+if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_skin_user_chip.py" "Skin user chip contrast"
+if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_release_candidate.py" "Release candidate consistency"
 if errorlevel 1 goto :error
 
@@ -112,9 +124,9 @@ if not exist "dist\MusicLibrary\MusicLibrary.exe" (
 
 echo Checking bundled version...
 for /f "delims=" %%V in ('"dist\MusicLibrary\MusicLibrary.exe" --version') do set "BUNDLED_VERSION=%%V"
-if not "%BUNDLED_VERSION%"=="2.7.1" (
-  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.1".
-  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.1".>>"%BUILD_LOG%"
+if not "%BUNDLED_VERSION%"=="2.7.2" (
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.2".
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.2".>>"%BUILD_LOG%"
   goto :error
 )
 
@@ -154,21 +166,21 @@ if exist "%INSTALLER%" del /q "%INSTALLER%"
 if errorlevel 1 goto :error
 
 if not exist "%INSTALLER%" (
-  echo ERROR: The v2.7.1 installer was not created.
-  echo ERROR: The v2.7.1 installer was not created.>>"%BUILD_LOG%"
+  echo ERROR: The v2.7.2 installer was not created.
+  echo ERROR: The v2.7.2 installer was not created.>>"%BUILD_LOG%"
   goto :error
 )
 
 echo Calculating SHA-256...
-powershell.exe -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath '%INSTALLER%').Hash.ToLower(); Set-Content -LiteralPath '%HASH_FILE%' -Value ($h + '  MusicLibrary-Setup-2.7.1-x64.exe') -Encoding ascii; Write-Output $h" > "%TEMP%\music-library-v271-hash.txt"
+powershell.exe -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath '%INSTALLER%').Hash.ToLower(); Set-Content -LiteralPath '%HASH_FILE%' -Value ($h + '  MusicLibrary-Setup-2.7.2-x64.exe') -Encoding ascii; Write-Output $h" > "%TEMP%\music-library-v272-hash.txt"
 if errorlevel 1 goto :error
-set /p "INSTALLER_HASH="<"%TEMP%\music-library-v271-hash.txt"
-del /q "%TEMP%\music-library-v271-hash.txt" >nul 2>&1
+set /p "INSTALLER_HASH="<"%TEMP%\music-library-v272-hash.txt"
+del /q "%TEMP%\music-library-v272-hash.txt" >nul 2>&1
 
-> "%BUILD_REPORT%" echo Music Library v2.7.1 RC2 Build Report
+> "%BUILD_REPORT%" echo Music Library v2.7.2 RC1 Build Report
 >>"%BUILD_REPORT%" echo =======================================
 >>"%BUILD_REPORT%" echo Finished: %DATE% %TIME%
->>"%BUILD_REPORT%" echo Installer: MusicLibrary-Setup-2.7.1-x64.exe
+>>"%BUILD_REPORT%" echo Installer: MusicLibrary-Setup-2.7.2-x64.exe
 >>"%BUILD_REPORT%" echo SHA256: %INSTALLER_HASH%
 >>"%BUILD_REPORT%" echo Bundled version: %BUNDLED_VERSION%
 >>"%BUILD_REPORT%" echo.
@@ -176,7 +188,7 @@ del /q "%TEMP%\music-library-v271-hash.txt" >nul 2>&1
 >>"%BUILD_REPORT%" echo Bundled executable smoke test passed.
 >>"%BUILD_REPORT%" echo Inno Setup compilation passed.
 >>"%BUILD_REPORT%" echo.
->>"%BUILD_REPORT%" echo This RC2 installer has not yet been installed on the live system.
+>>"%BUILD_REPORT%" echo This RC1 installer has not yet been installed on the live system.
 
 >>"%BUILD_LOG%" echo.
 >>"%BUILD_LOG%" echo BUILD COMPLETED
@@ -195,8 +207,8 @@ echo SHA256:
 echo %INSTALLER_HASH%
 echo.
 echo IMPORTANT:
-echo Do not install this RC2 yet.
-echo Share BUILD_REPORT_v2.7.1_RC2.txt or the final screen first.
+echo Do not install this RC1 yet.
+echo Share BUILD_REPORT_v2.7.2_RC1.txt or the final screen first.
 echo.
 start "" explorer.exe "%CD%\release"
 pause

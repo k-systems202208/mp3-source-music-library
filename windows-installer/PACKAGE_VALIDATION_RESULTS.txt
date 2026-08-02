@@ -1,30 +1,32 @@
-Music Library v2.7.1 RC2 Build Package Validation
-==================================================
+Music Library v2.7.2 Release Source Validation
+==============================================
 
-[PASS] Python production source compiles
-[PASS] Browser JavaScript syntax check (Node.js)
-[PASS] HTML duplicate-id check
-[PASS] Existing playback, remote access, launcher, schema, owner, Tailscale, user state, and favorite regression tests
-[PASS] Library home database/API/UI contract tests
-[PASS] Library home layout contract tests
-[PASS] Backup and restore functional/API/authorization tests
-[PASS] Update notification reads the published Release list instead of the full-release-only endpoint
-[PASS] Prerelease-only repository policy test using v2.7.0, v2.6.3, v2.6.2, and v2.6.1
-[PASS] Draft and non-semantic Release tags are excluded
-[PASS] Highest semantic version is selected independent of API list order
-[PASS] Update notification cache, offline fallback, owner-only API, and UI feedback tests
-[PASS] v2.7.1 version consistency across application, server, updater, executable metadata, installer, build script, and release assets
-[PASS] Existing AppId retained for over-installation
-[PASS] SQLite schema remains version 5
-[PASS] Historic library-pre-v2.7.0 migration backup naming retained intentionally
-[PASS] No MP3, SQLite database, executable, log, private key, or user-specific absolute path included
-[PASS] Package file manifest generated and verified
-[PASS] ZIP integrity verified
+Base source:
+- v2.7.2 RC1
+- Installed over v2.7.1 on 2026-08-02
+- User acceptance completed
 
-Windows-only steps not executed in this Linux validation environment:
-- PyInstaller creation of MusicLibrary.exe
+Validated areas:
+- Windows batch launcher integrity
+- Python source compilation
+- Existing functional regression suite
+- Schema v5 to v6 migration
+- User-specific skin persistence
+- Tailscale owner identity linkage
+- Six-skin UI contract
+- Responsive layout
+- Home statistic card styling
+- Dark-skin user chip contrast
 - Bundled executable smoke test
-- Inno Setup compilation of MusicLibrary-Setup-2.7.1-x64.exe
+- Inno Setup compilation
 
-Those Windows-only steps are performed by 00_build_installer.bat on the target PC.
-The RC2 installer must not be installed until its build report is reviewed.
+Documentation finalized for release:
+- Installer README
+- v2.7.2 release notes
+- User, install, build, remote-access guides
+- Manual acceptance result
+- GitHub Release configuration
+- Skin design and release scope
+- Document index and version check
+
+The release automation regenerates FILE_MANIFEST_SHA256.txt after applying the documentation overlay, then reruns the complete build and regression process.

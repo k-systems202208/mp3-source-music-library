@@ -19,6 +19,11 @@ for raw in MANIFEST.read_text(encoding="utf-8-sig").splitlines():
     if not separator or len(digest) != 64:
         failures.append(f"Invalid manifest line: {raw}")
         continue
+    try:
+        relative.encode("ascii")
+    except UnicodeEncodeError:
+        failures.append(f"Non-ASCII manifest path is not allowed: {relative}")
+        continue
     path = ROOT / relative
     if not path.is_file():
         failures.append(f"Missing: {relative}")
