@@ -1052,7 +1052,7 @@
   }
   .home-quick-links{
     display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
+    grid-template-columns:repeat(5,minmax(0,1fr));
     gap:9px;
   }
   .home-quick-btn{
@@ -2173,6 +2173,83 @@
     footer{padding-bottom:env(safe-area-inset-bottom);}
   }
 
+  /* ---- v2.7.5 Phase 1: per-user playlists ---- */
+  .playlist-panel{margin-top:12px;}
+  .playlist-hero{
+    display:flex;justify-content:space-between;gap:18px;align-items:flex-start;
+    background:linear-gradient(135deg,var(--card),var(--paper-deep));
+    border:1px solid var(--card-edge);border-left:6px solid var(--brass);
+    border-radius:var(--skin-radius);padding:20px 22px;box-shadow:0 3px 14px var(--shadow);
+  }
+  .playlist-kicker{margin:0 0 6px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;color:var(--stamp);}
+  .playlist-hero h2{margin:0 0 6px;font-family:'Shippori Mincho',serif;font-size:26px;}
+  .playlist-hero p{margin:0;color:var(--ink-soft);line-height:1.75;}
+  .playlist-auth-note{margin:12px 0 0;padding:13px 15px;background:var(--paper-deep);border:1px solid var(--card-edge);border-radius:var(--skin-radius);color:var(--ink-soft);}
+  .playlist-layout{display:grid;grid-template-columns:minmax(210px,30%) minmax(0,1fr);gap:14px;margin-top:14px;align-items:start;}
+  .playlist-list-panel,.playlist-detail-panel{background:var(--card);border:1px solid var(--card-edge);border-radius:var(--skin-radius);box-shadow:0 2px 10px var(--shadow);}
+  .playlist-list-panel{padding:12px;position:sticky;top:10px;}
+  .playlist-list-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:0 4px;}
+  .playlist-list-title h3{margin:0;font-size:15px;}
+  .playlist-list{display:grid;gap:7px;}
+  .playlist-list-empty{padding:18px 10px;text-align:center;color:var(--ink-soft);line-height:1.7;}
+  .playlist-list-button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:11px 10px;border:1px solid var(--card-edge);border-radius:var(--skin-radius);background:var(--paper);color:var(--ink);cursor:pointer;}
+  .playlist-list-button:hover{border-color:var(--brass);}
+  .playlist-list-button.active{background:var(--skin-strong);color:var(--skin-strong-text);border-color:var(--skin-strong);}
+  .playlist-list-button strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .playlist-list-button small{opacity:.76;white-space:nowrap;}
+  .playlist-detail-panel{min-height:330px;padding:18px;}
+  .playlist-detail-empty{min-height:290px;display:grid;place-items:center;text-align:center;color:var(--ink-soft);line-height:1.8;}
+  .playlist-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px dashed var(--card-edge);}
+  .playlist-detail-head h3{margin:0 0 4px;font-family:'Shippori Mincho',serif;font-size:24px;overflow-wrap:anywhere;}
+  .playlist-detail-meta{margin:0;color:var(--ink-soft);font-size:13px;}
+  .playlist-detail-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
+  .playlist-mini-btn{min-height:40px;padding:8px 11px;border:1px solid var(--card-edge);border-radius:var(--skin-radius);background:var(--paper);color:var(--ink);font-weight:700;cursor:pointer;}
+  .playlist-mini-btn:hover{border-color:var(--brass);}
+  .playlist-mini-btn.primary{background:var(--skin-strong);border-color:var(--skin-strong);color:var(--skin-strong-text);}
+  .playlist-mini-btn.danger{color:var(--stamp);}
+  .playlist-track-list{display:grid;gap:8px;margin-top:14px;}
+  .playlist-track-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:11px;align-items:center;border:1px solid var(--card-edge);border-left:4px solid var(--brass);border-radius:var(--skin-radius);background:var(--paper);padding:10px;}
+  .playlist-track-order{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--brass-deep);min-width:2.2em;text-align:center;}
+  .playlist-track-main{min-width:0;display:grid;grid-template-columns:46px minmax(0,1fr);gap:10px;align-items:center;}
+  .playlist-track-main.no-artwork{grid-template-columns:minmax(0,1fr);}
+  .playlist-track-artwork{width:46px;height:46px;object-fit:cover;border-radius:3px;background:var(--paper-deep);}
+  .playlist-track-copy{min-width:0;}
+  .playlist-track-copy strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .playlist-track-copy small{display:block;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;}
+  .playlist-track-actions{display:flex;align-items:center;gap:5px;}
+  .playlist-order-btn,.playlist-remove-btn,.playlist-add-btn{width:40px;height:40px;border:1px solid var(--card-edge);border-radius:50%;background:var(--paper);color:var(--ink);font-weight:800;cursor:pointer;display:inline-grid;place-items:center;}
+  .playlist-order-btn:hover,.playlist-remove-btn:hover,.playlist-add-btn:hover{border-color:var(--brass);background:var(--skin-accent-soft);}
+  .playlist-order-btn:disabled{opacity:.3;cursor:default;}
+  .playlist-remove-btn{color:var(--stamp);}
+  .playlist-add-btn{font-size:18px;}
+  .playlist-add-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .playlist-chooser-panel{max-width:560px;}
+  .playlist-chooser-track{margin:0 0 12px;padding:11px 12px;background:var(--paper-deep);border-radius:var(--skin-radius);font-weight:700;overflow-wrap:anywhere;}
+  .playlist-chooser-list{display:grid;gap:8px;margin:12px 0;max-height:42vh;overflow:auto;}
+  .playlist-chooser-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:12px;border:1px solid var(--card-edge);border-radius:var(--skin-radius);background:var(--paper);text-align:left;color:var(--ink);cursor:pointer;}
+  .playlist-chooser-item:hover{border-color:var(--brass);}
+  .playlist-new-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:12px;}
+  .playlist-new-row input{min-width:0;padding:10px 11px;border:1px solid var(--card-edge);border-radius:var(--skin-radius);font:inherit;background:var(--paper);color:var(--ink);}
+  .playlist-message{min-height:1.5em;margin-top:8px;color:var(--ink-soft);}
+  html[data-skin]:not([data-skin="library"]) .playlist-list-button.active,
+  html[data-skin]:not([data-skin="library"]) .playlist-mini-btn.primary{background:var(--skin-strong);color:var(--skin-strong-text);border-color:var(--skin-strong);}
+  @media(max-width:720px){
+    .playlist-hero{display:block;padding:17px 14px;}
+    .playlist-hero .user-action-btn{width:100%;margin-top:12px;}
+    .playlist-layout{grid-template-columns:1fr;}
+    .playlist-list-panel{position:static;}
+    .playlist-detail-head{display:block;}
+    .playlist-detail-actions{justify-content:flex-start;margin-top:12px;}
+    .playlist-track-card{grid-template-columns:auto minmax(0,1fr);}
+    .playlist-track-actions{grid-column:1/-1;justify-content:flex-end;border-top:1px dashed var(--card-edge);padding-top:8px;}
+    .playlist-new-row{grid-template-columns:1fr;}
+  }
+
+
+  .feature-preview-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--brass);border-radius:var(--skin-radius);background:var(--paper-deep);color:var(--ink);}
+  .feature-preview-banner strong{display:block;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;}
+  .feature-preview-banner span{display:block;margin-top:3px;color:var(--ink-soft);font-size:.9rem;}
+  @media(max-width:720px){.feature-preview-banner{align-items:flex-start;flex-direction:column;}}
   ::selection{background:var(--brass); color:var(--paper);}
 </style>
 </head>
@@ -2202,7 +2279,13 @@
     <button type="button" class="view-tab" data-view="songs">曲名</button>
     <button type="button" class="view-tab" data-view="artists">アーティスト</button>
     <button type="button" class="view-tab" data-view="albums">アルバム</button>
+    <button type="button" class="view-tab" data-view="playlists">プレイリスト</button>
   </div>
+
+
+  <aside class="feature-preview-banner" id="playlistFeaturePreviewBanner" hidden aria-live="polite">
+    <div><strong>v2.7.5 機能プレビュー</strong><span>複製DBでプレイリスト機能を確認しています。実運用DBと音楽ファイルは変更しません。</span></div>
+  </aside>
 
   <aside class="skin-preview-ribbon" id="skinPreviewRibbon" hidden aria-live="polite">
     <span><strong id="skinPreviewRibbonName">ライブラリー</strong> をプレビュー中です。まだ保存されていません。</span>
@@ -2235,9 +2318,31 @@
       <button type="button" class="home-quick-btn" data-home-view="artists">アーティスト</button>
       <button type="button" class="home-quick-btn" data-home-view="albums">アルバム</button>
       <button type="button" class="home-quick-btn" id="homeFavoritesShortcut" data-home-view="favorites">★ お気に入り</button>
+      <button type="button" class="home-quick-btn" id="homePlaylistsShortcut" data-home-view="playlists">プレイリスト</button>
     </nav>
     <p class="home-auth-note" id="homeAuthNote" hidden>利用者を確認できないため、最近再生した曲・お気に入り・よく聴く曲は表示していません。管理画面または本人のTailscale接続から開いてください。</p>
     <div id="homeSections" class="home-loading">ライブラリホームを読み込んでいます…</div>
+  </main>
+
+  <main class="playlist-panel" id="playlistPanel" hidden>
+    <section class="playlist-hero">
+      <div>
+        <p class="playlist-kicker">PERSONAL PLAYLISTS</p>
+        <h2>プレイリスト</h2>
+        <p>現在の利用者だけの曲リストを作成し、曲順を整えて続けて再生できます。</p>
+      </div>
+      <button type="button" class="user-action-btn" id="playlistCreateButton">新しいプレイリスト</button>
+    </section>
+    <p class="playlist-auth-note" id="playlistAuthNote" hidden>プレイリストを利用するには、管理画面または本人のTailscale接続から開いてください。</p>
+    <div class="playlist-layout" id="playlistLayout">
+      <aside class="playlist-list-panel">
+        <div class="playlist-list-title"><h3>自分のプレイリスト</h3><span id="playlistCountBadge">0件</span></div>
+        <div class="playlist-list" id="playlistList"><div class="playlist-list-empty">読み込み中…</div></div>
+      </aside>
+      <section class="playlist-detail-panel" id="playlistDetail">
+        <div class="playlist-detail-empty">左の一覧からプレイリストを選択してください。</div>
+      </section>
+    </div>
   </main>
 
   <div class="controls">
@@ -2289,8 +2394,22 @@
 
 </div>
 
-<footer>DATE FIRST ISSUED · 2026-07-18 — ライブラリホーム・利用者別スキン・新版通知・利用者別お気に入り／再生履歴・SQLite API検索・ブラウザプレーヤー</footer>
+<footer>DATE FIRST ISSUED · 2026-07-18 — ライブラリホーム・利用者別スキン・新版通知・利用者別お気に入り／再生履歴・利用者別プレイリスト・SQLite API検索・ブラウザプレーヤー</footer>
 
+
+<div class="user-modal" id="playlistAddModal" hidden role="dialog" aria-modal="true" aria-labelledby="playlistAddModalTitle">
+  <section class="user-panel playlist-chooser-panel">
+    <button type="button" class="user-panel-close" id="playlistAddModalClose" aria-label="プレイリスト選択を閉じる">×</button>
+    <h2 id="playlistAddModalTitle">プレイリストに追加</h2>
+    <p class="playlist-chooser-track" id="playlistChooserTrack">曲を選択しています…</p>
+    <div class="playlist-chooser-list" id="playlistChooserList"></div>
+    <div class="playlist-new-row">
+      <input type="text" id="playlistNewNameInput" maxlength="60" placeholder="新しいプレイリスト名">
+      <button type="button" class="user-action-btn" id="playlistCreateAndAddButton">作成して追加</button>
+    </div>
+    <p class="playlist-message" id="playlistChooserMessage" aria-live="polite"></p>
+  </section>
+</div>
 
 <div class="user-modal" id="userModal" hidden role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
   <section class="user-panel">
@@ -2502,6 +2621,7 @@
   const OWNER_LINK_STATUS_API_URL = './api/owner-link/status';
   const OWNER_LINK_CONFIRM_API_URL = './api/owner-link/confirm';
   const OWNER_LINK_CANCEL_API_URL = './api/owner-link/cancel';
+  const PLAYLISTS_API_URL = './api/playlists';
   const PAGE_SIZE = 80;
   const PLAYBACK_SETTINGS_KEY = 'music-library-playback-settings-v1';
   const ARTIST_FALLBACK = '(不明なアーティスト)';
@@ -2514,6 +2634,7 @@
     library:'ライブラリー', midnight:'ミッドナイト', neon:'ネオン', cyberpunk:'サイバーパンク', candy:'キャンディー', monochrome:'モノクローム'
   });
   const PWA_PREVIEW_MODE = new URLSearchParams(location.search).get('pwaPreview') === '1';
+  const PLAYLIST_FEATURE_PREVIEW_MODE = new URLSearchParams(location.search).get('playlistPreview') === '1';
   const PWA_THEME_COLORS = Object.freeze({
     library:'#24392b', midnight:'#101c2e', neon:'#041219', cyberpunk:'#16131d', candy:'#ff4f9a', monochrome:'#111111'
   });
@@ -2529,7 +2650,9 @@
     filterFavoritesOnly: false,
     sort: 'title',
     indexKey: '',
+    selectedPlaylistId: null,
   };
+  if (PLAYLIST_FEATURE_PREVIEW_MODE) state.view = 'playlists';
 
   const els = {
     pageTitle: document.getElementById('pageTitle'),
@@ -2540,6 +2663,20 @@
     homeAuthNote: document.getElementById('homeAuthNote'),
     homeFavoritesShortcut: document.getElementById('homeFavoritesShortcut'),
     homeSections: document.getElementById('homeSections'),
+    playlistPanel: document.getElementById('playlistPanel'),
+    playlistLayout: document.getElementById('playlistLayout'),
+    playlistAuthNote: document.getElementById('playlistAuthNote'),
+    playlistCreateButton: document.getElementById('playlistCreateButton'),
+    playlistList: document.getElementById('playlistList'),
+    playlistCountBadge: document.getElementById('playlistCountBadge'),
+    playlistDetail: document.getElementById('playlistDetail'),
+    playlistAddModal: document.getElementById('playlistAddModal'),
+    playlistAddModalClose: document.getElementById('playlistAddModalClose'),
+    playlistChooserTrack: document.getElementById('playlistChooserTrack'),
+    playlistChooserList: document.getElementById('playlistChooserList'),
+    playlistNewNameInput: document.getElementById('playlistNewNameInput'),
+    playlistCreateAndAddButton: document.getElementById('playlistCreateAndAddButton'),
+    playlistChooserMessage: document.getElementById('playlistChooserMessage'),
     controls: document.querySelector('.controls'),
     search: document.getElementById('search'),
     results: document.getElementById('results'),
@@ -2596,6 +2733,7 @@
     skinApplyButton: document.getElementById('skinApplyButton'),
     skinCancelButton: document.getElementById('skinCancelButton'),
     skinMessage: document.getElementById('skinMessage'),
+    playlistFeaturePreviewBanner: document.getElementById('playlistFeaturePreviewBanner'),
     skinPreviewRibbon: document.getElementById('skinPreviewRibbon'),
     skinPreviewRibbonName: document.getElementById('skinPreviewRibbonName'),
     skinPreviewResetButton: document.getElementById('skinPreviewResetButton'),
@@ -2678,6 +2816,10 @@
   let previewSkinId = 'library';
   let deferredPwaInstallPrompt = null;
   let pwaWorkerState = PWA_PREVIEW_MODE ? 'プレビュー（未登録）' : '確認中';
+  let playlistItems = [];
+  let currentPlaylist = null;
+  let playlistAddTrack = null;
+  let playlistRequestSerial = 0;
 
 
   function normalizeSkinId(value){
@@ -2820,6 +2962,7 @@
 
   function determineRenderKind(){
     if (state.view === 'home') return 'home';
+    if (state.view === 'playlists') return 'playlist';
     if (state.view === 'songs') return 'song';
     if (state.view === 'artists' && !state.selectedArtistKey) return 'artist';
     if (state.view === 'artists' && state.selectedArtistKey && !state.selectedAlbumKey) return 'album';
@@ -2896,15 +3039,17 @@
 
   function updateViewTabs(){
     const home = state.view === 'home';
+    const playlists = state.view === 'playlists';
     document.querySelectorAll('.view-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === state.view);
     });
     els.homePanel.hidden = !home;
-    els.controls.hidden = home;
-    els.results.hidden = home;
-    els.sentinel.hidden = home;
-    els.loadmoreMsg.hidden = home;
-    els.pageTitle.textContent = home ? '自宅音楽ライブラリ' : '音楽ライブラリ検索';
+    els.playlistPanel.hidden = !playlists;
+    els.controls.hidden = home || playlists;
+    els.results.hidden = home || playlists;
+    els.sentinel.hidden = home || playlists;
+    els.loadmoreMsg.hidden = home || playlists;
+    els.pageTitle.textContent = home ? '自宅音楽ライブラリ' : (playlists ? '自分のプレイリスト' : '音楽ライブラリ検索');
     els.toggleRow.style.display = isSongLevel() ? 'flex' : 'none';
     const albumDetail = renderKind === 'song-in-album' || renderKind === 'song-in-album-global';
     els.sortRow.style.display = isSongLevel() && !albumDetail ? 'flex' : 'none';
@@ -4181,6 +4326,7 @@
     const artworkHtml = track.artworkUrl
       ? `<img class="artwork-thumb" src="${escapeHtml(track.artworkUrl)}" alt="" loading="lazy" onerror="this.closest('.song-main').classList.remove('has-artwork');this.remove()">`
       : '';
+    const playlistButton = `<button type="button" class="playlist-add-btn" data-action="playlist-add" aria-label="プレイリストに追加" title="${currentUser && currentUser.authenticated ? 'プレイリストに追加' : '利用者を確認するとプレイリストへ追加できます'}"${currentUser && currentUser.authenticated ? '' : ' disabled'}>＋</button>`;
 
     return `<div class="card" data-id="${escapeHtml(track.id)}">
       <div class="info"><div class="song-main${track.artworkUrl ? ' has-artwork' : ''}">
@@ -4195,6 +4341,7 @@
       </div></div>
       <div class="side">
         <div class="song-actions">
+          ${playlistButton}
           <button type="button" class="favorite-btn${track.favorite ? ' active' : ''}" data-action="favorite" aria-pressed="${track.favorite ? 'true' : 'false'}" aria-label="${track.favorite ? 'お気に入りから外す' : 'お気に入りに追加'}" title="${currentUser && currentUser.authenticated ? (track.favorite ? 'お気に入りから外す' : 'お気に入りに追加') : '利用者を確認できないためお気に入りを保存できません'}"${currentUser && currentUser.authenticated ? '' : ' disabled'}>${track.favorite ? '★' : '☆'}</button>
           <div class="play-line">${playButton}<span class="dur">${fmtDuration(track.time)}</span></div>
         </div>
@@ -4367,6 +4514,10 @@
 
   async function fetchPlaybackTrackAtOffset(offset){
     if (!playbackContext) return null;
+    if (Array.isArray(playbackContext.trackIds)) {
+      const trackId = playbackContext.trackIds[Number(offset)];
+      return trackId ? idMap.get(String(trackId)) || null : null;
+    }
     const params = new URLSearchParams(playbackContext.baseParams);
     params.set('limit', '1');
     params.set('offset', String(offset));
@@ -4400,7 +4551,7 @@
       console.warn('再生回数を保存できませんでした:', error);
       track.playCount = Number(track.playCount || 0) + 1;
     }
-    document.querySelectorAll('.card[data-id], .home-track-card[data-id]').forEach(card => {
+    document.querySelectorAll('.card[data-id], .home-track-card[data-id], .playlist-track-card[data-id]').forEach(card => {
       if (card.dataset.id !== track.id) return;
       const plays = card.querySelector('.plays');
       if (plays) plays.textContent = `再生 ${Number(track.playCount || 0).toLocaleString()}回`;
@@ -4414,7 +4565,7 @@
   function updateFavoriteButtons(){
     const authenticated = Boolean(currentUser && currentUser.authenticated);
     document.querySelectorAll('button[data-action="favorite"]').forEach(button => {
-      const card = button.closest('.card[data-id], .home-track-card[data-id]');
+      const card = button.closest('.card[data-id], .home-track-card[data-id], .playlist-track-card[data-id]');
       const track = card ? idMap.get(card.dataset.id) : null;
       if (!track) return;
       const active = Boolean(track.favorite);
@@ -4762,6 +4913,290 @@
     input.addEventListener('blur', () => void finish(true));
   }
 
+
+  function playlistDurationLabel(ms){
+    const totalMinutes = Math.round(Number(ms || 0) / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours > 0 ? `${hours}時間${minutes}分` : `${minutes}分`;
+  }
+
+  function playlistListButtonHtml(item){
+    const active = String(state.selectedPlaylistId || '') === String(item.id || '');
+    return `<button type="button" class="playlist-list-button${active ? ' active' : ''}" data-playlist-id="${escapeHtml(item.id)}" aria-pressed="${active ? 'true' : 'false'}"><strong>${escapeHtml(item.name)}</strong><small>${Number(item.trackCount || 0).toLocaleString()}曲</small></button>`;
+  }
+
+  function renderPlaylistList(){
+    els.playlistCountBadge.textContent = `${playlistItems.length.toLocaleString()}件`;
+    if (!playlistItems.length) {
+      els.playlistList.innerHTML = '<div class="playlist-list-empty">まだプレイリストがありません。<br>「新しいプレイリスト」から作成できます。</div>';
+      return;
+    }
+    els.playlistList.innerHTML = playlistItems.map(playlistListButtonHtml).join('');
+  }
+
+  function playlistTrackCardHtml(track, index, total){
+    const artwork = track.artworkUrl
+      ? `<img class="playlist-track-artwork" src="${escapeHtml(track.artworkUrl)}" alt="" loading="lazy" onerror="this.closest('.playlist-track-main').classList.add('no-artwork');this.remove()">`
+      : '';
+    const isPlaying = currentTrackId === track.id && !els.audioPlayer.paused && !els.audioPlayer.ended;
+    return `<article class="playlist-track-card" data-id="${escapeHtml(track.id)}">
+      <span class="playlist-track-order">${String(index + 1).padStart(2, '0')}</span>
+      <div class="playlist-track-main${artwork ? '' : ' no-artwork'}">${artwork}<div class="playlist-track-copy"><strong>${escapeHtml(track.name || '(無題)')}</strong><small>${escapeHtml([track.artist, track.album].filter(Boolean).join(' · '))}</small></div></div>
+      <div class="playlist-track-actions">
+        <button type="button" class="play-btn${isPlaying ? ' playing' : ''}" data-playlist-action="play" title="${isPlaying ? '一時停止' : '再生'}">${isPlaying ? 'Ⅱ' : '▶'}</button>
+        <button type="button" class="playlist-order-btn" data-playlist-action="up" title="1つ上へ"${index === 0 ? ' disabled' : ''}>↑</button>
+        <button type="button" class="playlist-order-btn" data-playlist-action="down" title="1つ下へ"${index === total - 1 ? ' disabled' : ''}>↓</button>
+        <button type="button" class="playlist-remove-btn" data-playlist-action="remove" title="プレイリストから外す">×</button>
+      </div>
+    </article>`;
+  }
+
+  function renderPlaylistDetail(){
+    if (!currentPlaylist) {
+      els.playlistDetail.innerHTML = '<div class="playlist-detail-empty">左の一覧からプレイリストを選択してください。</div>';
+      return;
+    }
+    const tracks = Array.isArray(currentPlaylist.tracks) ? currentPlaylist.tracks : [];
+    const unavailable = Number(currentPlaylist.unavailableCount || 0);
+    const unavailableNote = unavailable ? ` · 利用不可 ${unavailable.toLocaleString()}曲` : '';
+    els.playlistDetail.innerHTML = `<div class="playlist-detail-head">
+      <div><h3>${escapeHtml(currentPlaylist.name)}</h3><p class="playlist-detail-meta">${tracks.length.toLocaleString()}曲 · ${playlistDurationLabel(currentPlaylist.durationMs)}${unavailableNote}</p></div>
+      <div class="playlist-detail-actions">
+        <button type="button" class="playlist-mini-btn primary" data-playlist-detail-action="play-all"${tracks.length ? '' : ' disabled'}>すべて再生</button>
+        <button type="button" class="playlist-mini-btn" data-playlist-detail-action="rename">名前変更</button>
+        <button type="button" class="playlist-mini-btn danger" data-playlist-detail-action="delete">削除</button>
+      </div>
+    </div>${tracks.length ? `<div class="playlist-track-list">${tracks.map((track, index) => playlistTrackCardHtml(track, index, tracks.length)).join('')}</div>` : '<div class="playlist-detail-empty">このプレイリストにはまだ曲がありません。<br>曲一覧の「＋」から追加してください。</div>'}`;
+    updatePlayButtons();
+  }
+
+  async function loadPlaylistDetail(playlistId){
+    const serial = ++playlistRequestSerial;
+    els.playlistDetail.innerHTML = '<div class="playlist-detail-empty">プレイリストを読み込んでいます…</div>';
+    try {
+      const payload = await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(playlistId)}`);
+      if (serial !== playlistRequestSerial || state.view !== 'playlists') return;
+      const playlist = payload && payload.playlist;
+      if (!playlist || !Array.isArray(playlist.tracks)) throw new Error('プレイリストの形式が不正です。');
+      playlist.tracks = playlist.tracks.map(prepareTrack);
+      currentPlaylist = playlist;
+      state.selectedPlaylistId = String(playlist.id);
+      renderPlaylistList();
+      renderPlaylistDetail();
+    } catch (error) {
+      if (serial !== playlistRequestSerial) return;
+      currentPlaylist = null;
+      els.playlistDetail.innerHTML = `<div class="playlist-detail-empty">プレイリストを取得できませんでした。<br>${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function loadPlaylists({selectId = null} = {}){
+    updateViewTabs();
+    const authenticated = Boolean(currentUser && currentUser.authenticated);
+    els.playlistAuthNote.hidden = authenticated;
+    els.playlistLayout.hidden = !authenticated;
+    els.playlistCreateButton.disabled = !authenticated;
+    if (!authenticated) {
+      playlistItems = [];
+      currentPlaylist = null;
+      renderPlaylistList();
+      renderPlaylistDetail();
+      return;
+    }
+    els.playlistList.innerHTML = '<div class="playlist-list-empty">読み込み中…</div>';
+    try {
+      const payload = await fetchJson(PLAYLISTS_API_URL);
+      playlistItems = Array.isArray(payload.items) ? payload.items : [];
+      const requested = String(selectId || state.selectedPlaylistId || '');
+      const selected = playlistItems.find(item => String(item.id) === requested) || playlistItems[0] || null;
+      state.selectedPlaylistId = selected ? String(selected.id) : null;
+      renderPlaylistList();
+      if (selected) await loadPlaylistDetail(String(selected.id));
+      else {
+        currentPlaylist = null;
+        renderPlaylistDetail();
+      }
+    } catch (error) {
+      playlistItems = [];
+      currentPlaylist = null;
+      els.playlistList.innerHTML = `<div class="playlist-list-empty">一覧を取得できませんでした。<br>${escapeHtml(error.message)}</div>`;
+      renderPlaylistDetail();
+    }
+  }
+
+  async function createPlaylistByName(name){
+    const value = String(name || '').trim();
+    if (!value) throw new Error('プレイリスト名を入力してください。');
+    const payload = await fetchJson(PLAYLISTS_API_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:value}),
+    });
+    if (!payload.playlist) throw new Error('作成結果を確認できませんでした。');
+    return payload.playlist;
+  }
+
+  async function promptCreatePlaylist(){
+    if (!currentUser || !currentUser.authenticated) return;
+    const name = prompt('新しいプレイリスト名を入力してください。');
+    if (name === null) return;
+    try {
+      const created = await createPlaylistByName(name);
+      state.view = 'playlists';
+      state.selectedPlaylistId = String(created.id);
+      await loadPlaylists({selectId:created.id});
+    } catch (error) {
+      alert(`プレイリストを作成できませんでした。\n${error.message}`);
+    }
+  }
+
+  async function renameCurrentPlaylist(){
+    if (!currentPlaylist) return;
+    const name = prompt('新しいプレイリスト名を入力してください。', currentPlaylist.name || '');
+    if (name === null) return;
+    try {
+      await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(currentPlaylist.id)}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}),
+      });
+      await loadPlaylists({selectId:currentPlaylist.id});
+    } catch (error) {
+      alert(`名前を変更できませんでした。\n${error.message}`);
+    }
+  }
+
+  async function deleteCurrentPlaylist(){
+    if (!currentPlaylist) return;
+    if (!confirm(`「${currentPlaylist.name}」を削除しますか？\n曲ファイルは削除されません。`)) return;
+    try {
+      await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(currentPlaylist.id)}`, {method:'DELETE'});
+      state.selectedPlaylistId = null;
+      currentPlaylist = null;
+      await loadPlaylists();
+    } catch (error) {
+      alert(`プレイリストを削除できませんでした。\n${error.message}`);
+    }
+  }
+
+  function setPlaylistPlaybackContext(index){
+    if (!currentPlaylist || !Array.isArray(currentPlaylist.tracks)) return false;
+    const trackIds = currentPlaylist.tracks.map(track => String(track.id));
+    if (!trackIds.length || index < 0 || index >= trackIds.length) return false;
+    playbackContext = {trackIds, total:trackIds.length, currentOffset:index, playlistId:String(currentPlaylist.id)};
+    if (shuffleEnabled) resetShuffleOrder(index);
+    else { shuffleOrder = []; shufflePosition = -1; }
+    updatePlaybackModeControls();
+    return true;
+  }
+
+  async function playPlaylistTrack(trackId){
+    if (!currentPlaylist) return;
+    const index = currentPlaylist.tracks.findIndex(track => String(track.id) === String(trackId));
+    if (index < 0 || !setPlaylistPlaybackContext(index)) return;
+    await toggleTrackPlayback(trackId);
+  }
+
+  async function playPlaylistAll(){
+    if (!currentPlaylist || !currentPlaylist.tracks.length) return;
+    setPlaylistPlaybackContext(0);
+    await playTrack(currentPlaylist.tracks[0], {offset:0});
+  }
+
+  async function reorderPlaylistTrack(trackId, direction){
+    if (!currentPlaylist) return;
+    const tracks = currentPlaylist.tracks;
+    const index = tracks.findIndex(track => String(track.id) === String(trackId));
+    const target = index + Number(direction);
+    if (index < 0 || target < 0 || target >= tracks.length) return;
+    [tracks[index], tracks[target]] = [tracks[target], tracks[index]];
+    renderPlaylistDetail();
+    try {
+      await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(currentPlaylist.id)}/tracks/order`, {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({trackIds:tracks.map(track => track.id)}),
+      });
+      await loadPlaylistDetail(currentPlaylist.id);
+    } catch (error) {
+      alert(`曲順を保存できませんでした。\n${error.message}`);
+      await loadPlaylistDetail(currentPlaylist.id);
+    }
+  }
+
+  async function removePlaylistTrack(trackId){
+    if (!currentPlaylist) return;
+    const track = currentPlaylist.tracks.find(item => String(item.id) === String(trackId));
+    if (!track || !confirm(`「${track.name}」をプレイリストから外しますか？`)) return;
+    try {
+      await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(currentPlaylist.id)}/tracks/${encodeURIComponent(trackId)}`, {method:'DELETE'});
+      await loadPlaylists({selectId:currentPlaylist.id});
+    } catch (error) {
+      alert(`曲を外せませんでした。\n${error.message}`);
+    }
+  }
+
+  function closePlaylistAddModal(){
+    els.playlistAddModal.hidden = true;
+    playlistAddTrack = null;
+    els.playlistNewNameInput.value = '';
+    els.playlistChooserMessage.textContent = '';
+  }
+
+  function renderPlaylistChooser(){
+    if (!playlistItems.length) {
+      els.playlistChooserList.innerHTML = '<div class="playlist-list-empty">既存のプレイリストはありません。下で新しく作成できます。</div>';
+      return;
+    }
+    els.playlistChooserList.innerHTML = playlistItems.map(item => `<button type="button" class="playlist-chooser-item" data-chooser-playlist-id="${escapeHtml(item.id)}"><strong>${escapeHtml(item.name)}</strong><small>${Number(item.trackCount || 0).toLocaleString()}曲</small></button>`).join('');
+  }
+
+  async function openPlaylistAddModal(track){
+    if (!currentUser || !currentUser.authenticated) {
+      alert('プレイリストを利用するには、利用者を確認できる接続から開いてください。');
+      return;
+    }
+    playlistAddTrack = track;
+    els.playlistChooserTrack.textContent = track.name || '(無題)';
+    els.playlistAddModal.hidden = false;
+    els.playlistChooserMessage.textContent = '追加先を選択してください。';
+    try {
+      const payload = await fetchJson(PLAYLISTS_API_URL);
+      playlistItems = Array.isArray(payload.items) ? payload.items : [];
+      renderPlaylistChooser();
+    } catch (error) {
+      els.playlistChooserList.innerHTML = `<div class="playlist-list-empty">一覧を取得できませんでした。<br>${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function addTrackToPlaylist(playlistId){
+    if (!playlistAddTrack) return;
+    try {
+      await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(playlistId)}/tracks`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({trackId:playlistAddTrack.id}),
+      });
+      const name = playlistItems.find(item => String(item.id) === String(playlistId))?.name || 'プレイリスト';
+      closePlaylistAddModal();
+      alert(`「${name}」へ追加しました。`);
+      if (state.view === 'playlists') await loadPlaylists({selectId:playlistId});
+    } catch (error) {
+      els.playlistChooserMessage.textContent = error.message;
+    }
+  }
+
+  async function createPlaylistAndAdd(){
+    const name = els.playlistNewNameInput.value.trim();
+    if (!name || !playlistAddTrack) {
+      els.playlistChooserMessage.textContent = '新しいプレイリスト名を入力してください。';
+      return;
+    }
+    els.playlistCreateAndAddButton.disabled = true;
+    try {
+      const created = await createPlaylistByName(name);
+      playlistItems.unshift(created);
+      await addTrackToPlaylist(created.id);
+    } catch (error) {
+      els.playlistChooserMessage.textContent = error.message;
+    } finally {
+      els.playlistCreateAndAddButton.disabled = false;
+    }
+  }
+
   document.querySelectorAll('.view-tab').forEach(button => {
     button.addEventListener('click', () => {
       const view = String(button.dataset.view || 'home');
@@ -4773,6 +5208,14 @@
         void loadHome();
         return;
       }
+      if (view === 'playlists') {
+        state.view = 'playlists';
+        state.filterFavoritesOnly = false;
+        state.indexKey = '';
+        els.search.value = '';
+        void loadPlaylists();
+        return;
+      }
       openBrowseView(view);
     });
   });
@@ -4782,6 +5225,7 @@
     if (shortcut) {
       const view = String(shortcut.dataset.homeView || 'songs');
       if (view === 'favorites') openBrowseView('songs', {favoritesOnly:true});
+      else if (view === 'playlists') { state.view = 'playlists'; void loadPlaylists(); }
       else openBrowseView(view);
       return;
     }
@@ -4850,6 +5294,16 @@
   });
 
   els.results.addEventListener('click', event => {
+    const playlistButton = event.target.closest('button[data-action="playlist-add"]');
+    if (playlistButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const card = playlistButton.closest('.card[data-id]');
+      const track = card ? idMap.get(card.dataset.id) : null;
+      if (track) void openPlaylistAddModal(track);
+      return;
+    }
+
     const favoriteButton = event.target.closest('button[data-action="favorite"]');
     if (favoriteButton) {
       event.preventDefault();
@@ -4942,6 +5396,47 @@
     }
   });
 
+  els.playlistCreateButton.addEventListener('click', () => void promptCreatePlaylist());
+  els.playlistList.addEventListener('click', event => {
+    const button = event.target.closest('button[data-playlist-id]');
+    if (!button) return;
+    const playlistId = String(button.dataset.playlistId || '');
+    state.selectedPlaylistId = playlistId;
+    renderPlaylistList();
+    void loadPlaylistDetail(playlistId);
+  });
+  els.playlistDetail.addEventListener('click', event => {
+    const detailAction = event.target.closest('[data-playlist-detail-action]');
+    if (detailAction) {
+      const action = String(detailAction.dataset.playlistDetailAction || '');
+      if (action === 'play-all') void playPlaylistAll();
+      else if (action === 'rename') void renameCurrentPlaylist();
+      else if (action === 'delete') void deleteCurrentPlaylist();
+      return;
+    }
+    const button = event.target.closest('[data-playlist-action]');
+    if (!button) return;
+    const card = button.closest('.playlist-track-card[data-id]');
+    if (!card) return;
+    const action = String(button.dataset.playlistAction || '');
+    if (action === 'play') void playPlaylistTrack(card.dataset.id);
+    else if (action === 'up') void reorderPlaylistTrack(card.dataset.id, -1);
+    else if (action === 'down') void reorderPlaylistTrack(card.dataset.id, 1);
+    else if (action === 'remove') void removePlaylistTrack(card.dataset.id);
+  });
+  els.playlistAddModalClose.addEventListener('click', closePlaylistAddModal);
+  els.playlistAddModal.addEventListener('click', event => {
+    if (event.target === els.playlistAddModal) closePlaylistAddModal();
+  });
+  els.playlistChooserList.addEventListener('click', event => {
+    const button = event.target.closest('[data-chooser-playlist-id]');
+    if (button) void addTrackToPlaylist(String(button.dataset.chooserPlaylistId || ''));
+  });
+  els.playlistCreateAndAddButton.addEventListener('click', () => void createPlaylistAndAdd());
+  els.playlistNewNameInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); void createPlaylistAndAdd(); }
+  });
+
   els.playerArtwork.addEventListener('error', () => {
     els.playerArtwork.removeAttribute('src');
     els.playerArtwork.hidden = true;
@@ -4984,6 +5479,11 @@
   });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
+    if (!els.playlistAddModal.hidden) {
+      event.preventDefault();
+      closePlaylistAddModal();
+      return;
+    }
     if (!els.userModal.hidden) {
       event.preventDefault();
       closeUserModal();
@@ -5090,6 +5590,7 @@
     const standaloneQuery = window.matchMedia('(display-mode: standalone)');
     if (standaloneQuery.addEventListener) standaloneQuery.addEventListener('change', updatePwaInstallUi);
   }
+  if (PLAYLIST_FEATURE_PREVIEW_MODE && els.playlistFeaturePreviewBanner) els.playlistFeaturePreviewBanner.hidden = false;
   void registerPwaServiceWorker();
 
   committedSkinId = 'library';

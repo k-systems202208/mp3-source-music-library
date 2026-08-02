@@ -65,6 +65,16 @@ from database import (
     link_tailscale_identity_to_owner,
     OwnerIdentityLinkConflict,
     OwnerIdentityLinkNotFound,
+    list_user_playlists,
+    get_user_playlist,
+    create_user_playlist,
+    rename_user_playlist,
+    delete_user_playlist,
+    add_track_to_user_playlist,
+    remove_track_from_user_playlist,
+    reorder_user_playlist_tracks,
+    PlaylistNotFound,
+    PlaylistConflict,
 )
 
 RANGE_PATTERN = re.compile(r"bytes=(\d*)-(\d*)$")
@@ -93,11 +103,16 @@ FAVORITE_ROUTE = re.compile(r"^/api/tracks/([^/]+)/favorite$")
 TITLE_CORRECTION_ROUTE = re.compile(r"^/api/tracks/([^/]+)/title-correction$")
 ARTIST_CORRECTION_ROUTE = re.compile(r"^/api/artists/([^/]+)/correction$")
 USER_ACTIVE_ROUTE = re.compile(r"^/api/users/([^/]+)/active$")
+PLAYLIST_ROUTE = re.compile(r"^/api/playlists/([^/]+)$")
+PLAYLIST_TRACKS_ROUTE = re.compile(r"^/api/playlists/([^/]+)/tracks$")
+PLAYLIST_TRACK_ROUTE = re.compile(r"^/api/playlists/([^/]+)/tracks/([^/]+)$")
+PLAYLIST_ORDER_ROUTE = re.compile(r"^/api/playlists/([^/]+)/tracks/order$")
 LOCAL_OWNER_TOKEN_ROUTE = "/api/local-auth/token"
 LOCAL_OWNER_EXCHANGE_ROUTE = "/api/local-auth/exchange"
 CURRENT_USER_ROUTE = "/api/current-user"
 CURRENT_USER_SKIN_ROUTE = "/api/me/skin"
 USERS_ROUTE = "/api/users"
+PLAYLISTS_ROUTE = "/api/playlists"
 HOME_ROUTE = "/api/home"
 BACKUPS_ROUTE = "/api/backups"
 BACKUPS_CREATE_ROUTE = "/api/backups/create"
@@ -285,6 +300,13 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         if parsed.path == OWNER_LINK_STATUS_ROUTE:
             self.handle_owner_link_status(parsed.query)
             return
+        if parsed.path == PLAYLISTS_ROUTE:
+            self.handle_playlists()
+            return
+        playlist_match = PLAYLIST_ROUTE.fullmatch(parsed.path)
+        if playlist_match:
+            self.handle_playlist(unquote(playlist_match.group(1)))
+            return
         if parsed.path == "/api/browse":
             self.handle_browse(parsed.query)
             return
@@ -334,6 +356,13 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         if parsed.path == BACKUPS_CANCEL_RESTORE_ROUTE:
             self.handle_backup_restore_cancel()
             return
+        if parsed.path == PLAYLISTS_ROUTE:
+            self.handle_playlist_create()
+            return
+        playlist_tracks_match = PLAYLIST_TRACKS_ROUTE.fullmatch(parsed.path)
+        if playlist_tracks_match:
+            self.handle_playlist_track_add(unquote(playlist_tracks_match.group(1)))
+            return
         match = USER_ACTIVE_ROUTE.fullmatch(parsed.path)
         if match:
             self.handle_user_active(unquote(match.group(1)))
@@ -366,6 +395,35 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == CURRENT_USER_SKIN_ROUTE:
             self.handle_current_user_skin()
+            return
+        playlist_order_match = PLAYLIST_ORDER_ROUTE.fullmatch(parsed.path)
+        if playlist_order_match:
+            self.handle_playlist_order(unquote(playlist_order_match.group(1)))
+            return
+        playlist_match = PLAYLIST_ROUTE.fullmatch(parsed.path)
+        if playlist_match:
+            self.handle_playlist_rename(unquote(playlist_match.group(1)))
+            return
+        self.send_json({"error": "API endpoint not found"}, HTTPStatus.NOT_FOUND)
+
+    def do_DELETE(self) -> None:
+        try:
+            self.read_request_body_bytes()
+        except ValueError as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
+
+        parsed = urlparse(self.path)
+        playlist_track_match = PLAYLIST_TRACK_ROUTE.fullmatch(parsed.path)
+        if playlist_track_match:
+            self.handle_playlist_track_remove(
+                unquote(playlist_track_match.group(1)),
+                unquote(playlist_track_match.group(2)),
+            )
+            return
+        playlist_match = PLAYLIST_ROUTE.fullmatch(parsed.path)
+        if playlist_match:
+            self.handle_playlist_delete(unquote(playlist_match.group(1)))
             return
         self.send_json({"error": "API endpoint not found"}, HTTPStatus.NOT_FOUND)
 
@@ -566,6 +624,16 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             )
 
 
+    def _require_authenticated_user(self) -> dict[str, Any] | None:
+        current = self._resolve_current_user()
+        if not bool(current.get("authenticated")):
+            self.send_json(
+                {"error": "authenticated user is required"},
+                HTTPStatus.UNAUTHORIZED,
+            )
+            return None
+        return current
+
     def _require_owner(self) -> dict[str, Any] | None:
         current = self._resolve_current_user()
         if (
@@ -653,6 +721,203 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                 "user": result,
             }
         )
+
+    def handle_playlists(self) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            with database() as connection:
+                initialize_database(connection)
+                items = list_user_playlists(
+                    connection,
+                    user_id=str(current["id"]),
+                )
+            self.send_json({"viewer": current, "items": items})
+        except Exception as exc:
+            self.send_json(
+                {"error": f"プレイリスト一覧を取得できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_playlist(self, playlist_id: str) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            with database() as connection:
+                initialize_database(connection)
+                item = get_user_playlist(
+                    connection,
+                    user_id=str(current["id"]),
+                    playlist_id=playlist_id,
+                )
+            self.send_json({"viewer": current, "playlist": item})
+        except PlaylistNotFound as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"プレイリストを取得できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_playlist_create(self) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            body = self.read_json_body()
+            name = body.get("name")
+            if not isinstance(name, str):
+                raise ValueError("name must be a string")
+            with database() as connection:
+                initialize_database(connection)
+                item = create_user_playlist(
+                    connection,
+                    user_id=str(current["id"]),
+                    name=name,
+                )
+            self.send_json({"created": True, "playlist": item}, HTTPStatus.CREATED)
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except PlaylistConflict as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.CONFLICT)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"プレイリストを作成できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_playlist_rename(self, playlist_id: str) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            body = self.read_json_body()
+            name = body.get("name")
+            if not isinstance(name, str):
+                raise ValueError("name must be a string")
+            with database() as connection:
+                initialize_database(connection)
+                item = rename_user_playlist(
+                    connection,
+                    user_id=str(current["id"]),
+                    playlist_id=playlist_id,
+                    name=name,
+                )
+            self.send_json({"updated": True, "playlist": item})
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except PlaylistNotFound as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except PlaylistConflict as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.CONFLICT)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"プレイリスト名を変更できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_playlist_delete(self, playlist_id: str) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            with database() as connection:
+                initialize_database(connection)
+                deleted = delete_user_playlist(
+                    connection,
+                    user_id=str(current["id"]),
+                    playlist_id=playlist_id,
+                )
+            self.send_json({"deleted": bool(deleted), "playlistId": playlist_id})
+        except PlaylistNotFound as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"プレイリストを削除できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_playlist_track_add(self, playlist_id: str) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            body = self.read_json_body()
+            track_id = body.get("trackId")
+            if not isinstance(track_id, str) or not track_id:
+                raise ValueError("trackId must be a non-empty string")
+            with database() as connection:
+                initialize_database(connection)
+                item = add_track_to_user_playlist(
+                    connection,
+                    user_id=str(current["id"]),
+                    playlist_id=playlist_id,
+                    track_id=track_id,
+                )
+            self.send_json({"added": True, **item}, HTTPStatus.CREATED)
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except PlaylistNotFound as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except PlaylistConflict as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.CONFLICT)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"曲をプレイリストへ追加できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_playlist_track_remove(self, playlist_id: str, track_id: str) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            with database() as connection:
+                initialize_database(connection)
+                remove_track_from_user_playlist(
+                    connection,
+                    user_id=str(current["id"]),
+                    playlist_id=playlist_id,
+                    track_id=track_id,
+                )
+            self.send_json({"removed": True, "playlistId": playlist_id, "trackId": track_id})
+        except PlaylistNotFound as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"曲をプレイリストから外せませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_playlist_order(self, playlist_id: str) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            body = self.read_json_body()
+            track_ids = body.get("trackIds")
+            if not isinstance(track_ids, list) or not all(isinstance(value, str) for value in track_ids):
+                raise ValueError("trackIds must be an array of strings")
+            with database() as connection:
+                initialize_database(connection)
+                item = reorder_user_playlist_tracks(
+                    connection,
+                    user_id=str(current["id"]),
+                    playlist_id=playlist_id,
+                    track_ids=track_ids,
+                )
+            self.send_json({"reordered": True, **item})
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except PlaylistNotFound as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"曲順を保存できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
 
     def handle_update_status(self, query_string: str) -> None:
         owner = self._require_owner()
@@ -1175,7 +1440,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             length = int(length_text)
         except ValueError as exc:
             raise ValueError("Content-Length is invalid") from exc
-        if length < 0 or length > 64 * 1024:
+        if length < 0 or length > 1024 * 1024:
             raise ValueError("Request body is too large")
 
         raw = self.rfile.read(length) if length else b"{}"

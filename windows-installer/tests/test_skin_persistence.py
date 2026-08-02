@@ -96,10 +96,10 @@ def stop_server(music_server: object, thread: threading.Thread) -> None:
     thread.join(timeout=5)
 
 
-def test_schema_v6_and_database_functions() -> None:
+def test_schema_v7_and_database_functions() -> None:
     with db.database(prepare_migration_backup=False) as connection:
         db.initialize_database(connection)
-        assert db.read_schema_version(connection) == 6
+        assert db.read_schema_version(connection) == 7
         owner = db.get_owner_user(connection)
         assert owner is not None
         owner_id = str(owner["id"])
@@ -163,7 +163,7 @@ def test_schema_v5_migration_and_backup() -> None:
         connection = raw_connection(database_path)
         try:
             db.initialize_database(connection)
-            assert db.read_schema_version(connection) == 6
+            assert db.read_schema_version(connection) == 7
             row = connection.execute(
                 "SELECT skin_id FROM user_preferences"
             ).fetchone()
@@ -329,7 +329,7 @@ def test_http_persistence_and_restart() -> None:
         stop_server(restarted, restarted_thread)
 
 
-test_schema_v6_and_database_functions()
+test_schema_v7_and_database_functions()
 test_schema_v5_migration_and_backup()
 test_user_separation_and_owner_link()
 test_http_persistence_and_restart()

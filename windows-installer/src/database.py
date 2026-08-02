@@ -17,7 +17,7 @@ from typing import Any, Iterator, Sequence
 
 ensure_data_directories()
 DATABASE_PATH = DATA_ROOT / "library.db"
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 DEFAULT_SKIN_ID = "library"
 ALLOWED_SKIN_IDS = frozenset({
     "library",
@@ -44,6 +44,18 @@ class OwnerIdentityLinkNotFound(OwnerIdentityLinkError):
 
 
 class OwnerIdentityLinkConflict(OwnerIdentityLinkError):
+    pass
+
+
+class PlaylistError(RuntimeError):
+    """Base error for per-user playlist operations."""
+
+
+class PlaylistNotFound(PlaylistError):
+    pass
+
+
+class PlaylistConflict(PlaylistError):
     pass
 
 
@@ -292,7 +304,7 @@ def create_pre_v272_migration_backup(
         return None
 
     current_version = database_schema_version(database_path)
-    if current_version >= SCHEMA_VERSION:
+    if current_version >= 6:
         return None
 
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -327,6 +339,54 @@ def create_pre_v272_migration_backup(
         destination.unlink(missing_ok=True)
         raise
 
+    return destination
+
+
+def create_pre_v275_migration_backup(
+    database_path: Path = DATABASE_PATH,
+    *,
+    backup_dir: Path = BACKUP_DIR,
+    now: datetime | None = None,
+) -> Path | None:
+    """Create and verify a backup before adding per-user playlists."""
+    if not database_path.exists() or database_path.stat().st_size == 0:
+        return None
+
+    current_version = database_schema_version(database_path)
+    if current_version >= SCHEMA_VERSION or current_version < 6:
+        return None
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = now or datetime.now().astimezone()
+    destination = _next_available_backup_path(
+        backup_dir,
+        timestamp.strftime("%Y%m%d-%H%M%S"),
+        release_label="v2.7.5",
+    )
+
+    source = sqlite3.connect(database_path, timeout=30.0)
+    target = sqlite3.connect(destination, timeout=30.0)
+    try:
+        source.backup(target)
+        target.commit()
+    except Exception:
+        target.close()
+        source.close()
+        destination.unlink(missing_ok=True)
+        raise
+    else:
+        target.close()
+        source.close()
+
+    try:
+        verify_sqlite_backup(
+            database_path,
+            destination,
+            expected_schema_version=current_version,
+        )
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
     return destination
 
 
@@ -393,10 +453,12 @@ def connect_database(
     migration_backup_dir: Path | None = None,
 ) -> sqlite3.Connection:
     if prepare_migration_backup:
-        create_pre_v272_migration_backup(
-            path,
-            backup_dir=migration_backup_dir or (path.parent / "Backups"),
-        )
+        backup_dir = migration_backup_dir or (path.parent / "Backups")
+        current_version = database_schema_version(path)
+        if 0 < current_version < 6:
+            create_pre_v272_migration_backup(path, backup_dir=backup_dir)
+        elif 6 <= current_version < SCHEMA_VERSION:
+            create_pre_v275_migration_backup(path, backup_dir=backup_dir)
 
     connection = sqlite3.connect(path, timeout=30.0)
     connection.row_factory = sqlite3.Row
@@ -582,6 +644,37 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     updated_at TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS playlists (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    normalized_name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(user_id, normalized_name),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_playlists_user_updated
+ON playlists(user_id, updated_at DESC, name COLLATE NOCASE);
+
+CREATE TABLE IF NOT EXISTS playlist_tracks (
+    playlist_id TEXT NOT NULL,
+    track_id TEXT NOT NULL,
+    position INTEGER NOT NULL CHECK(position >= 0),
+    added_at TEXT NOT NULL,
+    PRIMARY KEY(playlist_id, track_id),
+    UNIQUE(playlist_id, position),
+    FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+    FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_order
+ON playlist_tracks(playlist_id, position);
+
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track
+ON playlist_tracks(track_id);
 
 CREATE TABLE IF NOT EXISTS scan_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -944,6 +1037,35 @@ def _verify_schema_v6(connection: sqlite3.Connection, owner_id: str) -> None:
         raise RuntimeError("スキーマ6の外部キー整合性確認に失敗しました。")
 
 
+def _verify_schema_v7(connection: sqlite3.Connection, owner_id: str) -> None:
+    _verify_schema_v6(connection, owner_id)
+    required = {"playlists", "playlist_tracks"}
+    actual = {
+        str(row[0])
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    missing = required - actual
+    if missing:
+        raise RuntimeError(f"スキーマ7のプレイリストテーブルが不足しています: {sorted(missing)}")
+    duplicate_positions = connection.execute(
+        """
+        SELECT COUNT(*) FROM (
+            SELECT playlist_id, position, COUNT(*) AS count
+              FROM playlist_tracks
+             GROUP BY playlist_id, position
+            HAVING COUNT(*) > 1
+        )
+        """
+    ).fetchone()
+    if duplicate_positions is None or int(duplicate_positions[0]) != 0:
+        raise RuntimeError("プレイリストの曲順に重複があります。")
+    foreign_key_errors = connection.execute("PRAGMA foreign_key_check").fetchall()
+    if foreign_key_errors:
+        raise RuntimeError("スキーマ7の外部キー整合性確認に失敗しました。")
+
+
 def initialize_database(connection: sqlite3.Connection) -> None:
     if connection.in_transaction:
         raise RuntimeError("データベース初期化は未処理の更新がない状態で実行してください。")
@@ -964,7 +1086,7 @@ def initialize_database(connection: sqlite3.Connection) -> None:
         owner_id = _ensure_owner_user(connection, timestamp)
         _migrate_legacy_user_state(connection, owner_id, timestamp)
         _ensure_user_preferences(connection, timestamp)
-        _verify_schema_v6(connection, owner_id)
+        _verify_schema_v7(connection, owner_id)
 
         connection.execute(
             """
@@ -3229,3 +3351,334 @@ def get_owner_user(connection: sqlite3.Connection) -> dict[str, Any] | None:
     if row is None:
         return None
     return _user_row_to_dict(row)
+
+
+PLAYLIST_NAME_MAX_LENGTH = 60
+
+
+def _playlist_name(value: Any) -> tuple[str, str]:
+    name = re.sub(r"\s+", " ", str(value or "").strip())
+    if not name:
+        raise ValueError("プレイリスト名を入力してください。")
+    if len(name) > PLAYLIST_NAME_MAX_LENGTH:
+        raise ValueError(f"プレイリスト名は{PLAYLIST_NAME_MAX_LENGTH}文字以内にしてください。")
+    if any(ord(char) < 32 for char in name):
+        raise ValueError("プレイリスト名に制御文字は使用できません。")
+    return name, unicodedata.normalize("NFKC", name).casefold()
+
+
+def _require_active_user(connection: sqlite3.Connection, user_id: str) -> None:
+    row = connection.execute(
+        "SELECT is_active FROM users WHERE id = ?", (str(user_id),)
+    ).fetchone()
+    if row is None or not bool(row[0]):
+        raise PermissionError("active authenticated user is required")
+
+
+def _owned_playlist_row(
+    connection: sqlite3.Connection, user_id: str, playlist_id: str
+) -> sqlite3.Row:
+    row = connection.execute(
+        "SELECT * FROM playlists WHERE id = ? AND user_id = ?",
+        (str(playlist_id), str(user_id)),
+    ).fetchone()
+    if row is None:
+        raise PlaylistNotFound("プレイリストが見つかりません。")
+    return row
+
+
+def list_user_playlists(
+    connection: sqlite3.Connection, *, user_id: str
+) -> list[dict[str, Any]]:
+    _require_active_user(connection, user_id)
+    rows = connection.execute(
+        """
+        SELECT p.id, p.name, p.created_at, p.updated_at,
+               COUNT(pt.track_id) AS stored_track_count,
+               COALESCE(SUM(CASE WHEN t.is_available = 1 THEN 1 ELSE 0 END), 0) AS track_count,
+               COALESCE(SUM(CASE WHEN t.is_available = 1 THEN t.duration_ms ELSE 0 END), 0) AS duration_ms
+          FROM playlists AS p
+          LEFT JOIN playlist_tracks AS pt ON pt.playlist_id = p.id
+          LEFT JOIN tracks AS t ON t.id = pt.track_id
+         WHERE p.user_id = ?
+         GROUP BY p.id
+         ORDER BY p.updated_at DESC, p.name COLLATE NOCASE, p.id
+        """,
+        (str(user_id),),
+    ).fetchall()
+    return [
+        {
+            "id": str(row["id"]),
+            "name": str(row["name"]),
+            "trackCount": int(row["track_count"] or 0),
+            "storedTrackCount": int(row["stored_track_count"] or 0),
+            "durationMs": int(row["duration_ms"] or 0),
+            "createdAt": str(row["created_at"] or ""),
+            "updatedAt": str(row["updated_at"] or ""),
+        }
+        for row in rows
+    ]
+
+
+def create_user_playlist(
+    connection: sqlite3.Connection, *, user_id: str, name: str
+) -> dict[str, Any]:
+    _require_active_user(connection, user_id)
+    display_name, normalized_name = _playlist_name(name)
+    playlist_id = f"playlist_{uuid.uuid4().hex}"
+    timestamp = utc_now()
+    try:
+        connection.execute(
+            """
+            INSERT INTO playlists(id, user_id, name, normalized_name, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?)
+            """,
+            (
+                playlist_id,
+                str(user_id),
+                display_name,
+                normalized_name,
+                timestamp,
+                timestamp,
+            ),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise PlaylistConflict("同じ名前のプレイリストがすでにあります。") from exc
+    return {
+        "id": playlist_id,
+        "name": display_name,
+        "trackCount": 0,
+        "storedTrackCount": 0,
+        "durationMs": 0,
+        "createdAt": timestamp,
+        "updatedAt": timestamp,
+    }
+
+
+def rename_user_playlist(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str,
+    playlist_id: str,
+    name: str,
+) -> dict[str, Any]:
+    row = _owned_playlist_row(connection, user_id, playlist_id)
+    display_name, normalized_name = _playlist_name(name)
+    timestamp = utc_now()
+    try:
+        connection.execute(
+            """
+            UPDATE playlists
+               SET name = ?, normalized_name = ?, updated_at = ?
+             WHERE id = ? AND user_id = ?
+            """,
+            (display_name, normalized_name, timestamp, str(playlist_id), str(user_id)),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise PlaylistConflict("同じ名前のプレイリストがすでにあります。") from exc
+    return {
+        "id": str(row["id"]),
+        "name": display_name,
+        "updatedAt": timestamp,
+    }
+
+
+def delete_user_playlist(
+    connection: sqlite3.Connection, *, user_id: str, playlist_id: str
+) -> bool:
+    _owned_playlist_row(connection, user_id, playlist_id)
+    cursor = connection.execute(
+        "DELETE FROM playlists WHERE id = ? AND user_id = ?",
+        (str(playlist_id), str(user_id)),
+    )
+    return cursor.rowcount == 1
+
+
+def _playlist_track_rows(
+    connection: sqlite3.Connection, *, user_id: str, playlist_id: str
+) -> list[sqlite3.Row]:
+    return connection.execute(
+        """
+        SELECT t.*, ar.name AS artist_name,
+               ar.display_name_override AS artist_display_override,
+               al.title AS album_title,
+               aw.relative_path AS artwork_relative_path,
+               aw.source_type AS artwork_source_type,
+               COALESCE(uts.play_count, 0) AS user_play_count,
+               COALESCE(uts.last_played_at, '') AS user_last_played_at,
+               COALESCE(uts.favorite, 0) AS user_favorite,
+               uts.rating AS user_rating,
+               pt.position AS playlist_position,
+               pt.added_at AS playlist_added_at
+          FROM playlist_tracks AS pt
+          JOIN playlists AS p ON p.id = pt.playlist_id AND p.user_id = ?
+          JOIN tracks AS t ON t.id = pt.track_id
+          LEFT JOIN artists AS ar ON ar.id = t.artist_id
+          LEFT JOIN albums AS al ON al.id = t.album_id
+          LEFT JOIN artworks AS aw ON aw.id = t.artwork_id
+          LEFT JOIN user_track_state AS uts
+            ON uts.track_id = t.id AND uts.user_id = ?
+         WHERE pt.playlist_id = ? AND t.is_available = 1
+         ORDER BY pt.position, pt.added_at, t.id
+        """,
+        (str(user_id), str(user_id), str(playlist_id)),
+    ).fetchall()
+
+
+def get_user_playlist(
+    connection: sqlite3.Connection, *, user_id: str, playlist_id: str
+) -> dict[str, Any]:
+    row = _owned_playlist_row(connection, user_id, playlist_id)
+    track_rows = _playlist_track_rows(
+        connection, user_id=user_id, playlist_id=playlist_id
+    )
+    tracks: list[dict[str, Any]] = []
+    for item in track_rows:
+        track = row_to_track(item)
+        track["playlistPosition"] = int(item["playlist_position"] or 0)
+        track["playlistAddedAt"] = str(item["playlist_added_at"] or "")
+        tracks.append(track)
+    stored = connection.execute(
+        "SELECT COUNT(*) FROM playlist_tracks WHERE playlist_id = ?",
+        (str(playlist_id),),
+    ).fetchone()
+    stored_count = int(stored[0]) if stored is not None else len(tracks)
+    return {
+        "id": str(row["id"]),
+        "name": str(row["name"]),
+        "trackCount": len(tracks),
+        "storedTrackCount": stored_count,
+        "unavailableCount": max(0, stored_count - len(tracks)),
+        "durationMs": sum(int(track.get("time") or 0) for track in tracks),
+        "createdAt": str(row["created_at"] or ""),
+        "updatedAt": str(row["updated_at"] or ""),
+        "tracks": tracks,
+    }
+
+
+def _touch_playlist(connection: sqlite3.Connection, playlist_id: str) -> str:
+    timestamp = utc_now()
+    connection.execute(
+        "UPDATE playlists SET updated_at = ? WHERE id = ?",
+        (timestamp, str(playlist_id)),
+    )
+    return timestamp
+
+
+def _renumber_playlist(connection: sqlite3.Connection, playlist_id: str) -> None:
+    rows = connection.execute(
+        "SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position, added_at, track_id",
+        (str(playlist_id),),
+    ).fetchall()
+    # Offset first to avoid the UNIQUE(playlist_id, position) constraint while updating.
+    connection.execute(
+        "UPDATE playlist_tracks SET position = position + 1000000 WHERE playlist_id = ?",
+        (str(playlist_id),),
+    )
+    for position, row in enumerate(rows):
+        connection.execute(
+            "UPDATE playlist_tracks SET position = ? WHERE playlist_id = ? AND track_id = ?",
+            (position, str(playlist_id), str(row["track_id"])),
+        )
+
+
+def add_track_to_user_playlist(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str,
+    playlist_id: str,
+    track_id: str,
+) -> dict[str, Any]:
+    _owned_playlist_row(connection, user_id, playlist_id)
+    track = connection.execute(
+        "SELECT id FROM tracks WHERE id = ? AND is_available = 1",
+        (str(track_id),),
+    ).fetchone()
+    if track is None:
+        raise PlaylistNotFound("追加する曲が見つかりません。")
+    exists = connection.execute(
+        "SELECT 1 FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
+        (str(playlist_id), str(track_id)),
+    ).fetchone()
+    if exists is not None:
+        raise PlaylistConflict("この曲はすでにプレイリストへ入っています。")
+    row = connection.execute(
+        "SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_tracks WHERE playlist_id = ?",
+        (str(playlist_id),),
+    ).fetchone()
+    position = int(row[0] if row is not None else 0)
+    timestamp = utc_now()
+    connection.execute(
+        """
+        INSERT INTO playlist_tracks(playlist_id, track_id, position, added_at)
+        VALUES(?, ?, ?, ?)
+        """,
+        (str(playlist_id), str(track_id), position, timestamp),
+    )
+    _touch_playlist(connection, playlist_id)
+    return {"playlistId": str(playlist_id), "trackId": str(track_id), "position": position}
+
+
+def remove_track_from_user_playlist(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str,
+    playlist_id: str,
+    track_id: str,
+) -> bool:
+    _owned_playlist_row(connection, user_id, playlist_id)
+    cursor = connection.execute(
+        "DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
+        (str(playlist_id), str(track_id)),
+    )
+    if cursor.rowcount != 1:
+        raise PlaylistNotFound("プレイリスト内に指定した曲が見つかりません。")
+    _renumber_playlist(connection, playlist_id)
+    _touch_playlist(connection, playlist_id)
+    return True
+
+
+def reorder_user_playlist_tracks(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str,
+    playlist_id: str,
+    track_ids: Sequence[str],
+) -> dict[str, Any]:
+    _owned_playlist_row(connection, user_id, playlist_id)
+    requested = [str(value) for value in track_ids]
+    if any(not value for value in requested):
+        raise ValueError("曲順に空の曲IDは指定できません。")
+    if len(requested) != len(set(requested)):
+        raise ValueError("曲順に同じ曲を重複して指定できません。")
+    rows = connection.execute(
+        """
+        SELECT pt.track_id, t.is_available
+          FROM playlist_tracks AS pt
+          JOIN tracks AS t ON t.id = pt.track_id
+         WHERE pt.playlist_id = ?
+         ORDER BY pt.position, pt.added_at, pt.track_id
+        """,
+        (str(playlist_id),),
+    ).fetchall()
+    current_available = [str(row["track_id"]) for row in rows if bool(row["is_available"])]
+    current_unavailable = [str(row["track_id"]) for row in rows if not bool(row["is_available"])]
+    if set(requested) != set(current_available) or len(requested) != len(current_available):
+        raise ValueError("現在利用できる全曲を1回ずつ指定してください。")
+    final_order = [*requested, *current_unavailable]
+    connection.execute(
+        "UPDATE playlist_tracks SET position = position + 1000000 WHERE playlist_id = ?",
+        (str(playlist_id),),
+    )
+    for position, track_id in enumerate(final_order):
+        connection.execute(
+            "UPDATE playlist_tracks SET position = ? WHERE playlist_id = ? AND track_id = ?",
+            (position, str(playlist_id), track_id),
+        )
+    updated_at = _touch_playlist(connection, playlist_id)
+    return {
+        "playlistId": str(playlist_id),
+        "trackIds": requested,
+        "unavailableTrackCount": len(current_unavailable),
+        "updatedAt": updated_at,
+    }

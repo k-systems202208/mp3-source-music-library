@@ -15,7 +15,7 @@ from paths import BACKUP_DIR, DATA_ROOT
 DATABASE_FILENAME = "library.db"
 RESTORE_REQUEST_FILENAME = "restore-request.json"
 RESTORE_STATUS_FILENAME = "restore-status.json"
-SUPPORTED_SCHEMA_VERSIONS = frozenset({5, 6})
+SUPPORTED_SCHEMA_VERSIONS = frozenset({5, 6, 7})
 BACKUP_NAME_PATTERN = re.compile(r"^library-[A-Za-z0-9._-]+\.db$")
 
 
