@@ -129,6 +129,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         ".html": "text/html; charset=utf-8",
         ".htm": "text/html; charset=utf-8",
         ".json": "application/json; charset=utf-8",
+        ".webmanifest": "application/manifest+json; charset=utf-8",
         ".js": "text/javascript; charset=utf-8",
         ".css": "text/css; charset=utf-8",
         ".txt": "text/plain; charset=utf-8",
@@ -241,7 +242,12 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "same-origin")
         parsed_path = urlparse(self.path).path.casefold()
-        if parsed_path.startswith("/api/") or parsed_path.endswith((".json", ".html", ".htm")):
+        if parsed_path == "/service-worker.js":
+            self.send_header("Cache-Control", "no-cache, max-age=0")
+            self.send_header("Service-Worker-Allowed", "/")
+        elif parsed_path.endswith(".webmanifest"):
+            self.send_header("Cache-Control", "no-cache, max-age=0")
+        elif parsed_path.startswith("/api/") or parsed_path.endswith((".json", ".html", ".htm")):
             self.send_header("Cache-Control", "no-store")
         super().end_headers()
 
@@ -425,6 +431,19 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         parameters = parse_qs(query_string, keep_blank_values=True)
         token_values = parameters.get("token") or []
         token = str(token_values[0]) if len(token_values) == 1 else ""
+        next_values = parameters.get("next") or []
+        requested_next = str(next_values[0]) if len(next_values) == 1 else ""
+        safe_next = "/music-library-search.html"
+        parsed_next = urlparse(requested_next)
+        allowed_next_paths = {"/music-library-search.html"}
+        if (
+            parsed_next.path in allowed_next_paths
+            and not parsed_next.scheme
+            and not parsed_next.netloc
+            and requested_next.startswith("/")
+            and not requested_next.startswith("//")
+        ):
+            safe_next = requested_next
 
         if not self.local_owner_auth.consume_one_time_token(token):
             self.send_html_error(
@@ -435,7 +454,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
 
         session = self.local_owner_auth.issue_session()
         self.send_response(HTTPStatus.SEE_OTHER)
-        self.send_header("Location", "/music-library-search.html")
+        self.send_header("Location", safe_next)
         self.send_header(
             "Set-Cookie",
             (

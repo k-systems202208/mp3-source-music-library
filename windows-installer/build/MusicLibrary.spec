@@ -11,6 +11,11 @@ analysis = Analysis(
     binaries=[],
     datas=[
         (str(src / "music-library-search.html"), "."),
+        (str(src / "manifest.webmanifest"), "."),
+        (str(src / "service-worker.js"), "."),
+        (str(src / "offline.html"), "."),
+        (str(src / "favicon.ico"), "."),
+        (str(src / "pwa-icons"), "pwa-icons"),
         (str(src / "vendor"), "vendor"),
         (str(project_root / "docs" / "MUTAGEN_LICENSE.txt"), "licenses"),
         (str(project_root / "docs" / "REMOTE_ACCESS_USER.txt"), "."),

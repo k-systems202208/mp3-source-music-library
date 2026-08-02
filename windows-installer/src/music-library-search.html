@@ -2,7 +2,23 @@
 <html lang="ja" data-skin="library">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" id="pwaThemeColor" content="#24392b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="音楽ライブラリ">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="./pwa-icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./pwa-icons/icon-180.png">
+<script>
+(() => {
+  const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  if (standalone || window.navigator.standalone === true) document.documentElement.classList.add('pwa-standalone');
+  window.addEventListener('load', () => setTimeout(() => document.body && document.body.classList.add('app-ready'), 8000), {once:true});
+})();
+</script>
 <title>自宅音楽ライブラリ — Music Library Catalog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2050,10 +2066,124 @@
     body,header.plate,.view-tab,.controls,.card,.home-hero,.home-stat,.home-quick-btn,.home-track-card,.user-panel,.skin-card{transition:none!important;}
   }
 
+
+  /* ---- v2.7.3 Phase 1: smartphone home-screen / PWA preview ---- */
+  .app-startup{display:none;}
+  html.pwa-standalone .app-startup{
+    position:fixed;
+    inset:0;
+    z-index:300;
+    display:grid;
+    place-items:center;
+    padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+    background:var(--paper);
+    color:var(--ink);
+    transition:opacity .24s ease,visibility .24s ease;
+  }
+  html.pwa-standalone body.app-ready .app-startup{opacity:0;visibility:hidden;pointer-events:none;}
+  .app-startup-inner{text-align:center;}
+  .app-startup img{width:104px;height:104px;border-radius:24px;box-shadow:0 14px 36px var(--shadow);}
+  .app-startup strong{display:block;margin-top:18px;font-family:'Shippori Mincho',serif;font-size:24px;}
+  .app-startup span{display:block;margin-top:7px;color:var(--ink-soft);font-size:13px;}
+
+  .pwa-status-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+    margin-top:11px;
+  }
+  .pwa-status-card{
+    min-width:0;
+    padding:10px 11px;
+    border:1px solid var(--card-edge);
+    border-radius:var(--skin-radius);
+    background:var(--paper);
+  }
+  .pwa-status-card small{display:block;color:var(--ink-faint);font-size:10px;}
+  .pwa-status-card strong{display:block;margin-top:3px;font-size:12px;overflow-wrap:anywhere;}
+  .pwa-url-box{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+    align-items:center;
+    margin-top:11px;
+    padding:10px;
+    border:1px dashed var(--brass);
+    border-radius:var(--skin-radius);
+    background:var(--skin-accent-soft);
+  }
+  .pwa-url-box code{min-width:0;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:11px;overflow-wrap:anywhere;user-select:all;}
+  .pwa-install-callout{
+    margin-top:11px;
+    padding:13px;
+    border:1px solid var(--card-edge);
+    border-left:5px solid var(--brass);
+    border-radius:var(--skin-radius);
+    background:var(--paper);
+  }
+  .pwa-install-callout strong{display:block;font-size:14px;}
+  .pwa-install-callout p{margin:5px 0 0;white-space:pre-line;}
+  .pwa-install-callout .user-actions{margin-top:10px;}
+  .pwa-install-badge{
+    display:inline-flex;
+    align-items:center;
+    min-height:25px;
+    margin-top:8px;
+    padding:3px 9px;
+    border:1px solid var(--brass);
+    border-radius:999px;
+    color:var(--brass-deep);
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    font-weight:700;
+  }
+  html.pwa-standalone .wrap{padding-top:calc(20px + env(safe-area-inset-top));}
+  html.pwa-standalone .player-bar{padding-bottom:env(safe-area-inset-bottom);}
+  html.pwa-standalone .user-panel{padding-bottom:calc(34px + env(safe-area-inset-bottom));}
+  .view-tab,.home-quick-btn,.user-action-btn,.pill-btn,.play-btn,.favorite-btn,.home-play-btn,.home-favorite-btn{touch-action:manipulation;}
+
+  @media (max-width:600px){
+    .wrap{padding:14px 10px calc(80px + env(safe-area-inset-bottom));}
+    header.plate{padding:58px 16px 16px;}
+    header.plate h1{font-size:26px;}
+    header.plate .sub{font-size:11px;line-height:1.55;}
+    .view-tabs{
+      position:sticky;
+      top:env(safe-area-inset-top);
+      z-index:35;
+      gap:5px;
+      margin-top:12px;
+      padding:6px 0;
+      background:color-mix(in srgb,var(--paper) 92%,transparent);
+      backdrop-filter:blur(8px);
+    }
+    .view-tab{min-width:0;min-height:44px;padding:9px 3px;font-size:11px;}
+    .home-hero{padding:18px 14px;}
+    .home-greeting{font-size:24px;}
+    .home-stat{min-height:70px;padding:10px;}
+    .home-quick-btn{min-height:48px;padding:9px 5px;font-size:12px;}
+    .controls{padding:12px;}
+    #search{font-size:16px;}
+    .user-chip{min-height:44px;}
+    .user-action-btn{min-height:44px;}
+    .pwa-status-grid{grid-template-columns:1fr;}
+    .pwa-url-box{grid-template-columns:1fr;}
+    .pwa-url-box .user-action-btn{width:100%;}
+    .player-inner{padding-bottom:calc(8px + env(safe-area-inset-bottom));}
+    footer{padding-bottom:env(safe-area-inset-bottom);}
+  }
+
   ::selection{background:var(--brass); color:var(--paper);}
 </style>
 </head>
 <body>
+<div class="app-startup" id="appStartup" role="status" aria-live="polite">
+  <div class="app-startup-inner">
+    <img src="./pwa-icons/icon-192.png" alt="">
+    <strong>自宅音楽ライブラリ</strong>
+    <span>ライブラリを準備しています…</span>
+  </div>
+</div>
 <div class="wrap">
 
   <header class="plate">
@@ -2212,6 +2342,29 @@
       <div class="user-message skin-preview-note" id="skinMessage">現在は「ライブラリー」です。</div>
     </section>
 
+    <section class="user-section" id="pwaInstallSection">
+      <h3>スマホのホーム画面に追加</h3>
+      <p>現在開いている接続先を、スマートフォンのホーム画面からアプリのように起動できます。音楽ファイルやDBは端末へ保存しません。</p>
+      <div class="pwa-status-grid" aria-label="ホーム画面対応状況">
+        <article class="pwa-status-card"><small>接続の種類</small><strong id="pwaConnectionStatus">確認中…</strong></article>
+        <article class="pwa-status-card"><small>通信方式</small><strong id="pwaSecureStatus">確認中…</strong></article>
+        <article class="pwa-status-card"><small>起動方法</small><strong id="pwaDisplayStatus">ブラウザ</strong></article>
+      </div>
+      <div class="pwa-url-box">
+        <code id="pwaCurrentUrl">接続先を確認しています…</code>
+        <button type="button" class="user-action-btn secondary" id="pwaCopyUrlButton">URLをコピー</button>
+      </div>
+      <div class="pwa-install-callout">
+        <strong id="pwaGuideTitle">端末を確認しています…</strong>
+        <p id="pwaGuideText">ホーム画面への追加方法を準備しています。</p>
+        <span class="pwa-install-badge" id="pwaWorkerStatus">画面資産：確認中</span>
+        <div class="user-actions">
+          <button type="button" class="user-action-btn" id="pwaInstallButton" hidden>アプリとして追加</button>
+        </div>
+      </div>
+      <div class="user-message" id="pwaInstallMessage" hidden></div>
+    </section>
+
     <section class="user-section" id="anonymousUserSection" hidden>
       <h3>個人機能は利用できません</h3>
       <p>管理画面からブラウザを開くか、利用者本人のTailscaleアカウントで接続してください。未識別の状態では、お気に入りや個人別再生回数を保存しません。</p>
@@ -2360,6 +2513,10 @@
   const SKIN_OPTIONS = Object.freeze({
     library:'ライブラリー', midnight:'ミッドナイト', neon:'ネオン', cyberpunk:'サイバーパンク', candy:'キャンディー', monochrome:'モノクローム'
   });
+  const PWA_PREVIEW_MODE = new URLSearchParams(location.search).get('pwaPreview') === '1';
+  const PWA_THEME_COLORS = Object.freeze({
+    library:'#24392b', midnight:'#101c2e', neon:'#041219', cyberpunk:'#16131d', candy:'#ff4f9a', monochrome:'#111111'
+  });
 
   const state = {
     view: 'home',
@@ -2483,6 +2640,16 @@
     updateCheckButton: document.getElementById('updateCheckButton'),
     updateReleaseLink: document.getElementById('updateReleaseLink'),
     updateMessage: document.getElementById('updateMessage'),
+    pwaConnectionStatus: document.getElementById('pwaConnectionStatus'),
+    pwaSecureStatus: document.getElementById('pwaSecureStatus'),
+    pwaDisplayStatus: document.getElementById('pwaDisplayStatus'),
+    pwaCurrentUrl: document.getElementById('pwaCurrentUrl'),
+    pwaCopyUrlButton: document.getElementById('pwaCopyUrlButton'),
+    pwaGuideTitle: document.getElementById('pwaGuideTitle'),
+    pwaGuideText: document.getElementById('pwaGuideText'),
+    pwaWorkerStatus: document.getElementById('pwaWorkerStatus'),
+    pwaInstallButton: document.getElementById('pwaInstallButton'),
+    pwaInstallMessage: document.getElementById('pwaInstallMessage'),
   };
 
   let stats = null;
@@ -2509,6 +2676,8 @@
   let updateRequestSerial = 0;
   let committedSkinId = 'library';
   let previewSkinId = 'library';
+  let deferredPwaInstallPrompt = null;
+  let pwaWorkerState = PWA_PREVIEW_MODE ? 'プレビュー（未登録）' : '確認中';
 
 
   function normalizeSkinId(value){
@@ -2536,6 +2705,7 @@
   function applySkinPreview(skinId, {announce=true} = {}){
     previewSkinId = normalizeSkinId(skinId);
     document.documentElement.dataset.skin = previewSkinId;
+    updatePwaThemeColor(previewSkinId);
     renderSkinPreviewUi();
     if (announce && els.skinMessage) {
       els.skinMessage.textContent = `「${SKIN_OPTIONS[previewSkinId]}」を一時表示しています。保存する場合は「適用する」を押してください。`;
@@ -2856,6 +3026,164 @@
     return '未識別';
   }
 
+  function updatePwaThemeColor(skinId){
+    const meta = document.getElementById('pwaThemeColor');
+    if (meta) meta.setAttribute('content', PWA_THEME_COLORS[normalizeSkinId(skinId)] || PWA_THEME_COLORS.library);
+  }
+
+  function isPwaStandalone(){
+    return Boolean((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true);
+  }
+
+  function isIosDevice(){
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function isSafariBrowser(){
+    const ua = navigator.userAgent;
+    return /safari/i.test(ua) && !/crios|fxios|edgios|chrome|android/i.test(ua);
+  }
+
+  function isLocalPwaOrigin(){
+    const host = location.hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  }
+
+  function pwaLaunchUrl(){
+    return new URL('./music-library-search.html', location.href).href;
+  }
+
+  function updatePwaInstallUi(){
+    if (!els.pwaCurrentUrl) return;
+    const standalone = isPwaStandalone();
+    const localOrigin = isLocalPwaOrigin();
+    const protocol = location.protocol.toLowerCase();
+    const https = protocol === 'https:';
+    const secure = window.isSecureContext || localOrigin;
+    const provider = currentUser && currentUser.provider ? currentUser.provider : '';
+    const ios = isIosDevice();
+    const safari = isSafariBrowser();
+
+    els.pwaCurrentUrl.textContent = pwaLaunchUrl();
+    els.pwaConnectionStatus.textContent = provider === 'tailscale'
+      ? 'Tailscale経由'
+      : provider === 'local_owner' || localOrigin
+        ? '自宅PC内のローカル接続'
+        : https ? '外部HTTPS接続' : '接続方法を未判定';
+    els.pwaSecureStatus.textContent = https
+      ? 'HTTPS'
+      : localOrigin && protocol === 'http:'
+        ? 'HTTP（このPC内のみ）'
+        : protocol === 'http:' ? 'HTTP（追加不可）' : protocol.replace(':', '').toUpperCase();
+    els.pwaDisplayStatus.textContent = standalone ? 'ホーム画面から起動中' : 'ブラウザで表示中';
+    els.pwaWorkerStatus.textContent = `画面資産：${pwaWorkerState}`;
+    els.pwaInstallButton.hidden = true;
+
+    let title = 'ホーム画面への追加方法';
+    let guide = '';
+    if (PWA_PREVIEW_MODE) {
+      title = '工程1プレビュー';
+      guide = 'このプレビューは一時的なポートで動作するため、ホーム画面へは追加しないでください。アイコン、案内表示、スマホ用レイアウトを確認します。';
+    } else if (standalone) {
+      title = 'ホーム画面から起動しています';
+      guide = '専用アイコンからアプリのように起動できています。接続先は、このホーム画面アイコンを追加した時のURLです。';
+    } else if (!secure) {
+      title = 'HTTPSの接続先が必要です';
+      guide = 'スマートフォンでは、HTTPSのTailscale URLを開いてからホーム画面へ追加してください。HTTP接続ではPWAとして追加できません。';
+    } else if (ios) {
+      title = safari ? 'iPhone／iPadで追加' : 'Safariで開いて追加';
+      guide = safari
+        ? '1. Safari下部の共有ボタンを押します。\n2. 「ホーム画面に追加」を選びます。\n3. 右上の「追加」を押します。'
+        : 'iPhone／iPadでは、このURLをSafariで開きます。Safariの共有ボタンから「ホーム画面に追加」を選んでください。';
+    } else if (deferredPwaInstallPrompt) {
+      title = 'ホーム画面へ追加できます';
+      guide = '下の「アプリとして追加」を押すと、この接続先を専用アイコンから起動できるようになります。';
+      els.pwaInstallButton.hidden = false;
+    } else {
+      title = 'Androidで追加';
+      guide = 'ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。対応すると、この画面にも追加ボタンが表示されます。';
+    }
+    els.pwaGuideTitle.textContent = title;
+    els.pwaGuideText.textContent = guide;
+
+    if (PWA_PREVIEW_MODE) {
+      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.3 RCのTailscale URLで確認します。');
+    } else if (provider === 'tailscale') {
+      setMessage(els.pwaInstallMessage, 'この接続先を追加すると、Tailscale接続時にホーム画面から直接開けます。', 'success');
+    } else if (provider === 'local_owner' || isLocalPwaOrigin()) {
+      setMessage(els.pwaInstallMessage, '外出先でも利用する場合は、Tailscale接続用URLをスマートフォンで開いてからホーム画面へ追加してください。');
+    } else {
+      setMessage(els.pwaInstallMessage, '普段利用するTailscale URLで開いていることを確認してから追加してください。');
+    }
+  }
+
+  async function copyPwaUrl(){
+    const value = pwaLaunchUrl();
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const field = document.createElement('textarea');
+        field.value = value;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        if (!document.execCommand('copy')) throw new Error('copy failed');
+        field.remove();
+      }
+      setMessage(els.pwaInstallMessage, '現在の接続先URLをコピーしました。', 'success');
+    } catch (_) {
+      setMessage(els.pwaInstallMessage, '自動コピーできませんでした。URL部分を長押ししてコピーしてください。', 'error');
+    }
+  }
+
+  async function requestPwaInstall(){
+    if (!deferredPwaInstallPrompt) {
+      updatePwaInstallUi();
+      return;
+    }
+    const prompt = deferredPwaInstallPrompt;
+    deferredPwaInstallPrompt = null;
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    setMessage(els.pwaInstallMessage, choice && choice.outcome === 'accepted'
+      ? 'ホーム画面への追加を開始しました。'
+      : 'ホーム画面への追加を取り消しました。', choice && choice.outcome === 'accepted' ? 'success' : '');
+    updatePwaInstallUi();
+  }
+
+  async function registerPwaServiceWorker(){
+    if (PWA_PREVIEW_MODE) {
+      pwaWorkerState = 'プレビュー（未登録）';
+      updatePwaInstallUi();
+      return;
+    }
+    if (!('serviceWorker' in navigator)) {
+      pwaWorkerState = '非対応ブラウザ';
+      updatePwaInstallUi();
+      return;
+    }
+    if (!(window.isSecureContext || isLocalPwaOrigin())) {
+      pwaWorkerState = 'HTTPSが必要';
+      updatePwaInstallUi();
+      return;
+    }
+    try {
+      await navigator.serviceWorker.register('./service-worker.js', {scope:'./'});
+      pwaWorkerState = '準備完了';
+    } catch (error) {
+      pwaWorkerState = '登録エラー';
+      console.error('Service Worker registration failed:', error);
+    }
+    updatePwaInstallUi();
+  }
+
+  function finishAppStartup(){
+    document.body.classList.add('app-ready');
+  }
+
   function setMessage(element, text, kind=''){
     element.textContent = text || '';
     element.classList.toggle('error', kind === 'error');
@@ -2902,6 +3230,7 @@
     els.currentUserDetail.textContent = authenticated
       ? `${providerLabel(currentUser.provider)}で識別されています。`
       : '利用者情報を確認できませんでした。';
+    updatePwaInstallUi();
 
     els.skinSection.hidden = !authenticated;
     if (authenticated && els.skinMessage) {
@@ -3301,6 +3630,7 @@
 
   async function openUserModal(){
     els.userModal.hidden = false;
+    updatePwaInstallUi();
     try {
       await loadCurrentUser();
       await loadManagedUsers();
@@ -4744,6 +5074,23 @@
   });
   els.updateCheckButton.addEventListener('click', () => void loadUpdateStatus({force:true}));
   els.updateBannerDismissButton.addEventListener('click', dismissUpdateBanner);
+  els.pwaCopyUrlButton.addEventListener('click', () => void copyPwaUrl());
+  els.pwaInstallButton.addEventListener('click', () => void requestPwaInstall());
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredPwaInstallPrompt = event;
+    updatePwaInstallUi();
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredPwaInstallPrompt = null;
+    setMessage(els.pwaInstallMessage, 'ホーム画面への追加が完了しました。', 'success');
+    updatePwaInstallUi();
+  });
+  if (window.matchMedia) {
+    const standaloneQuery = window.matchMedia('(display-mode: standalone)');
+    if (standaloneQuery.addEventListener) standaloneQuery.addEventListener('change', updatePwaInstallUi);
+  }
+  void registerPwaServiceWorker();
 
   committedSkinId = 'library';
   applySkinPreview(committedSkinId, {announce:false});
@@ -4779,6 +5126,8 @@
     } else {
       els.results.innerHTML = errorHtml(error);
     }
+  } finally {
+    finishAppStartup();
   }
 })();
 
