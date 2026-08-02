@@ -304,6 +304,7 @@ def test_http_identity_flow() -> None:
             "displayName": "",
             "isOwner": False,
             "provider": "",
+            "skinId": "library",
         }
 
         tagged_device = current_user(

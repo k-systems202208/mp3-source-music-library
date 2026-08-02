@@ -15,7 +15,7 @@ from paths import BACKUP_DIR, DATA_ROOT
 DATABASE_FILENAME = "library.db"
 RESTORE_REQUEST_FILENAME = "restore-request.json"
 RESTORE_STATUS_FILENAME = "restore-status.json"
-SUPPORTED_SCHEMA_VERSION = 5
+SUPPORTED_SCHEMA_VERSIONS = frozenset({5, 6})
 BACKUP_NAME_PATTERN = re.compile(r"^library-[A-Za-z0-9._-]+\.db$")
 
 
@@ -91,12 +91,12 @@ def inspect_database(path: Path) -> dict[str, Any]:
                 "schemaVersion": schema,
                 "trackCount": _count_rows(connection, "tracks"),
                 "userCount": _count_rows(connection, "users"),
-                "valid": quick_text.casefold() == "ok" and schema == SUPPORTED_SCHEMA_VERSION,
+                "valid": quick_text.casefold() == "ok" and schema in SUPPORTED_SCHEMA_VERSIONS,
             }
         )
         if quick_text.casefold() != "ok":
             result["error"] = f"SQLite整合性検査: {quick_text}"
-        elif schema != SUPPORTED_SCHEMA_VERSION:
+        elif schema not in SUPPORTED_SCHEMA_VERSIONS:
             result["error"] = f"対応外のDBスキーマです: {schema}"
     except sqlite3.Error as exc:
         result["quickCheck"] = "error"

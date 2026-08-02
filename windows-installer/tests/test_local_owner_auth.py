@@ -135,6 +135,7 @@ def test_http_flow() -> None:
             "displayName": "",
             "isOwner": False,
             "provider": "",
+            "skinId": "library",
         }
 
         token = "A" * 43

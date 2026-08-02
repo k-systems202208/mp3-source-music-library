@@ -202,7 +202,7 @@ def test_connect_creates_backup_before_upgrade() -> None:
         finally:
             connection.close()
 
-        backups = list(backup_dir.glob("library-pre-v2.7.0-*.db"))
+        backups = list(backup_dir.glob("library-pre-v2.7.2-*.db"))
         assert len(backups) == 1
         assert db.database_schema_version(backups[0]) == 4
 
@@ -216,7 +216,7 @@ def test_schema_v5_migration() -> None:
         try:
             db.initialize_database(connection)
 
-            assert db.read_schema_version(connection) == 5
+            assert db.read_schema_version(connection) == 6
             assert schema_value(connection, db.MIGRATION_V5_FLAG) == db.MIGRATION_V5_COMPLETED
 
             owners = connection.execute(
@@ -238,6 +238,13 @@ def test_schema_v5_migration() -> None:
             ).fetchone()
             assert identity is not None
             assert identity["user_id"] == owner_id
+
+            preference = connection.execute(
+                "SELECT skin_id FROM user_preferences WHERE user_id = ?",
+                (owner_id,),
+            ).fetchone()
+            assert preference is not None
+            assert preference["skin_id"] == "library"
 
             rows = connection.execute(
                 """
@@ -375,9 +382,10 @@ def test_fresh_database() -> None:
         connection = raw_connection(database_path)
         try:
             db.initialize_database(connection)
-            assert db.read_schema_version(connection) == 5
+            assert db.read_schema_version(connection) == 6
             assert connection.execute("SELECT COUNT(*) FROM users WHERE is_owner = 1").fetchone()[0] == 1
             assert connection.execute("SELECT COUNT(*) FROM user_track_state").fetchone()[0] == 0
+            assert connection.execute("SELECT COUNT(*) FROM user_preferences").fetchone()[0] == 1
             assert schema_value(connection, db.MIGRATION_V5_FLAG) == db.MIGRATION_V5_COMPLETED
         finally:
             connection.close()
@@ -579,7 +587,7 @@ def test_future_schema_is_refused() -> None:
         connection = raw_connection(database_path)
         try:
             connection.execute(
-                "UPDATE schema_info SET value = '6' WHERE key = 'schema_version'"
+                "UPDATE schema_info SET value = '7' WHERE key = 'schema_version'"
             )
             connection.commit()
 
@@ -590,7 +598,7 @@ def test_future_schema_is_refused() -> None:
             else:
                 raise AssertionError("A future schema version was accepted")
 
-            assert db.read_schema_version(connection) == 6
+            assert db.read_schema_version(connection) == 7
             tables = {
                 str(row[0])
                 for row in connection.execute(

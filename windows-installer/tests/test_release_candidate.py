@@ -36,11 +36,13 @@ assert "/releases?per_page=100" in update_text
 assert "/releases/latest" not in update_text
 assert "_select_latest_published_release" in update_text
 
-# Schema 5 and its historic pre-v2.7.0 migration backup name remain intentional.
+# v2.7.2 development adds schema 6 while the installed application version remains 2.7.1 until RC creation.
 database_text = (ROOT / "src" / "database.py").read_text(encoding="utf-8")
-assert "SCHEMA_VERSION = 5" in database_text
+assert "SCHEMA_VERSION = 6" in database_text
 assert "user_track_state" in database_text
-assert "library-pre-v2.7.0-" in database_text
+assert "user_preferences" in database_text
+assert "def create_pre_v272_migration_backup(" in database_text
+assert 'release_label="v2.7.2"' in database_text
 assert "def _merge_user_track_state_into_owner(" in database_text
 
 installer_text = (ROOT / "installer" / "MusicLibrary.iss").read_text(encoding="utf-8-sig")
@@ -106,4 +108,4 @@ release_asset_script = (ROOT / "04_prepare_release_assets.ps1").read_text(encodi
 assert "[string]$Version = '2.7.1'" in release_asset_script
 assert "SHA256SUMS.txt" in release_asset_script
 
-print("Release candidate consistency tests passed.")
+print("v2.7.2 development consistency tests passed.")

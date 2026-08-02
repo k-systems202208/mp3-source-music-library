@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-skin="library">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1016,13 +1016,14 @@
   .home-stat{
     min-width:0;
     padding:11px 12px;
-    border:1px solid var(--line);
+    border:1px solid var(--home-stat-border,var(--line));
     border-radius:5px;
-    background:rgba(250,246,236,.72);
+    background:var(--home-stat-bg,rgba(250,246,236,.72));
+    box-shadow:var(--home-stat-shadow,none);
   }
   .home-stat strong{
     display:block;
-    color:var(--ink);
+    color:var(--home-stat-value,var(--ink));
     font-family:'JetBrains Mono',monospace;
     font-size:18px;
     line-height:1.2;
@@ -1030,7 +1031,7 @@
   .home-stat span{
     display:block;
     margin-top:3px;
-    color:var(--ink-faint);
+    color:var(--home-stat-label,var(--ink-faint));
     font-size:10px;
   }
   .home-quick-links{
@@ -1280,10 +1281,11 @@
     max-width:min(46%, 280px);
     min-height:34px;
     padding:7px 11px;
-    border:1px solid rgba(239,232,216,.34);
+    border:1px solid var(--user-chip-border,rgba(239,232,216,.34));
     border-radius:999px;
-    background:rgba(239,232,216,.08);
-    color:var(--paper);
+    background:var(--user-chip-bg,rgba(239,232,216,.08));
+    color:var(--user-chip-text,var(--paper));
+    box-shadow:var(--user-chip-shadow,none);
     font-family:'Zen Kaku Gothic New', sans-serif;
     font-size:12px;
     font-weight:700;
@@ -1291,9 +1293,11 @@
   }
   .user-chip:hover,
   .user-chip:focus-visible{
-    border-color:var(--brass);
-    background:rgba(239,232,216,.14);
-    outline:none;
+    border-color:var(--user-chip-hover-border,var(--brass));
+    background:var(--user-chip-hover-bg,rgba(239,232,216,.14));
+    color:var(--user-chip-hover-text,var(--user-chip-text,var(--paper)));
+    outline:2px solid var(--user-chip-focus-ring,transparent);
+    outline-offset:2px;
   }
   .user-chip-dot{
     flex:0 0 auto;
@@ -1301,7 +1305,7 @@
     height:8px;
     border-radius:50%;
     background:var(--ink-faint);
-    box-shadow:0 0 0 2px rgba(239,232,216,.12);
+    box-shadow:0 0 0 2px var(--user-chip-dot-ring,rgba(239,232,216,.12));
   }
   .user-chip.authenticated .user-chip-dot{background:#91c788;}
   .user-chip.owner .user-chip-dot{background:var(--brass);}
@@ -1571,6 +1575,481 @@
     .update-banner-actions .update-release-link{width:100%;}
   }
 
+
+  /* ---- v2.7.2 Phase 2: per-user skin persistence ---- */
+  :root{
+    --skin-strong:#24392b;
+    --skin-strong-text:#efe8d8;
+    --skin-header:#24392b;
+    --skin-player:rgba(36,57,43,.97);
+    --skin-overlay:rgba(23,34,26,.72);
+    --skin-accent-soft:rgba(169,132,60,.13);
+    --skin-success-bg:#dfead9;
+    --skin-success-text:#2f5b2b;
+    --skin-error-bg:#f3d9d5;
+    --skin-error-text:#7d2822;
+    --skin-radius:6px;
+    --skin-glow:none;
+    --home-stat-bg:rgba(250,246,236,.72);
+    --home-stat-border:var(--line);
+    --home-stat-value:var(--ink);
+    --home-stat-label:var(--ink-faint);
+    --home-stat-shadow:none;
+    --user-chip-bg:rgba(239,232,216,.08);
+    --user-chip-border:rgba(239,232,216,.34);
+    --user-chip-text:#efe8d8;
+    --user-chip-hover-bg:rgba(239,232,216,.14);
+    --user-chip-hover-border:#a9843c;
+    --user-chip-hover-text:#fffaf0;
+    --user-chip-focus-ring:rgba(169,132,60,.32);
+    --user-chip-dot-ring:rgba(239,232,216,.12);
+    --user-chip-shadow:none;
+  }
+  html[data-skin]{color-scheme:light;}
+  html[data-skin="midnight"],
+  html[data-skin="neon"],
+  html[data-skin="cyberpunk"]{color-scheme:dark;}
+  .artwork-thumb,
+  .album-artwork,
+  .player-artwork,
+  .player-modal-artwork,
+  .home-track-artwork img{transition:filter .18s ease;}
+
+  body,
+  header.plate,
+  .view-tab,
+  .controls,
+  .card,
+  .home-hero,
+  .home-stat,
+  .home-quick-btn,
+  .home-track-card,
+  .user-panel,
+  .user-summary,
+  .user-message,
+  .backup-card,
+  .update-status-card,
+  .player-bar{
+    transition:background-color .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease;
+  }
+
+  .skin-preview-ribbon{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:12px;
+    padding:10px 13px;
+    border:1px dashed var(--brass);
+    border-radius:var(--skin-radius);
+    background:var(--skin-accent-soft);
+    color:var(--ink);
+    font-size:12px;
+  }
+  .skin-preview-ribbon[hidden]{display:none;}
+  .skin-preview-ribbon strong{font-family:'JetBrains Mono',monospace;}
+  .skin-preview-reset{
+    border:1px solid var(--card-edge);
+    border-radius:4px;
+    background:var(--card);
+    color:var(--ink);
+    padding:6px 10px;
+    font:700 11px 'Zen Kaku Gothic New',sans-serif;
+    cursor:pointer;
+  }
+
+  .skin-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+    margin-top:12px;
+  }
+  .skin-card{
+    min-width:0;
+    padding:0;
+    border:2px solid var(--card-edge);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    overflow:hidden;
+    cursor:pointer;
+    text-align:left;
+    font:inherit;
+    transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;
+  }
+  .skin-card:hover{transform:translateY(-2px);border-color:var(--brass);}
+  .skin-card.selected{border-color:var(--brass);box-shadow:0 0 0 2px var(--skin-accent-soft);}
+  .skin-card.committed::after{
+    content:'適用中';
+    position:absolute;
+    top:8px;
+    right:8px;
+    padding:3px 7px;
+    border-radius:999px;
+    background:var(--skin-strong);
+    color:var(--skin-strong-text);
+    font:700 9px 'JetBrains Mono',monospace;
+  }
+  .skin-card{position:relative;}
+  .skin-card-scene{
+    height:86px;
+    padding:12px;
+    background:var(--skin-card-bg);
+    color:var(--skin-card-text);
+    position:relative;
+    overflow:hidden;
+  }
+  .skin-card-scene::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:var(--skin-card-pattern,none);
+    opacity:.55;
+  }
+  .skin-card-window{
+    position:relative;
+    height:100%;
+    border:1px solid var(--skin-card-line);
+    border-radius:var(--skin-card-radius,5px);
+    background:var(--skin-card-panel);
+    box-shadow:var(--skin-card-shadow,none);
+    padding:9px;
+  }
+  .skin-card-window::before{
+    content:'';
+    display:block;
+    width:58%;
+    height:7px;
+    border-radius:99px;
+    background:var(--skin-card-accent);
+    margin-bottom:9px;
+  }
+  .skin-card-minirow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
+  .skin-card-minirow i{
+    display:block;
+    height:28px;
+    border:1px solid var(--skin-card-line);
+    border-left:3px solid var(--skin-card-accent);
+    border-radius:var(--skin-card-radius,4px);
+    background:var(--skin-card-surface);
+  }
+  .skin-card-copy{display:block;padding:10px 11px 11px;}
+  .skin-card-copy strong{display:block;font-size:14px;}
+  .skin-card-copy small{display:block;margin-top:3px;color:var(--ink-soft);font-size:11px;line-height:1.45;}
+  .skin-card[data-skin-option="library"]{
+    --skin-card-bg:#efe8d8;--skin-card-panel:#24392b;--skin-card-surface:#faf6ec;
+    --skin-card-text:#efe8d8;--skin-card-line:#a9843c;--skin-card-accent:#a23b32;
+  }
+  .skin-card[data-skin-option="midnight"]{
+    --skin-card-bg:#0b1220;--skin-card-panel:#152238;--skin-card-surface:#1b2a40;
+    --skin-card-text:#edf4ff;--skin-card-line:#385271;--skin-card-accent:#6da8ff;
+  }
+  .skin-card[data-skin-option="neon"]{
+    --skin-card-bg:#03080d;--skin-card-panel:#07151c;--skin-card-surface:#0a2027;
+    --skin-card-text:#e9ffff;--skin-card-line:#22f2ff;--skin-card-accent:#ff4fd8;
+    --skin-card-shadow:0 0 13px rgba(34,242,255,.35);
+    --skin-card-pattern:linear-gradient(rgba(34,242,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(34,242,255,.08) 1px,transparent 1px);
+  }
+  .skin-card[data-skin-option="cyberpunk"]{
+    --skin-card-bg:#111016;--skin-card-panel:#191721;--skin-card-surface:#24202c;
+    --skin-card-text:#fffbe7;--skin-card-line:#ffe45e;--skin-card-accent:#ff3cac;
+    --skin-card-radius:0px;--skin-card-shadow:5px 5px 0 rgba(255,60,172,.45);
+    --skin-card-pattern:repeating-linear-gradient(135deg,rgba(255,228,94,.08) 0 2px,transparent 2px 10px);
+  }
+  .skin-card[data-skin-option="candy"]{
+    --skin-card-bg:#fff0fa;--skin-card-panel:#ffffff;--skin-card-surface:#fff7d6;
+    --skin-card-text:#4c174f;--skin-card-line:#ff70b7;--skin-card-accent:#00bce8;
+    --skin-card-radius:12px;--skin-card-shadow:0 7px 0 rgba(123,44,191,.20);
+    --skin-card-pattern:radial-gradient(circle at 18% 25%,rgba(255,79,154,.24) 0 6px,transparent 7px),radial-gradient(circle at 78% 68%,rgba(0,194,255,.22) 0 7px,transparent 8px),linear-gradient(135deg,rgba(255,210,63,.16),transparent 55%);
+  }
+  .skin-card[data-skin-option="monochrome"]{
+    --skin-card-bg:#ededed;--skin-card-panel:#111111;--skin-card-surface:#f8f8f8;
+    --skin-card-text:#ffffff;--skin-card-line:#777777;--skin-card-accent:#ffffff;
+    --skin-card-radius:1px;--skin-card-shadow:5px 5px 0 rgba(0,0,0,.24);
+    --skin-card-pattern:repeating-linear-gradient(135deg,rgba(0,0,0,.06) 0 1px,transparent 1px 8px);
+  }
+  .skin-preview-note{margin-top:10px!important;}
+
+  /* Dark skin shared corrections for legacy ink/paper semantics. */
+  html[data-skin="midnight"],html[data-skin="neon"],html[data-skin="cyberpunk"]{
+    --skin-strong:#152a44;
+    --skin-strong-text:#f3f8ff;
+    --skin-success-bg:#163322;
+    --skin-success-text:#a9efbd;
+    --skin-error-bg:#3b1c26;
+    --skin-error-text:#ffb7c2;
+  }
+  html[data-skin="midnight"]{
+    --paper:#0b1220;--paper-deep:#111a29;--card:#162234;--card-edge:#2e4058;
+    --ink:#edf4ff;--ink-soft:#afbdd0;--ink-faint:#74859d;
+    --brass:#6da8ff;--brass-deep:#a8caff;--stamp:#8b72ff;--line:#31465f;
+    --shadow:rgba(0,0,0,.42);--skin-strong:#172a43;--skin-header:#101c2e;
+    --skin-player:rgba(9,18,32,.97);--skin-overlay:rgba(3,8,15,.78);
+    --skin-accent-soft:rgba(109,168,255,.13);--skin-radius:8px;
+    --home-stat-bg:linear-gradient(145deg,#18273c,#111b2a);
+    --home-stat-border:#385271;--home-stat-value:#f5f9ff;--home-stat-label:#9fb0c4;
+    --home-stat-shadow:0 5px 14px rgba(0,0,0,.20);
+    --user-chip-bg:#101c2e;--user-chip-border:#6da8ff;--user-chip-text:#f3f8ff;
+    --user-chip-hover-bg:#172a43;--user-chip-hover-border:#9ac3ff;--user-chip-hover-text:#ffffff;
+    --user-chip-focus-ring:rgba(109,168,255,.38);--user-chip-dot-ring:rgba(243,248,255,.22);
+    --user-chip-shadow:0 4px 14px rgba(0,0,0,.24);
+  }
+  html[data-skin="neon"]{
+    --paper:#03080d;--paper-deep:#061219;--card:#08161d;--card-edge:#17444b;
+    --ink:#eaffff;--ink-soft:#9dc6ca;--ink-faint:#568087;
+    --brass:#22f2ff;--brass-deep:#72f8ff;--stamp:#ff4fd8;--line:#15505a;
+    --shadow:rgba(0,0,0,.56);--skin-strong:#081f27;--skin-header:#041219;
+    --skin-player:rgba(2,12,16,.97);--skin-overlay:rgba(0,5,8,.82);
+    --skin-accent-soft:rgba(34,242,255,.11);--skin-radius:12px;
+    --skin-glow:0 0 18px rgba(34,242,255,.22);
+    --home-stat-bg:linear-gradient(145deg,rgba(8,31,39,.97),rgba(5,17,23,.97));
+    --home-stat-border:rgba(34,242,255,.58);--home-stat-value:#eaffff;--home-stat-label:#8fbfc5;
+    --home-stat-shadow:0 0 14px rgba(34,242,255,.12),inset 0 0 18px rgba(34,242,255,.035);
+    --user-chip-bg:#041219;--user-chip-border:#22f2ff;--user-chip-text:#eaffff;
+    --user-chip-hover-bg:#081f27;--user-chip-hover-border:#ff4fd8;--user-chip-hover-text:#ffffff;
+    --user-chip-focus-ring:rgba(34,242,255,.42);--user-chip-dot-ring:rgba(34,242,255,.28);
+    --user-chip-shadow:0 0 13px rgba(34,242,255,.24);
+  }
+  html[data-skin="cyberpunk"]{
+    --paper:#111016;--paper-deep:#18161f;--card:#1c1923;--card-edge:#4f465b;
+    --ink:#fffbe8;--ink-soft:#c9c0d2;--ink-faint:#81788d;
+    --brass:#ffe45e;--brass-deep:#fff09d;--stamp:#ff3cac;--line:#5d5266;
+    --shadow:rgba(0,0,0,.55);--skin-strong:#24202c;--skin-header:#16131d;
+    --skin-player:rgba(15,12,20,.98);--skin-overlay:rgba(5,3,8,.82);
+    --skin-accent-soft:rgba(255,228,94,.12);--skin-radius:0px;
+    --home-stat-bg:linear-gradient(135deg,#211d2a,#16131d);
+    --home-stat-border:#ffe45e;--home-stat-value:#fffbe8;--home-stat-label:#c9c0d2;
+    --home-stat-shadow:4px 4px 0 rgba(255,60,172,.20);
+    --user-chip-bg:#16131d;--user-chip-border:#ffe45e;--user-chip-text:#fffbe8;
+    --user-chip-hover-bg:#24202c;--user-chip-hover-border:#ff3cac;--user-chip-hover-text:#ffffff;
+    --user-chip-focus-ring:rgba(255,228,94,.38);--user-chip-dot-ring:rgba(255,228,94,.25);
+    --user-chip-shadow:3px 3px 0 rgba(255,60,172,.24);
+  }
+  html[data-skin="candy"]{
+    --paper:#fff3fb;--paper-deep:#ffe6f4;--card:#fffdfd;--card-edge:#ff9acc;
+    --ink:#3f2043;--ink-soft:#76536f;--ink-faint:#9b7d96;
+    --brass:#00aeea;--brass-deep:#006b91;--stamp:#ff3f87;--line:#ffc4df;
+    --shadow:rgba(122,45,114,.20);--skin-strong:#7b2cbf;--skin-strong-text:#ffffff;
+    --skin-header:#ff4f9a;--skin-player:rgba(96,30,119,.97);--skin-overlay:rgba(63,20,72,.72);
+    --skin-accent-soft:rgba(255,79,154,.13);--skin-radius:16px;
+    --skin-success-bg:#d9f9ec;--skin-success-text:#116145;
+    --skin-error-bg:#ffe0eb;--skin-error-text:#8c1747;
+    --home-stat-bg:linear-gradient(145deg,#fff0f8,#ffe3f2);
+    --home-stat-border:#ff70b7;--home-stat-value:#5a174f;--home-stat-label:#8c527f;
+    --home-stat-shadow:0 5px 0 rgba(123,44,191,.11);
+    --user-chip-bg:#6d239f;--user-chip-border:#ffffff;--user-chip-text:#ffffff;
+    --user-chip-hover-bg:#51206f;--user-chip-hover-border:#fff0a8;--user-chip-hover-text:#ffffff;
+    --user-chip-focus-ring:rgba(255,255,255,.45);--user-chip-dot-ring:rgba(255,255,255,.30);
+    --user-chip-shadow:0 4px 0 rgba(63,32,67,.18);
+  }
+  html[data-skin="monochrome"]{
+    --paper:#eeeeee;--paper-deep:#dddddd;--card:#fafafa;--card-edge:#a7a7a7;
+    --ink:#111111;--ink-soft:#505050;--ink-faint:#777777;
+    --brass:#242424;--brass-deep:#000000;--stamp:#5b5b5b;--line:#c3c3c3;
+    --shadow:rgba(0,0,0,.19);--skin-strong:#111111;--skin-strong-text:#ffffff;
+    --skin-header:#111111;--skin-player:rgba(17,17,17,.98);--skin-overlay:rgba(0,0,0,.74);
+    --skin-accent-soft:rgba(0,0,0,.075);--skin-radius:2px;
+    --skin-success-bg:#e1e1e1;--skin-success-text:#181818;
+    --skin-error-bg:#d3d3d3;--skin-error-text:#111111;
+    --home-stat-bg:linear-gradient(145deg,#ffffff,#e8e8e8);
+    --home-stat-border:#111111;--home-stat-value:#000000;--home-stat-label:#4e4e4e;
+    --home-stat-shadow:3px 3px 0 rgba(0,0,0,.17);
+    --user-chip-bg:#111111;--user-chip-border:#f2f2f2;--user-chip-text:#ffffff;
+    --user-chip-hover-bg:#303030;--user-chip-hover-border:#ffffff;--user-chip-hover-text:#ffffff;
+    --user-chip-focus-ring:rgba(255,255,255,.38);--user-chip-dot-ring:rgba(255,255,255,.25);
+    --user-chip-shadow:2px 2px 0 rgba(255,255,255,.15);
+  }
+
+  html[data-skin="midnight"] body{
+    background:radial-gradient(circle at 80% 0,rgba(69,111,170,.17),transparent 38%),linear-gradient(180deg,#0b1220,#0d1624);
+  }
+  html[data-skin="midnight"] body::before{
+    background-image:repeating-linear-gradient(0deg,rgba(157,190,235,.025) 0 1px,transparent 1px 4px);
+  }
+  html[data-skin="neon"] body{
+    background:radial-gradient(circle at 15% 0,rgba(255,79,216,.16),transparent 34%),radial-gradient(circle at 88% 12%,rgba(34,242,255,.14),transparent 36%),#03080d;
+  }
+  html[data-skin="neon"] body::before{
+    background-image:linear-gradient(rgba(34,242,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(34,242,255,.035) 1px,transparent 1px);
+    background-size:28px 28px;
+  }
+  html[data-skin="cyberpunk"] body{
+    background:radial-gradient(circle at 100% 0,rgba(255,60,172,.15),transparent 35%),#111016;
+  }
+  html[data-skin="cyberpunk"] body::before{
+    background-image:repeating-linear-gradient(135deg,rgba(255,228,94,.035) 0 2px,transparent 2px 16px);
+  }
+  html[data-skin="candy"] body{
+    background:radial-gradient(circle at 8% 5%,rgba(255,79,154,.25),transparent 24%),radial-gradient(circle at 93% 8%,rgba(0,194,255,.21),transparent 25%),radial-gradient(circle at 74% 92%,rgba(255,210,63,.22),transparent 26%),linear-gradient(135deg,#fff3fb 0%,#f2fbff 52%,#fff9da 100%);
+  }
+  html[data-skin="candy"] body::before{
+    background-image:radial-gradient(circle,rgba(255,79,154,.10) 0 3px,transparent 4px),radial-gradient(circle,rgba(0,174,234,.09) 0 2px,transparent 3px);
+    background-position:0 0,18px 18px;
+    background-size:36px 36px;
+  }
+  html[data-skin="monochrome"] body{
+    background:linear-gradient(135deg,#f7f7f7,#e5e5e5 58%,#f2f2f2);
+  }
+  html[data-skin="monochrome"] body::before{
+    background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.022) 0 1px,transparent 1px 8px);
+  }
+
+  html[data-skin]:not([data-skin="library"]) header.plate{
+    background:var(--skin-header);color:var(--skin-strong-text);border-radius:var(--skin-radius);
+  }
+  html[data-skin]:not([data-skin="library"]) header.plate .sub{color:color-mix(in srgb,var(--skin-strong-text) 72%,transparent);}
+  html[data-skin]:not([data-skin="library"]) .tab-punch{background:var(--paper);}
+  html[data-skin]:not([data-skin="library"]) .view-tab.active,
+  html[data-skin]:not([data-skin="library"]) .pill-btn.active,
+  html[data-skin]:not([data-skin="library"]) .index-reset.active,
+  html[data-skin]:not([data-skin="library"]) .user-summary-mark,
+  html[data-skin]:not([data-skin="library"]) .user-action-btn{
+    background:var(--skin-strong);color:var(--skin-strong-text);border-color:var(--skin-strong);
+  }
+  html[data-skin]:not([data-skin="library"]) .user-action-btn.secondary{
+    background:var(--paper);color:var(--ink);border-color:var(--card-edge);
+  }
+  html[data-skin]:not([data-skin="library"]) .play-btn:hover{
+    background:var(--skin-strong);color:var(--skin-strong-text);
+  }
+  html[data-skin]:not([data-skin="library"]) .player-bar{background:var(--skin-player);color:var(--skin-strong-text);}
+  html[data-skin]:not([data-skin="library"]) .player-modal{background:var(--skin-overlay);}
+  html[data-skin]:not([data-skin="library"]) .player-modal-panel{
+    background:linear-gradient(145deg,var(--skin-header),var(--skin-strong));color:var(--skin-strong-text);
+  }
+  html[data-skin]:not([data-skin="library"]) .home-play-btn,
+  html[data-skin]:not([data-skin="library"]) .home-favorite-btn{
+    background:color-mix(in srgb,var(--skin-strong) 92%,transparent);color:var(--skin-strong-text);
+  }
+  html[data-skin]:not([data-skin="library"]) .favorite-btn.active,
+  html[data-skin]:not([data-skin="library"]) .home-favorite-btn.active{
+    background:var(--skin-accent-soft);color:var(--brass-deep);border-color:var(--brass);
+  }
+  html[data-skin]:not([data-skin="library"]) .user-modal{background:var(--skin-overlay);}
+  html[data-skin]:not([data-skin="library"]) .user-message.success{background:var(--skin-success-bg);color:var(--skin-success-text);}
+  html[data-skin]:not([data-skin="library"]) .user-message.error,
+  html[data-skin]:not([data-skin="library"]) .update-status-card.error,
+  html[data-skin]:not([data-skin="library"]) .backup-card.invalid{background:var(--skin-error-bg);color:var(--skin-error-text);}
+  html[data-skin]:not([data-skin="library"]) .sort-select,
+  html[data-skin]:not([data-skin="library"]) .index-btn{background:var(--paper-deep);}
+  html[data-skin]:not([data-skin="library"]) .update-banner{
+    background:linear-gradient(135deg,var(--skin-accent-soft),var(--card));box-shadow:var(--skin-glow);
+  }
+  html[data-skin]:not([data-skin="library"]) .owner-link-box{background:var(--paper-deep);}
+
+  html[data-skin="midnight"] header.plate{box-shadow:0 6px 0 #365d91,0 12px 30px rgba(0,0,0,.45);}
+  html[data-skin="midnight"] .card{border-left-color:#6da8ff;}
+  html[data-skin="midnight"] .home-hero{background:linear-gradient(135deg,#142137,#101a2a);}
+
+  html[data-skin="neon"] header.plate{
+    border:1px solid rgba(34,242,255,.62);box-shadow:0 0 0 1px rgba(255,79,216,.18),0 0 26px rgba(34,242,255,.22);
+  }
+  html[data-skin="neon"] header.plate h1{text-shadow:0 0 18px rgba(34,242,255,.28);}
+  html[data-skin="neon"] .view-tab.active,
+  html[data-skin="neon"] .home-hero,
+  html[data-skin="neon"] .card:hover,
+  html[data-skin="neon"] .skin-preview-ribbon{box-shadow:0 0 16px rgba(34,242,255,.18);}
+  html[data-skin="neon"] .card{border-left-color:#22f2ff;}
+  html[data-skin="neon"] .card:hover{border-left-color:#ff4fd8;}
+  html[data-skin="neon"] .home-hero{background:linear-gradient(135deg,rgba(34,242,255,.09),rgba(255,79,216,.06));}
+  html[data-skin="neon"] .home-track-card,
+  html[data-skin="neon"] .home-stat{box-shadow:0 0 14px rgba(34,242,255,.07);}
+
+  html[data-skin="cyberpunk"] header.plate{
+    border:1px solid #ffe45e;border-radius:0;box-shadow:7px 7px 0 rgba(255,60,172,.5);
+  }
+  html[data-skin="cyberpunk"] header.plate::after{border-radius:0;transform:rotate(45deg);border-color:rgba(255,228,94,.25);}
+  html[data-skin="cyberpunk"] .plate-eyebrow,
+  html[data-skin="cyberpunk"] .home-kicker{color:#ffe45e;}
+  html[data-skin="cyberpunk"] .view-tab,
+  html[data-skin="cyberpunk"] .controls,
+  html[data-skin="cyberpunk"] .card,
+  html[data-skin="cyberpunk"] .home-hero,
+  html[data-skin="cyberpunk"] .home-stat,
+  html[data-skin="cyberpunk"] .home-quick-btn,
+  html[data-skin="cyberpunk"] .home-track-card,
+  html[data-skin="cyberpunk"] .user-panel{border-radius:0;}
+  html[data-skin="cyberpunk"] .view-tab.active{box-shadow:inset 0 -3px 0 #ff3cac;}
+  html[data-skin="cyberpunk"] .card{border-left-color:#ffe45e;}
+  html[data-skin="cyberpunk"] .card:hover{border-left-color:#ff3cac;box-shadow:5px 5px 0 rgba(255,60,172,.22);}
+  html[data-skin="cyberpunk"] .home-hero{background:linear-gradient(120deg,rgba(255,228,94,.08),rgba(255,60,172,.06));border-left-color:#ffe45e;}
+  html[data-skin="cyberpunk"] header.plate h1,
+  html[data-skin="cyberpunk"] .home-greeting,
+  html[data-skin="cyberpunk"] .user-panel h2{font-family:'JetBrains Mono','Zen Kaku Gothic New',sans-serif;letter-spacing:-.04em;}
+
+  html[data-skin="candy"] header.plate{
+    background:linear-gradient(115deg,#ff3f87 0%,#ff7a18 34%,#ffd23f 61%,#00bce8 100%);
+    border:1px solid rgba(255,255,255,.72);
+    box-shadow:0 7px 0 rgba(123,44,191,.32),0 15px 32px rgba(255,63,135,.24);
+  }
+  html[data-skin="candy"] header.plate::after{border-color:rgba(255,255,255,.38);box-shadow:inset 0 0 0 13px rgba(255,255,255,.06);}
+  html[data-skin="candy"] header.plate h1{text-shadow:0 2px 0 rgba(91,27,102,.32);}
+  html[data-skin="candy"] .view-tab.active,
+  html[data-skin="candy"] .user-action-btn:not(.secondary){background:linear-gradient(100deg,#ff3f87,#7b2cbf);border-color:#7b2cbf;color:#fff;}
+  html[data-skin="candy"] .card{border-left-color:#ff4f9a;box-shadow:0 5px 15px rgba(122,45,114,.11);}
+  html[data-skin="candy"] .card:nth-child(4n+2){border-left-color:#00bce8;}
+  html[data-skin="candy"] .card:nth-child(4n+3){border-left-color:#ffd23f;}
+  html[data-skin="candy"] .card:nth-child(4n){border-left-color:#7b2cbf;}
+  html[data-skin="candy"] .home-hero{background:linear-gradient(120deg,rgba(255,79,154,.13),rgba(0,188,232,.10) 55%,rgba(255,210,63,.15));border-left-color:#ff4f9a;}
+  html[data-skin="candy"] .home-track-card,
+  html[data-skin="candy"] .home-stat,
+  html[data-skin="candy"] .home-quick-btn,
+  html[data-skin="candy"] .controls{box-shadow:0 5px 0 rgba(123,44,191,.10);}
+  html[data-skin="candy"] .home-favorite-btn.active,
+  html[data-skin="candy"] .favorite-btn.active{background:#fff0a8;color:#8a3a00;border-color:#ff9d00;}
+  html[data-skin="candy"] .home-stat:nth-child(1){
+    background:linear-gradient(145deg,#fff0f8,#ffdceb);border-color:#ff70b7;
+  }
+  html[data-skin="candy"] .home-stat:nth-child(2){
+    background:linear-gradient(145deg,#eafcff,#d6f5ff);border-color:#00bce8;
+  }
+  html[data-skin="candy"] .home-stat:nth-child(2) strong{color:#005d76;}
+  html[data-skin="candy"] .home-stat:nth-child(3){
+    background:linear-gradient(145deg,#fff9d8,#fff0a3);border-color:#e8b900;
+  }
+  html[data-skin="candy"] .home-stat:nth-child(3) strong{color:#674b00;}
+  html[data-skin="candy"] .home-stat:nth-child(4){
+    background:linear-gradient(145deg,#f5edff,#e8d6ff);border-color:#9d63d8;
+  }
+  html[data-skin="candy"] .home-stat:nth-child(4) strong{color:#50236f;}
+
+  html[data-skin="monochrome"] header.plate{
+    background:linear-gradient(135deg,#050505,#292929);border:1px solid #000;border-radius:2px;
+    box-shadow:0 7px 0 #777,0 13px 24px rgba(0,0,0,.23);
+  }
+  html[data-skin="monochrome"] header.plate::after{border-color:rgba(255,255,255,.18);border-radius:0;}
+  html[data-skin="monochrome"] .plate-eyebrow,
+  html[data-skin="monochrome"] .home-kicker{color:#202020;}
+  html[data-skin="monochrome"] .view-tab,
+  html[data-skin="monochrome"] .controls,
+  html[data-skin="monochrome"] .card,
+  html[data-skin="monochrome"] .home-hero,
+  html[data-skin="monochrome"] .home-stat,
+  html[data-skin="monochrome"] .home-quick-btn,
+  html[data-skin="monochrome"] .home-track-card,
+  html[data-skin="monochrome"] .user-panel{border-radius:2px;}
+  html[data-skin="monochrome"] .view-tab.active{background:#111;color:#fff;border-color:#111;box-shadow:inset 0 -3px 0 #888;}
+  html[data-skin="monochrome"] .card{border-left-color:#111;box-shadow:3px 3px 0 rgba(0,0,0,.13);}
+  html[data-skin="monochrome"] .home-hero{background:linear-gradient(135deg,#fbfbfb,#dedede);border-left-color:#111;}
+  html[data-skin="monochrome"] .home-stat:nth-child(even){background:linear-gradient(145deg,#e2e2e2,#cfcfcf);}
+  html[data-skin="monochrome"] .home-stat:nth-child(odd){background:linear-gradient(145deg,#ffffff,#ececec);}
+  html[data-skin="monochrome"] .artwork-thumb,
+  html[data-skin="monochrome"] .album-artwork,
+  html[data-skin="monochrome"] .player-artwork,
+  html[data-skin="monochrome"] .player-modal-artwork,
+  html[data-skin="monochrome"] .home-track-artwork img{
+    filter:grayscale(1) saturate(0) contrast(1.08);
+  }
+
+  @media (max-width:600px){
+    .skin-grid{grid-template-columns:1fr;}
+    .skin-preview-ribbon{align-items:flex-start;flex-direction:column;}
+    .skin-preview-reset{width:100%;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    body,header.plate,.view-tab,.controls,.card,.home-hero,.home-stat,.home-quick-btn,.home-track-card,.user-panel,.skin-card{transition:none!important;}
+  }
+
   ::selection{background:var(--brass); color:var(--paper);}
 </style>
 </head>
@@ -1594,6 +2073,11 @@
     <button type="button" class="view-tab" data-view="artists">アーティスト</button>
     <button type="button" class="view-tab" data-view="albums">アルバム</button>
   </div>
+
+  <aside class="skin-preview-ribbon" id="skinPreviewRibbon" hidden aria-live="polite">
+    <span><strong id="skinPreviewRibbonName">ライブラリー</strong> をプレビュー中です。まだ保存されていません。</span>
+    <button type="button" class="skin-preview-reset" id="skinPreviewResetButton">変更を取り消す</button>
+  </aside>
 
   <aside class="update-banner" id="updateBanner" hidden aria-live="polite">
     <div class="update-banner-copy">
@@ -1675,7 +2159,7 @@
 
 </div>
 
-<footer>DATE FIRST ISSUED · 2026-07-18 — ライブラリホーム・新版通知・利用者別お気に入り／再生履歴・SQLite API検索・ブラウザプレーヤー</footer>
+<footer>DATE FIRST ISSUED · 2026-07-18 — ライブラリホーム・利用者別スキン・新版通知・利用者別お気に入り／再生履歴・SQLite API検索・ブラウザプレーヤー</footer>
 
 
 <div class="user-modal" id="userModal" hidden role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
@@ -1691,6 +2175,42 @@
         <small id="currentUserDetail">利用者情報を取得しています。</small>
       </div>
     </div>
+
+    <section class="user-section" id="skinSection" hidden>
+      <h3>スキンを変更</h3>
+      <p>カードを選ぶと画面全体へ一時的に反映します。「適用する」で現在の利用者の設定として保存します。</p>
+      <div class="skin-grid" id="skinGrid" role="list" aria-label="スキン一覧">
+        <button type="button" class="skin-card selected committed" data-skin-option="library" role="listitem" aria-pressed="true">
+          <span class="skin-card-scene"><span class="skin-card-window"><span class="skin-card-minirow"><i></i><i></i><i></i></span></span></span>
+          <span class="skin-card-copy"><strong>ライブラリー</strong><small>現在の標準。紙、カード目録、書斎をイメージ。</small></span>
+        </button>
+        <button type="button" class="skin-card" data-skin-option="midnight" role="listitem" aria-pressed="false">
+          <span class="skin-card-scene"><span class="skin-card-window"><span class="skin-card-minirow"><i></i><i></i><i></i></span></span></span>
+          <span class="skin-card-copy"><strong>ミッドナイト</strong><small>深い紺色の、落ち着いて使えるダークデザイン。</small></span>
+        </button>
+        <button type="button" class="skin-card" data-skin-option="neon" role="listitem" aria-pressed="false">
+          <span class="skin-card-scene"><span class="skin-card-window"><span class="skin-card-minirow"><i></i><i></i><i></i></span></span></span>
+          <span class="skin-card-copy"><strong>ネオン</strong><small>黒を基調に、シアンとマゼンタが柔らかく発光。</small></span>
+        </button>
+        <button type="button" class="skin-card" data-skin-option="cyberpunk" role="listitem" aria-pressed="false">
+          <span class="skin-card-scene"><span class="skin-card-window"><span class="skin-card-minirow"><i></i><i></i><i></i></span></span></span>
+          <span class="skin-card-copy"><strong>サイバーパンク</strong><small>黄とマゼンタ、直線的な情報端末スタイル。</small></span>
+        </button>
+        <button type="button" class="skin-card" data-skin-option="candy" role="listitem" aria-pressed="false">
+          <span class="skin-card-scene"><span class="skin-card-window"><span class="skin-card-minirow"><i></i><i></i><i></i></span></span></span>
+          <span class="skin-card-copy"><strong>キャンディー</strong><small>ピンク、シアン、黄色が弾むビビッドでカラフルなデザイン。</small></span>
+        </button>
+        <button type="button" class="skin-card" data-skin-option="monochrome" role="listitem" aria-pressed="false">
+          <span class="skin-card-scene"><span class="skin-card-window"><span class="skin-card-minirow"><i></i><i></i><i></i></span></span></span>
+          <span class="skin-card-copy"><strong>モノクローム</strong><small>白・黒・グレーで統一。アートワークも画面上で白黒表示。</small></span>
+        </button>
+      </div>
+      <div class="user-actions">
+        <button type="button" class="user-action-btn" id="skinApplyButton">適用する</button>
+        <button type="button" class="user-action-btn secondary" id="skinCancelButton">キャンセル</button>
+      </div>
+      <div class="user-message skin-preview-note" id="skinMessage">現在は「ライブラリー」です。</div>
+    </section>
 
     <section class="user-section" id="anonymousUserSection" hidden>
       <h3>個人機能は利用できません</h3>
@@ -1816,6 +2336,7 @@
   const HOME_API_URL = './api/home';
   const STATS_API_URL = './api/stats';
   const CURRENT_USER_API_URL = './api/current-user';
+  const CURRENT_USER_SKIN_API_URL = './api/me/skin';
   const USERS_API_URL = './api/users';
   const BACKUPS_API_URL = './api/backups';
   const BACKUPS_CREATE_API_URL = './api/backups/create';
@@ -1836,6 +2357,9 @@
   const UNKNOWN_ALBUM_KEY = '__unknown_album__';
   const ALPHABET_INDEX_KEYS = ['0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
   const KANA_INDEX_KEYS = ['あ','か','さ','た','な','は','ま','や','ら','わ','他'];
+  const SKIN_OPTIONS = Object.freeze({
+    library:'ライブラリー', midnight:'ミッドナイト', neon:'ネオン', cyberpunk:'サイバーパンク', candy:'キャンディー', monochrome:'モノクローム'
+  });
 
   const state = {
     view: 'home',
@@ -1910,6 +2434,14 @@
     currentUserMark: document.getElementById('currentUserMark'),
     currentUserName: document.getElementById('currentUserName'),
     currentUserDetail: document.getElementById('currentUserDetail'),
+    skinSection: document.getElementById('skinSection'),
+    skinGrid: document.getElementById('skinGrid'),
+    skinApplyButton: document.getElementById('skinApplyButton'),
+    skinCancelButton: document.getElementById('skinCancelButton'),
+    skinMessage: document.getElementById('skinMessage'),
+    skinPreviewRibbon: document.getElementById('skinPreviewRibbon'),
+    skinPreviewRibbonName: document.getElementById('skinPreviewRibbonName'),
+    skinPreviewResetButton: document.getElementById('skinPreviewResetButton'),
     anonymousUserSection: document.getElementById('anonymousUserSection'),
     tailscaleClaimSection: document.getElementById('tailscaleClaimSection'),
     tailscaleLinkCodeInput: document.getElementById('tailscaleLinkCodeInput'),
@@ -1975,6 +2507,98 @@
   let backupData = null;
   let updateData = null;
   let updateRequestSerial = 0;
+  let committedSkinId = 'library';
+  let previewSkinId = 'library';
+
+
+  function normalizeSkinId(value){
+    const skinId = String(value || '').trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(SKIN_OPTIONS, skinId) ? skinId : 'library';
+  }
+
+  function renderSkinPreviewUi(){
+    const cards = els.skinGrid ? els.skinGrid.querySelectorAll('[data-skin-option]') : [];
+    cards.forEach(card => {
+      const skinId = normalizeSkinId(card.dataset.skinOption);
+      const selected = skinId === previewSkinId;
+      const committed = skinId === committedSkinId;
+      card.classList.toggle('selected', selected);
+      card.classList.toggle('committed', committed);
+      card.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+    if (els.skinPreviewRibbon) {
+      const hasUnsavedPreview = previewSkinId !== committedSkinId;
+      els.skinPreviewRibbon.hidden = !hasUnsavedPreview;
+      els.skinPreviewRibbonName.textContent = SKIN_OPTIONS[previewSkinId];
+    }
+  }
+
+  function applySkinPreview(skinId, {announce=true} = {}){
+    previewSkinId = normalizeSkinId(skinId);
+    document.documentElement.dataset.skin = previewSkinId;
+    renderSkinPreviewUi();
+    if (announce && els.skinMessage) {
+      els.skinMessage.textContent = `「${SKIN_OPTIONS[previewSkinId]}」を一時表示しています。保存する場合は「適用する」を押してください。`;
+      els.skinMessage.className = 'user-message skin-preview-note';
+      els.skinMessage.hidden = false;
+    }
+  }
+
+  async function commitSkinPreview(){
+    if (!currentUser || !currentUser.authenticated) {
+      applySkinPreview(committedSkinId, {announce:false});
+      setMessage(els.skinMessage, '利用者を確認できないため、スキンを保存できません。', 'error');
+      return;
+    }
+
+    const requestedSkinId = previewSkinId;
+    els.skinApplyButton.disabled = true;
+    try {
+      const result = await fetchJson(CURRENT_USER_SKIN_API_URL, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({skinId:requestedSkinId}),
+      });
+      committedSkinId = normalizeSkinId(result && result.skinId);
+      previewSkinId = committedSkinId;
+      currentUser.skinId = committedSkinId;
+      document.documentElement.dataset.skin = committedSkinId;
+      renderSkinPreviewUi();
+      setMessage(
+        els.skinMessage,
+        `スキンを「${SKIN_OPTIONS[committedSkinId]}」に変更しました。`,
+        'success',
+      );
+    } catch (error) {
+      applySkinPreview(committedSkinId, {announce:false});
+      setMessage(
+        els.skinMessage,
+        `スキンを保存できませんでした。変更前の表示に戻しました。${error.message}`,
+        'error',
+      );
+    } finally {
+      els.skinApplyButton.disabled = false;
+    }
+  }
+
+  function cancelSkinPreview(){
+    applySkinPreview(committedSkinId, {announce:false});
+    if (els.skinMessage) {
+      els.skinMessage.textContent = `変更を取り消しました。現在は「${SKIN_OPTIONS[committedSkinId]}」です。`;
+      els.skinMessage.className = 'user-message skin-preview-note';
+      els.skinMessage.hidden = false;
+    }
+    els.userModal.hidden = true;
+  }
+
+  function resetSkinPreview(){
+    applySkinPreview(committedSkinId, {announce:false});
+    if (els.skinMessage) {
+      els.skinMessage.textContent = `未保存の変更を取り消しました。現在は「${SKIN_OPTIONS[committedSkinId]}」です。`;
+      els.skinMessage.className = 'user-message skin-preview-note';
+      els.skinMessage.hidden = false;
+    }
+  }
 
   function escapeHtml(value){
     return String(value || '').replace(/[&<>"']/g, c => ({
@@ -2253,9 +2877,14 @@
       displayName:'',
       isOwner:false,
       provider:'',
+      skinId:'library',
     };
 
     const authenticated = Boolean(currentUser.authenticated);
+    committedSkinId = authenticated
+      ? normalizeSkinId(currentUser.skinId)
+      : 'library';
+    applySkinPreview(committedSkinId, {announce:false});
     if (!authenticated) state.filterFavoritesOnly = false;
     const owner = authenticated && Boolean(currentUser.isOwner);
     const displayName = authenticated
@@ -2274,6 +2903,12 @@
       ? `${providerLabel(currentUser.provider)}で識別されています。`
       : '利用者情報を確認できませんでした。';
 
+    els.skinSection.hidden = !authenticated;
+    if (authenticated && els.skinMessage) {
+      els.skinMessage.textContent = `現在は「${SKIN_OPTIONS[committedSkinId]}」です。`;
+      els.skinMessage.className = 'user-message skin-preview-note';
+      els.skinMessage.hidden = false;
+    }
     els.anonymousUserSection.hidden = authenticated;
     els.tailscaleClaimSection.hidden = !(
       authenticated
@@ -2682,6 +3317,7 @@
   }
 
   function closeUserModal(){
+    if (previewSkinId !== committedSkinId) applySkinPreview(committedSkinId, {announce:false});
     els.userModal.hidden = true;
   }
 
@@ -4063,6 +4699,15 @@
   els.userModal.addEventListener('click', event => {
     if (event.target === els.userModal) closeUserModal();
   });
+
+  els.skinGrid.addEventListener('click', event => {
+    const card = event.target.closest('[data-skin-option]');
+    if (!card) return;
+    applySkinPreview(card.dataset.skinOption || 'library');
+  });
+  els.skinApplyButton.addEventListener('click', () => void commitSkinPreview());
+  els.skinCancelButton.addEventListener('click', cancelSkinPreview);
+  els.skinPreviewResetButton.addEventListener('click', resetSkinPreview);
   els.ownerLinkStartButton.addEventListener('click', () => void startOwnerLink());
   els.ownerLinkCopyButton.addEventListener('click', async () => {
     if (!ownerLinkCodeValue) return;
@@ -4100,6 +4745,8 @@
   els.updateCheckButton.addEventListener('click', () => void loadUpdateStatus({force:true}));
   els.updateBannerDismissButton.addEventListener('click', dismissUpdateBanner);
 
+  committedSkinId = 'library';
+  applySkinPreview(committedSkinId, {announce:false});
   loadPlaybackSettings();
   updatePlaybackModeControls();
 

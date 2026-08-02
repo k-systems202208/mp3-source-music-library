@@ -52,6 +52,9 @@ from database import (
     initialize_database,
     get_owner_user,
     get_user_by_id,
+    get_user_skin,
+    set_user_skin,
+    DEFAULT_SKIN_ID,
     list_users_for_management,
     set_user_active,
     get_or_create_tailscale_user,
@@ -91,6 +94,7 @@ USER_ACTIVE_ROUTE = re.compile(r"^/api/users/([^/]+)/active$")
 LOCAL_OWNER_TOKEN_ROUTE = "/api/local-auth/token"
 LOCAL_OWNER_EXCHANGE_ROUTE = "/api/local-auth/exchange"
 CURRENT_USER_ROUTE = "/api/current-user"
+CURRENT_USER_SKIN_ROUTE = "/api/me/skin"
 USERS_ROUTE = "/api/users"
 HOME_ROUTE = "/api/home"
 BACKUPS_ROUTE = "/api/backups"
@@ -173,6 +177,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             "displayName": "",
             "isOwner": False,
             "provider": "",
+            "skinId": DEFAULT_SKIN_ID,
         }
 
     def _resolve_current_user(self) -> dict[str, Any]:
@@ -194,6 +199,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                         tailscale_identity.profile_picture_url
                     ),
                 )
+                skin_id = get_user_skin(connection, str(user["id"]))
 
             if not bool(user.get("isActive")):
                 return self._anonymous_current_user()
@@ -204,6 +210,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                 "displayName": user["displayName"],
                 "isOwner": bool(user["isOwner"]),
                 "provider": "tailscale",
+                "skinId": skin_id,
             }
 
         if not self._has_valid_owner_session():
@@ -212,6 +219,11 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         with database() as connection:
             initialize_database(connection)
             owner = get_owner_user(connection)
+            skin_id = (
+                get_user_skin(connection, str(owner["id"]))
+                if owner is not None
+                else DEFAULT_SKIN_ID
+            )
 
         if owner is None or not bool(owner.get("isActive")):
             return self._anonymous_current_user()
@@ -222,6 +234,7 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             "displayName": owner["displayName"],
             "isOwner": True,
             "provider": "local_owner",
+            "skinId": skin_id,
         }
 
     def end_headers(self) -> None:
@@ -335,6 +348,19 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             return
         self.send_json({"error": "API endpoint not found"}, HTTPStatus.NOT_FOUND)
 
+    def do_PUT(self) -> None:
+        try:
+            self.read_request_body_bytes()
+        except ValueError as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
+
+        parsed = urlparse(self.path)
+        if parsed.path == CURRENT_USER_SKIN_ROUTE:
+            self.handle_current_user_skin()
+            return
+        self.send_json({"error": "API endpoint not found"}, HTTPStatus.NOT_FOUND)
+
     @staticmethod
     def _query_value(parameters: dict[str, list[str]], name: str, default: str = "") -> str:
         values = parameters.get(name)
@@ -429,6 +455,45 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                 {
                     "error": (
                         "利用者情報を取得できませんでした: "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                },
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+
+    def handle_current_user_skin(self) -> None:
+        try:
+            current = self._resolve_current_user()
+            if not bool(current.get("authenticated")):
+                self.send_json(
+                    {"error": "authenticated user is required"},
+                    HTTPStatus.UNAUTHORIZED,
+                )
+                return
+
+            body = self.read_json_body()
+            skin_id = body.get("skinId")
+            if not isinstance(skin_id, str):
+                raise ValueError("skinId must be a string")
+
+            with database() as connection:
+                initialize_database(connection)
+                result = set_user_skin(
+                    connection,
+                    user_id=str(current["id"]),
+                    skin_id=skin_id,
+                )
+            self.send_json(result)
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except PermissionError as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.FORBIDDEN)
+        except Exception as exc:
+            self.send_json(
+                {
+                    "error": (
+                        "スキンを保存できませんでした: "
                         f"{type(exc).__name__}: {exc}"
                     )
                 },

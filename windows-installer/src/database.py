@@ -17,7 +17,16 @@ from typing import Any, Iterator, Sequence
 
 ensure_data_directories()
 DATABASE_PATH = DATA_ROOT / "library.db"
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
+DEFAULT_SKIN_ID = "library"
+ALLOWED_SKIN_IDS = frozenset({
+    "library",
+    "midnight",
+    "neon",
+    "cyberpunk",
+    "candy",
+    "monochrome",
+})
 MIGRATION_V5_FLAG = "user_state_migration_v5"
 MIGRATION_V5_COMPLETED = "completed"
 OWNER_IDENTITY_PROVIDER = "local_owner"
@@ -169,12 +178,17 @@ def database_schema_version(path: Path) -> int:
         connection.close()
 
 
-def _next_available_backup_path(backup_dir: Path, stamp: str) -> Path:
-    candidate = backup_dir / f"library-pre-v2.7.0-{stamp}.db"
+def _next_available_backup_path(
+    backup_dir: Path,
+    stamp: str,
+    *,
+    release_label: str,
+) -> Path:
+    candidate = backup_dir / f"library-pre-{release_label}-{stamp}.db"
     if not candidate.exists():
         return candidate
     for number in range(1, 1000):
-        candidate = backup_dir / f"library-pre-v2.7.0-{stamp}-{number:02d}.db"
+        candidate = backup_dir / f"library-pre-{release_label}-{stamp}-{number:02d}.db"
         if not candidate.exists():
             return candidate
     raise RuntimeError("移行前バックアップの保存名を確保できませんでした。")
@@ -229,7 +243,7 @@ def create_pre_v27_migration_backup(
         return None
 
     current_version = database_schema_version(database_path)
-    if current_version >= SCHEMA_VERSION:
+    if current_version >= 5:
         return None
 
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -237,6 +251,7 @@ def create_pre_v27_migration_backup(
     destination = _next_available_backup_path(
         backup_dir,
         timestamp.strftime("%Y%m%d-%H%M%S"),
+        release_label="v2.7.0",
     )
 
     source = sqlite3.connect(database_path, timeout=30.0)
@@ -265,6 +280,54 @@ def create_pre_v27_migration_backup(
 
     return destination
 
+
+def create_pre_v272_migration_backup(
+    database_path: Path = DATABASE_PATH,
+    *,
+    backup_dir: Path = BACKUP_DIR,
+    now: datetime | None = None,
+) -> Path | None:
+    """Create and verify a dedicated backup before the schema-v6 migration."""
+    if not database_path.exists() or database_path.stat().st_size == 0:
+        return None
+
+    current_version = database_schema_version(database_path)
+    if current_version >= SCHEMA_VERSION:
+        return None
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = now or datetime.now().astimezone()
+    destination = _next_available_backup_path(
+        backup_dir,
+        timestamp.strftime("%Y%m%d-%H%M%S"),
+        release_label="v2.7.2",
+    )
+
+    source = sqlite3.connect(database_path, timeout=30.0)
+    target = sqlite3.connect(destination, timeout=30.0)
+    try:
+        source.backup(target)
+        target.commit()
+    except Exception:
+        target.close()
+        source.close()
+        destination.unlink(missing_ok=True)
+        raise
+    else:
+        target.close()
+        source.close()
+
+    try:
+        verify_sqlite_backup(
+            database_path,
+            destination,
+            expected_schema_version=current_version,
+        )
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+
+    return destination
 
 
 def create_pre_owner_link_backup(
@@ -330,7 +393,7 @@ def connect_database(
     migration_backup_dir: Path | None = None,
 ) -> sqlite3.Connection:
     if prepare_migration_backup:
-        create_pre_v27_migration_backup(
+        create_pre_v272_migration_backup(
             path,
             backup_dir=migration_backup_dir or (path.parent / "Backups"),
         )
@@ -511,6 +574,14 @@ ON user_track_state(user_id, last_played_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_user_track_state_favorite
 ON user_track_state(user_id, favorite);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id TEXT PRIMARY KEY,
+    skin_id TEXT NOT NULL DEFAULT 'library'
+        CHECK(skin_id IN ('library', 'midnight', 'neon', 'cyberpunk', 'candy', 'monochrome')),
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS scan_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -794,6 +865,20 @@ def _migrate_legacy_user_state(
         )
 
 
+def _ensure_user_preferences(connection: sqlite3.Connection, timestamp: str) -> None:
+    connection.execute(
+        """
+        INSERT INTO user_preferences(user_id, skin_id, updated_at)
+        SELECT id, ?, ?
+          FROM users
+         WHERE NOT EXISTS (
+             SELECT 1 FROM user_preferences AS p WHERE p.user_id = users.id
+         )
+        """,
+        (DEFAULT_SKIN_ID, timestamp),
+    )
+
+
 def _verify_schema_v5(connection: sqlite3.Connection, owner_id: str) -> None:
     required_tables = {"users", "user_identities", "user_track_state"}
     actual_tables = {
@@ -828,6 +913,37 @@ def _verify_schema_v5(connection: sqlite3.Connection, owner_id: str) -> None:
         raise RuntimeError("スキーマ5の外部キー整合性確認に失敗しました。")
 
 
+def _verify_schema_v6(connection: sqlite3.Connection, owner_id: str) -> None:
+    _verify_schema_v5(connection, owner_id)
+    if not _table_exists(connection, "user_preferences"):
+        raise RuntimeError("スキーマ6の利用者設定テーブルが不足しています。")
+
+    missing = connection.execute(
+        """
+        SELECT COUNT(*)
+          FROM users AS u
+         WHERE NOT EXISTS (
+             SELECT 1 FROM user_preferences AS p WHERE p.user_id = u.id
+         )
+        """
+    ).fetchone()
+    if missing is None or int(missing[0]) != 0:
+        raise RuntimeError("利用者スキンの初期設定が不足しています。")
+
+    invalid = connection.execute(
+        """
+        SELECT COUNT(*) FROM user_preferences
+         WHERE skin_id NOT IN ('library', 'midnight', 'neon', 'cyberpunk', 'candy', 'monochrome')
+        """
+    ).fetchone()
+    if invalid is None or int(invalid[0]) != 0:
+        raise RuntimeError("未対応のスキン設定が保存されています。")
+
+    foreign_key_errors = connection.execute("PRAGMA foreign_key_check").fetchall()
+    if foreign_key_errors:
+        raise RuntimeError("スキーマ6の外部キー整合性確認に失敗しました。")
+
+
 def initialize_database(connection: sqlite3.Connection) -> None:
     if connection.in_transaction:
         raise RuntimeError("データベース初期化は未処理の更新がない状態で実行してください。")
@@ -847,7 +963,8 @@ def initialize_database(connection: sqlite3.Connection) -> None:
         timestamp = utc_now()
         owner_id = _ensure_owner_user(connection, timestamp)
         _migrate_legacy_user_state(connection, owner_id, timestamp)
-        _verify_schema_v5(connection, owner_id)
+        _ensure_user_preferences(connection, timestamp)
+        _verify_schema_v6(connection, owner_id)
 
         connection.execute(
             """
@@ -2459,6 +2576,15 @@ def get_or_create_tailscale_user(
                 (timestamp, user_id),
             )
 
+        connection.execute(
+            """
+            INSERT INTO user_preferences(user_id, skin_id, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO NOTHING
+            """,
+            (user_id, DEFAULT_SKIN_ID, timestamp),
+        )
+
         user_row = connection.execute(
             """
             SELECT id, display_name, is_owner, is_active,
@@ -2915,6 +3041,58 @@ def link_tailscale_identity_to_owner(
             connection.rollback()
         raise
 
+
+
+def normalize_skin_id(value: Any) -> str:
+    skin_id = str(value or "").strip().casefold()
+    if skin_id not in ALLOWED_SKIN_IDS:
+        return DEFAULT_SKIN_ID
+    return skin_id
+
+
+def get_user_skin(connection: sqlite3.Connection, user_id: str | None) -> str:
+    if not user_id:
+        return DEFAULT_SKIN_ID
+    row = connection.execute(
+        "SELECT skin_id FROM user_preferences WHERE user_id = ?",
+        (str(user_id),),
+    ).fetchone()
+    if row is None:
+        return DEFAULT_SKIN_ID
+    return normalize_skin_id(row["skin_id"])
+
+
+def set_user_skin(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str,
+    skin_id: str,
+) -> dict[str, str]:
+    normalized_skin = str(skin_id or "").strip().casefold()
+    if normalized_skin not in ALLOWED_SKIN_IDS:
+        raise ValueError("skinId is not supported")
+
+    user = connection.execute(
+        "SELECT id, is_active FROM users WHERE id = ?",
+        (str(user_id or ""),),
+    ).fetchone()
+    if user is None:
+        raise PermissionError("authenticated user was not found")
+    if not bool(user["is_active"]):
+        raise PermissionError("inactive user cannot change skin")
+
+    timestamp = utc_now()
+    connection.execute(
+        """
+        INSERT INTO user_preferences(user_id, skin_id, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            skin_id = excluded.skin_id,
+            updated_at = excluded.updated_at
+        """,
+        (str(user_id), normalized_skin, timestamp),
+    )
+    return {"skinId": normalized_skin, "updatedAt": timestamp}
 
 
 def get_user_by_id(
