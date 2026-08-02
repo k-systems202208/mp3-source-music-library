@@ -1,4 +1,4 @@
-自宅音楽ライブラリ v2.7.2
+﻿自宅音楽ライブラリ v2.7.2
 GitHub Release設定
 ================================
 
@@ -13,18 +13,12 @@ RELEASE_NOTES_v2.7.2.mdを使用します。
 
 添付:
 ・MusicLibrary-Setup-2.7.2-x64.exe
+・MusicLibrary-Setup-2.7.2-x64_SHA256.txt
 ・SHA256SUMS.txt
-・README_USER.txt
-・REMOTE_ACCESS_USER.txt
-・REMOTE_ACCESS_FAMILY.txt
 ・RELEASE_NOTES_v2.7.2.md
+・README_USER.txt
+・REMOTE_ACCESS_FAMILY.txt
 
 設定:
-・Draftとして自動作成
-・Set as a pre-releaseを有効
-・内容と添付を人が確認後、Publish releaseを手動実行
-
-公開後の確認:
-・アプリの新版通知でv2.7.2が最新版と表示される
-・Release Assetsをダウンロードできる
-・SHA256SUMS.txtとSetup.exeのSHA-256が一致する
+・pre-releaseを有効
+・draftで内容確認後に公開

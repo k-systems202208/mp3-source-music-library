@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "自宅音楽ライブラリ"
-APP_VERSION = "2.7.2"
+APP_VERSION = "2.7.3"
 APP_ID = "MusicLibrary"
 DEFAULT_PORT = 8765
 OWNER_CONTROL_SECRET_ENV = "MUSIC_LIBRARY_OWNER_CONTROL_SECRET"

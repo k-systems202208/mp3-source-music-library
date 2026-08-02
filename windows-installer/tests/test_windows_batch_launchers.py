@@ -4,10 +4,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED = {
-    "00_build_installer.bat": [b"tests\\verify_package_manifest.py", b"MusicLibrary-Setup-2.7.2-x64.exe"],
+    "00_build_installer.bat": [b"tests\\verify_package_manifest.py", b"MusicLibrary-Setup-2.7.3-x64.exe"],
     "01_install_inno_setup.bat": [],
     "02_install_python.bat": [],
-    "03_prepare_release_assets.bat": [b"04_prepare_release_assets.ps1", b'-Version "2.7.2"'],
+    "03_prepare_release_assets.bat": [b"04_prepare_release_assets.ps1", b'-Version "2.7.3"'],
 }
 
 failures: list[str] = []

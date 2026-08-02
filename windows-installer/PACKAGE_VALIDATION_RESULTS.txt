@@ -1,32 +1,31 @@
-Music Library v2.7.2 Release Source Validation
+Music Library v2.7.3 Release Source Validation
 ==============================================
 
 Base source:
-- v2.7.2 RC1
-- Installed over v2.7.1 on 2026-08-02
-- User acceptance completed
+- v2.7.3 RC1
+- Installed over v2.7.2 on 2026-08-02
+- iPhone home-screen acceptance completed
 
 Validated areas:
 - Windows batch launcher integrity
 - Python source compilation
 - Existing functional regression suite
-- Schema v5 to v6 migration
-- User-specific skin persistence
-- Tailscale owner identity linkage
-- Six-skin UI contract
-- Responsive layout
-- Home statistic card styling
-- Dark-skin user chip contrast
+- PWA manifest and application icons
+- Service Worker cache exclusions
+- Smartphone install guidance
+- Responsive smartphone layout
+- Static-file MIME and cache headers
+- Tailscale HTTPS connection labels
 - Bundled executable smoke test
 - Inno Setup compilation
 
 Documentation finalized for release:
-- Installer README
-- v2.7.2 release notes
-- User, install, build, remote-access guides
+- Installer README and repository README section
+- v2.7.3 release notes
+- User, install, build and remote-access guides
 - Manual acceptance result
 - GitHub Release configuration
-- Skin design and release scope
+- Mobile-home design and release scope
 - Document index and version check
 
 The release automation regenerates FILE_MANIFEST_SHA256.txt after applying the documentation overlay, then reruns the complete build and regression process.
