@@ -1,5 +1,7 @@
 # 利用マニュアル
 
+> インストーラーの入手から初回設定、Tailscale導入、家族招待までを初めて行う場合は、先に[オーナー導入・家族共有ガイド](19-owner-setup-guide.md)を参照してください。
+
 ## 1. インストール・更新
 
 1. 起動中の自宅音楽ライブラリを終了します。
@@ -196,6 +198,11 @@ Android:
 <!-- USER_MANUAL_GIF_END:tailscale-remote -->
 
 管理画面の外部接続案内に従ってTailscaleとServeを設定します。ルーターのポート開放は行いません。家族は各自のTailscaleアカウントでアクセスし、利用者別状態を分けます。
+
+- iPhone／iPad: [App StoreからTailscaleをインストール](https://apps.apple.com/us/app/tailscale/id1470499037?ls=1)
+- Android: [Google PlayからTailscaleをインストール](https://play.google.com/store/apps/details?id=com.tailscale.ipn)
+
+自宅PCへの導入、Serve設定、家族招待の詳しい手順は[オーナー導入・家族共有ガイド](19-owner-setup-guide.md)を参照してください。
 
 ## 13. 長いパス
 

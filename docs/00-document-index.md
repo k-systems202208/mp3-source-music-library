@@ -7,6 +7,7 @@
 | 目的 | 文書 |
 |---|---|
 | 概要を知る | [README](../README.md) |
+| 初めて導入・家族共有する | [オーナー導入・家族共有ガイド](19-owner-setup-guide.md) |
 | 利用する | [利用マニュアル](06-user-manual.md) |
 | 外部接続・安全性 | [運用・セキュリティ](07-operations-security.md) |
 | 障害を切り分ける | [トラブルシューティング](08-troubleshooting.md) |
@@ -37,6 +38,7 @@
 | `16-requirements-traceability.md` | 要件追跡表 |
 | `17-ui-ux-design-history.md` | UI/UXの変遷 |
 | `18-documentation-audit-v2.7.5.md` | 今回の全文書監査 |
+| `19-owner-setup-guide.md` | PC初心者向けの導入、Tailscale、家族招待、運用手順 |
 | `THIRD_PARTY_NOTICES.md` | 第三者ライブラリ通知 |
 
 Windowsインストーラーと配布物の文書は[DOCUMENT_INDEX_v2.7.5](../windows-installer/docs/DOCUMENT_INDEX_v2.7.5.md)を参照してください。

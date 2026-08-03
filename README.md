@@ -93,6 +93,8 @@ flowchart LR
 
 ## インストールと更新
 
+PC操作に慣れていないオーナーは、ダウンロード、初回設定、Tailscale導入、家族招待までを図解した[オーナー導入・家族共有ガイド](docs/19-owner-setup-guide.md)を上から順に進めてください。
+
 1. GitHub Releasesから`MusicLibrary-Setup-2.7.5-x64.exe`を取得します。
 2. 起動中の自宅音楽ライブラリを終了します。
 3. 旧版をアンインストールせず、インストーラーを上書き実行します。
@@ -128,6 +130,9 @@ v2.7.4以前のスキーマ6から更新する際は、スキーマ7への移行
 ## スマートフォン利用
 
 TailscaleのHTTPS URLをSafariまたは対応ブラウザで開き、ホーム画面へ追加できます。専用アイコン、standalone表示、safe area、モバイル向け操作サイズに対応します。
+
+- iPhone／iPad: [App StoreからTailscaleをインストール](https://apps.apple.com/us/app/tailscale/id1470499037?ls=1)
+- Android: [Google PlayからTailscaleをインストール](https://play.google.com/store/apps/details?id=com.tailscale.ipn)
 
 PWAは画面表示用のシェルだけをキャッシュします。MP3、API、DB、バックアップ、アートワーク、認証情報をオフライン保存しません。自宅PCとネットワークへ接続できる状態が必要です。
 
@@ -167,6 +172,7 @@ C:\ML275Build
 - [APIリファレンス](docs/04-api-reference.md)
 - [DB設計](docs/05-database-design.md)
 - [利用マニュアル](docs/06-user-manual.md)
+- [オーナー導入・家族共有ガイド](docs/19-owner-setup-guide.md)
 - [トラブルシューティング](docs/08-troubleshooting.md)
 - [変更履歴](docs/10-changelog.md)
 - [文書監査結果](docs/18-documentation-audit-v2.7.5.md)

@@ -37,6 +37,8 @@
 
 ## インストール・更新
 
+初めて設定する場合は、[オーナー導入・家族共有ガイド](../docs/19-owner-setup-guide.md)にダウンロード、インストール、初回設定、Tailscale、家族招待をまとめています。
+
 1. 自宅音楽ライブラリを終了
 2. `MusicLibrary-Setup-2.7.5-x64.exe`を実行
 3. 旧版をアンインストールせず上書き
@@ -78,6 +80,7 @@ C:\ML275Build
 
 ## 文書
 
+- [オーナー導入・家族共有ガイド](../docs/19-owner-setup-guide.md)
 - `RELEASE_NOTES_v2.7.5.md`
 - `docs/DOCUMENT_INDEX_v2.7.5.md`
 - `docs/README_USER.txt`
