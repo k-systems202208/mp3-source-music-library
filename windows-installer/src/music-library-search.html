@@ -130,6 +130,10 @@
     cursor:pointer;
     transition:all .12s ease;
     text-align:center;
+    white-space:nowrap;
+    word-break:keep-all;
+    overflow-wrap:normal;
+    line-height:1.2;
   }
   .view-tab:hover{color:var(--ink); border-bottom-color:var(--brass);}
   .view-tab.active{
@@ -2157,7 +2161,7 @@
       background:color-mix(in srgb,var(--paper) 92%,transparent);
       backdrop-filter:blur(8px);
     }
-    .view-tab{min-width:0;min-height:44px;padding:9px 3px;font-size:11px;}
+    .view-tab{min-width:0;min-height:44px;padding:9px 2px;font-size:11px;letter-spacing:-.02em;}
     .home-hero{padding:18px 14px;}
     .home-greeting{font-size:24px;}
     .home-stat{min-height:70px;padding:10px;}
@@ -2245,11 +2249,6 @@
     .playlist-new-row{grid-template-columns:1fr;}
   }
 
-
-  .feature-preview-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--brass);border-radius:var(--skin-radius);background:var(--paper-deep);color:var(--ink);}
-  .feature-preview-banner strong{display:block;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;}
-  .feature-preview-banner span{display:block;margin-top:3px;color:var(--ink-soft);font-size:.9rem;}
-  @media(max-width:720px){.feature-preview-banner{align-items:flex-start;flex-direction:column;}}
   ::selection{background:var(--brass); color:var(--paper);}
 </style>
 </head>
@@ -2282,10 +2281,6 @@
     <button type="button" class="view-tab" data-view="playlists">プレイリスト</button>
   </div>
 
-
-  <aside class="feature-preview-banner" id="playlistFeaturePreviewBanner" hidden aria-live="polite">
-    <div><strong>v2.7.5 機能プレビュー</strong><span>複製DBでプレイリスト機能を確認しています。実運用DBと音楽ファイルは変更しません。</span></div>
-  </aside>
 
   <aside class="skin-preview-ribbon" id="skinPreviewRibbon" hidden aria-live="polite">
     <span><strong id="skinPreviewRibbonName">ライブラリー</strong> をプレビュー中です。まだ保存されていません。</span>
@@ -2633,8 +2628,16 @@
   const SKIN_OPTIONS = Object.freeze({
     library:'ライブラリー', midnight:'ミッドナイト', neon:'ネオン', cyberpunk:'サイバーパンク', candy:'キャンディー', monochrome:'モノクローム'
   });
+  // The Phase 1 preview used ?playlistPreview=1.  Production builds must
+  // discard that temporary flag so a saved PWA URL cannot show preview copy
+  // or force the playlist view after the live installer is applied.
+  const startupUrl = new URL(location.href);
+  if (startupUrl.searchParams.has('playlistPreview')) {
+    startupUrl.searchParams.delete('playlistPreview');
+    const cleanSearch = startupUrl.searchParams.toString();
+    history.replaceState(null, '', `${startupUrl.pathname}${cleanSearch ? `?${cleanSearch}` : ''}${startupUrl.hash}`);
+  }
   const PWA_PREVIEW_MODE = new URLSearchParams(location.search).get('pwaPreview') === '1';
-  const PLAYLIST_FEATURE_PREVIEW_MODE = new URLSearchParams(location.search).get('playlistPreview') === '1';
   const PWA_THEME_COLORS = Object.freeze({
     library:'#24392b', midnight:'#101c2e', neon:'#041219', cyberpunk:'#16131d', candy:'#ff4f9a', monochrome:'#111111'
   });
@@ -2652,7 +2655,6 @@
     indexKey: '',
     selectedPlaylistId: null,
   };
-  if (PLAYLIST_FEATURE_PREVIEW_MODE) state.view = 'playlists';
 
   const els = {
     pageTitle: document.getElementById('pageTitle'),
@@ -2733,7 +2735,6 @@
     skinApplyButton: document.getElementById('skinApplyButton'),
     skinCancelButton: document.getElementById('skinCancelButton'),
     skinMessage: document.getElementById('skinMessage'),
-    playlistFeaturePreviewBanner: document.getElementById('playlistFeaturePreviewBanner'),
     skinPreviewRibbon: document.getElementById('skinPreviewRibbon'),
     skinPreviewRibbonName: document.getElementById('skinPreviewRibbonName'),
     skinPreviewResetButton: document.getElementById('skinPreviewResetButton'),
@@ -3252,7 +3253,7 @@
     els.pwaGuideText.textContent = guide;
 
     if (PWA_PREVIEW_MODE) {
-      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.4 RCのTailscale URLで確認します。');
+      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.5 RCのTailscale URLで確認します。');
     } else if (provider === 'tailscale') {
       setMessage(els.pwaInstallMessage, 'この接続先を追加すると、Tailscale接続時にホーム画面から直接開けます。', 'success');
     } else if (provider === 'local_owner' || isLocalPwaOrigin()) {
@@ -3762,7 +3763,7 @@
     } catch (error) {
       if (serial !== updateRequestSerial) return;
       renderUpdateStatus({
-        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.4',
+        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.5',
         latestVersion: '',
         updateAvailable: false,
         source: 'error',
@@ -5590,7 +5591,6 @@
     const standaloneQuery = window.matchMedia('(display-mode: standalone)');
     if (standaloneQuery.addEventListener) standaloneQuery.addEventListener('change', updatePwaInstallUi);
   }
-  if (PLAYLIST_FEATURE_PREVIEW_MODE && els.playlistFeaturePreviewBanner) els.playlistFeaturePreviewBanner.hidden = false;
   void registerPwaServiceWorker();
 
   committedSkinId = 'library';
