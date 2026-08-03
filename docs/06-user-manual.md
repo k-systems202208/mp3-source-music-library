@@ -42,6 +42,13 @@ v2.7.4以前からの初回起動ではDBをスキーマ7へ更新し、移行�
 
 ## 4. 検索・絞り込み
 
+<!-- USER_MANUAL_GIF_START:search-filter -->
+<p align="center">
+  <img src="assets/user-manual-search-filter.gif" alt="検索、索引、絞り込み、並べ替えの操作イメージ" width="720">
+</p>
+<p align="center"><em>キーワード検索、索引、お気に入り、並べ替えを組み合わせて目的の曲を探せます。</em></p>
+<!-- USER_MANUAL_GIF_END:search-filter -->
+
 - 検索欄へ曲名、アーティスト、アルバム、作曲者を入力
 - 索引でA～Z、五十音、漢字・その他を選択
 - お気に入りだけを表示
@@ -49,6 +56,13 @@ v2.7.4以前からの初回起動ではDBをスキーマ7へ更新し、移行�
 - アーティスト→アルバム→曲へ移動
 
 ## 5. 再生
+
+<!-- USER_MANUAL_GIF_START:playback -->
+<p align="center">
+  <img src="assets/user-manual-playback.gif" alt="音楽再生、シーク、再生モード変更の操作イメージ" width="720">
+</p>
+<p align="center"><em>曲カードから再生し、シーク、前後移動、シャッフル、リピートを操作できます。</em></p>
+<!-- USER_MANUAL_GIF_END:playback -->
 
 曲カードの再生ボタンを押します。下部プレーヤーで次を操作できます。
 
@@ -63,6 +77,13 @@ v2.7.4以前からの初回起動ではDBをスキーマ7へ更新し、移行�
 MP3は再エンコードしません。
 
 ## 6. お気に入り・再生履歴
+
+<!-- USER_MANUAL_GIF_START:favorites-history -->
+<p align="center">
+  <img src="assets/user-manual-favorites-history.gif" alt="お気に入り追加と再生履歴確認の操作イメージ" width="720">
+</p>
+<p align="center"><em>お気に入り、再生回数、最終再生日時は認証された利用者ごとに保存されます。</em></p>
+<!-- USER_MANUAL_GIF_END:favorites-history -->
 
 認証済み利用者では、お気に入り、再生回数、最終再生日時を個別保存します。他の家族の状態とは混ざりません。匿名接続では保存しません。
 
@@ -101,9 +122,23 @@ MP3は再エンコードしません。
 
 ## 8. スキン
 
+<!-- USER_MANUAL_GIF_START:skin -->
+<p align="center">
+  <img src="assets/user-manual-skin.gif" alt="スキン選択、プレビュー、適用の操作イメージ" width="720">
+</p>
+<p align="center"><em>スキンを選んでプレビューし、利用者ごとの表示設定として適用できます。</em></p>
+<!-- USER_MANUAL_GIF_END:skin -->
+
 利用者ボタン→「スキンを変更」で選択し、「適用する」を押します。利用者ごとに保存され、PCとスマートフォンで共通です。
 
 ## 9. バックアップ・復元
+
+<!-- USER_MANUAL_GIF_START:backup-restore -->
+<p align="center">
+  <img src="assets/user-manual-backup-restore.gif" alt="バックアップ作成と復元予約の操作イメージ" width="720">
+</p>
+<p align="center"><em>DBバックアップを作成し、必要な時点を選んで次回起動時の復元を予約できます。</em></p>
+<!-- USER_MANUAL_GIF_END:backup-restore -->
 
 ローカルオーナーだけが操作できます。
 
@@ -115,6 +150,13 @@ MP3は再エンコードしません。
 スキーマ7ではプレイリストも含みます。MP3そのものはDBバックアップに含みません。
 
 ## 10. 新版通知
+
+<!-- USER_MANUAL_GIF_START:update-check -->
+<p align="center">
+  <img src="assets/user-manual-update-check.gif" alt="GitHub Releaseで新版を確認する操作イメージ" width="720">
+</p>
+<p align="center"><em>公開済みGitHub Releaseを確認し、更新するか利用者自身で判断できます。</em></p>
+<!-- USER_MANUAL_GIF_END:update-check -->
 
 「今すぐ確認」でGitHub Releaseを確認します。自動インストールはしません。通信失敗しても検索・再生には影響しません。
 
@@ -145,6 +187,13 @@ Android:
 ホーム画面から起動してもMP3は端末へ保存されません。自宅PCとTailscaleまたはWi-Fi接続が必要です。
 
 ## 12. Tailscale利用
+
+<!-- USER_MANUAL_GIF_START:tailscale-remote -->
+<p align="center">
+  <img src="assets/user-manual-tailscale-remote.gif" alt="Tailscale HTTPSで外出先から接続するイメージ" width="720">
+</p>
+<p align="center"><em>ルーターのポートを開けず、Tailscale HTTPS経由で自宅の音楽へ接続します。</em></p>
+<!-- USER_MANUAL_GIF_END:tailscale-remote -->
 
 管理画面の外部接続案内に従ってTailscaleとServeを設定します。ルーターのポート開放は行いません。家族は各自のTailscaleアカウントでアクセスし、利用者別状態を分けます。
 
