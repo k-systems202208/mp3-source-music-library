@@ -9,7 +9,7 @@ v2.7.6
 自宅音楽ライブラリ v2.7.6
 
 公開日:
-2026-08-03
+2026-08-04
 
 本文:
 RELEASE_NOTES_v2.7.6.md
@@ -29,6 +29,11 @@ RELEASE_NOTES_v2.7.6.md
 ・EXEスモーク試験合格
 ・Inno Setupコンパイル合格
 ・Setup.exeとSHA256SUMS.txtが一致
+
+ビルド結果:
+・GitHub Actions run 30828732192
+・インストーラーSHA-256
+  89edd0f25bcb613605874dd4c737be14cfd75c1d68ad4a5e709f81e36cd98145
 
 公開後確認:
 ・Release URLが/releases/tag/v2.7.6

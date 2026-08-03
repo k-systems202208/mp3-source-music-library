@@ -27,3 +27,10 @@
 
 手動確認結果:
 ユーザー確認済み（2026-08-03）
+
+自動試験・ビルド結果:
+GitHub Actions run 30828732192で全34試験に合格。
+PyInstaller EXE、組み込み版2.7.6、空ライブラリスモーク試験、
+Inno Setupコンパイル、Release Assets作成に合格。
+インストーラーSHA-256:
+89edd0f25bcb613605874dd4c737be14cfd75c1d68ad4a5e709f81e36cd98145

@@ -7,6 +7,10 @@
 ・メタデータ変更のオーナー権限をUIとAPIで試験
 ・訂正済表示・フィルターの除去を試験
 ・プレーヤーリンクを試験
-・全ソース回帰試験を実行
-・EXEスモーク試験とInno Setupコンパイルを実行
-・Release Assets 6ファイルとSHA-256を検証
+・GitHub Actions run 30828732192で全34ソース回帰試験に合格
+・PyInstaller EXE作成、組み込み版2.7.6、空ライブラリスモーク試験に合格
+・Inno Setupコンパイルに合格
+・Release Assets 6ファイルを生成
+・インストーラーSHA-256:
+  89edd0f25bcb613605874dd4c737be14cfd75c1d68ad4a5e709f81e36cd98145
+・MusicLibrary-Setup-2.7.6-x64.exeとSHA256SUMS.txtの一致を確認
