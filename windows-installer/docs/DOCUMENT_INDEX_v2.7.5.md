@@ -1,31 +1,41 @@
 # v2.7.5 ドキュメント一覧
 
-## 利用者向け
+## 現行・利用者向け
 
-- `README_USER.txt`：インストール、プレイリスト、長いパス、スキン、バックアップ、新版通知
-- `INSTALL_INFO.txt`：更新前の確認、スキーマ7、移行前バックアップ
-- `REMOTE_ACCESS_USER.txt`：Tailscale Serve、利用者別プレイリスト、スマートフォン利用
-- `REMOTE_ACCESS_FAMILY.txt`：家族向け接続・プレイリスト案内
+- `README_USER.txt`: インストール、検索、再生、プレイリスト、PWA
+- `INSTALL_INFO.txt`: 上書き更新、schema 7、移行前バックアップ
+- `REMOTE_ACCESS_USER.txt`: Tailscaleとスマートフォン利用
+- `REMOTE_ACCESS_FAMILY.txt`: 家族向けの簡易案内
 
-## リリース・ビルド
+## 現行・ビルド／公開
 
-- `README_BUILD.txt`：配布用インストーラーの作成手順
-- `MANUAL_TEST_v2.7.5.txt`：自動試験と実機受入結果
-- `GITHUB_RELEASE_2.7.5.txt`：タグ、タイトル、Release Assets、公開設定
-- `DOCUMENT_VERSION_CHECK_v2.7.5.txt`：バージョン表記と関連文書の整合性確認
-- `RELEASE_SCOPE_v2.7.5.md`：正式リリース対象範囲
+- `README_BUILD.txt`: v2.7.5のビルド手順
+- `MANUAL_TEST_v2.7.5.txt`: 自動試験と実機受入
+- `GITHUB_RELEASE_2.7.5.txt`: 公開済みRelease情報と確認項目
+- `DOCUMENT_VERSION_CHECK_v2.7.5.txt`: バージョン・schema・文書整合性
+- `RELEASE_SCOPE_v2.7.5.md`: 正式リリース範囲
+- `DOCUMENTATION_AUDIT_v2.7.5.md`: 全文書監査結果
 
-## 機能設計
+## 現行・機能設計
 
-- `PLAYLISTS_v2.7.5.md`：利用者別プレイリスト、DB、API、所有権
-- `PLAYLIST_MOBILE_UI_v2.7.5.md`：RC2の本番表示、PWAキャッシュ、スマートフォンタブ修正
-- `PLAYLISTS_v2.7.5_PHASE1.md`：複製DBプレビュー工程
-- `LONG_PATH_v2.7.4.md`：長いWindowsパス対応
-- `STARTUP_AUTH_v2.7.4.md`：起動時オーナー認証
-- `MOBILE_HOME_v2.7.3_PHASE1.md`：PWA・ホーム画面追加
-- `SKINS_v2.7.2_PHASE2.md`：利用者別スキン
-- `BACKUP_RESTORE_v2.7.1_PHASE2.md`：バックアップ・復元
+- `PLAYLISTS_v2.7.5.md`: プレイリストDB・API・所有権
+- `PLAYLIST_MOBILE_UI_v2.7.5.md`: 本番モバイル表示とPWAキャッシュ
+- `LONG_PATH_v2.7.4.md`: 長いWindowsパスの正式サマリー
+- `STARTUP_AUTH_v2.7.4.md`: 起動時オーナー認証の正式サマリー
+- `MOBILE_HOME_v2.7.3_PHASE1.md`: PWA導入時の設計履歴
+- `SKINS_v2.7.2_PHASE2.md`: スキン導入時の設計履歴
+- `BACKUP_RESTORE_v2.7.1_PHASE2.md`: バックアップ導入時の設計履歴
 
-## 履歴文書
+## 履歴
 
-`RC1_v2.7.5_SCOPE.md`、`RC2_v2.7.5_SCOPE.md`、過去バージョンの手動試験・Release設定文書は、開発と検証の履歴として残します。
+次は当時の判断・検証を残す履歴文書であり、現行仕様へ書き換えません。
+
+- `PLAYLISTS_v2.7.5_PHASE1.md`
+- `LONG_PATH_v2.7.4_PHASE1.md`
+- `LONG_PATH_v2.7.4_PHASE2.md`
+- `RC*_SCOPE.md`
+- 過去バージョンの`MANUAL_TEST`、`GITHUB_RELEASE`、`DOCUMENT_VERSION_CHECK`
+- `OWNER_PERSONAL_STATE_MERGE_RC2.md`
+- `SCHEMA_V5_MIGRATION_SPEC.md`
+
+現行仕様はREADME、正式Release Notes、現行文書を優先してください。

@@ -1,76 +1,87 @@
 # GitHub公開ガイド
 
-## 1. 公開対象
+## 前提
 
-- ソースコード
-- HTML／CSS／JavaScript
-- 空のサンプル音楽フォルダ
-- ビルド定義
-- インストーラー定義
-- テスト
-- READMEと設計文書
-- 第三者ライセンス通知
-- Release Notes
-- 完成したインストーラーと検証用ハッシュ
+- ブランチは`main`
+- 作業ツリーがclean
+- `origin/main`と同期
+- ソース、インストーラー、文書の版が一致
+- 全試験合格
+- 実機受入完了
+- 秘密情報・個人パスを除外
 
-## 2. 公開禁止
+## 文書更新
 
-- MP3、FLAC、AAC等の音源
-- 実運用`library.db`、WAL、SHM
-- `.artwork-cache`
-- `Backups`、`Exports`、`Logs`
-- `config.json`、`remote-url.txt`
-- 診断JSON／CSV
-- 実際の利用者名、メール、Tailscaleログイン、プロフィールURL
-- IP、端末名、tailnet名が分かる画像
-- 関連付けコード、Cookie、制御秘密
-- 個人用ビルドパスを含むログ
+正式公開前に少なくとも次を確認します。
 
-## 3. v2.7.0 Release Assets
+- ルート`README.md`
+- `UPDATE_SUMMARY.md`
+- `docs/00-document-index.md`
+- 仕様、API、DB、利用、運用、試験、変更履歴
+- `windows-installer/README.md`
+- `RELEASE_NOTES_vX.Y.Z.md`
+- Windows配布文書
+- 文書内ローカルリンク
+- 末尾空白とEOF
+- `git diff --check`
 
-推奨:
+RC／Phase文書は履歴として保持し、正式仕様へ後書きで改変しません。
 
-- `MusicLibrary-Setup-2.7.0-x64.exe`
-- SHA-256ファイル
-- Release Notes
-- ソースZIP（GitHub自動生成を利用可能）
-- 必要に応じてビルドレポート
+## ビルド
 
-公開済みタグの内容を後から書き換えません。文書修正だけの場合は`main`へ追加コミットし、次の製品リリースへ取り込みます。重大な配布物修正が必要なら新バージョンを発行します。
-
-## 4. 公開前チェック
+短いパスへ`windows-installer`を置きます。
 
 ```text
-[ ] git statusに意図しないファイルがない
-[ ] git diff --checkが成功
-[ ] READMEの製品バージョンが2.7.0
-[ ] DBスキーマが5
-[ ] 「利用者別状態は未実装」等の旧記述がない
-[ ] 音源・DB・診断・個人情報がない
-[ ] 第三者ライセンス通知がある
-[ ] 全回帰テストPASS
-[ ] バンドル済みEXEスモークPASS
-[ ] Inno SetupコンパイルPASS
-[ ] SHA-256を記録
-[ ] 実機の上書き・移行・Tailscale・関連付けPASS
+C:\ML275Build
 ```
 
-## 5. スクリーンショット
+`00_build_installer.bat`を実行し、次を確認します。
 
-- ダミー曲名・ダミーアートワークを使用
-- 利用者名は「オーナー」「家族A」等へ置換
-- 関連付けコードを写さない
-- メール、Tailscaleログイン名、プロフィール画像を写さない
-- 外部URLのホスト名を隠す
+- 全ソース回帰試験
+- PyInstaller
+- EXEスモーク試験
+- Inno Setup
+- バージョン整合性
+- SHA-256
+- BUILD LOG／REPORT
 
-## 6. 文書更新
+## タグ・Release
 
-READMEだけでなく、API、DB、利用マニュアル、セキュリティ、テスト、変更履歴を同時に更新します。旧仕様を歴史として残す場合はバージョン見出しの下へ記載します。
-
-## 7. コミット例
+v2.7.5の例:
 
 ```text
-docs: update documentation for v2.7.0
+tag: v2.7.5
+title: 自宅音楽ライブラリ v2.7.5
 ```
 
-文書だけの更新では既存の`v2.7.0`タグを移動しません。
+Release本文は正式なRelease Notesを使用します。Draft／pre-releaseで作成し、人が内容・添付を確認してから公開する運用を採用できます。
+
+## 代表的なRelease Assets
+
+- `MusicLibrary-Setup-2.7.5-x64.exe`
+- `SHA256SUMS.txt`
+- `README_USER.txt`
+- `REMOTE_ACCESS_USER.txt`
+- `REMOTE_ACCESS_FAMILY.txt`
+- `RELEASE_NOTES_v2.7.5.md`
+
+## 公開後確認
+
+- Release URLが`/releases/tag/v2.7.5`
+- タグとReleaseが一致
+- Assetsをダウンロード可能
+- Setup.exeのSHA-256一致
+- READMEの最新版リンク・版表記
+- アプリの新版通知
+
+v2.7.5は2026-08-03に公開完了したことをユーザーが確認しています。本監査ではRelease画面や新版通知の追加取得は行っていません。
+
+## 既公開タグの扱い
+
+文書だけを後から修正する場合:
+
+- `main`へ文書コミットを追加
+- 公開済みタグを移動しない
+- Release Assetsを暗黙に差し替えない
+- Release本文の訂正が必要なら変更理由を残す
+- ソース版と配布版の歴史を保持する

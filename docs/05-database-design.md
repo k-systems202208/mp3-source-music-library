@@ -1,163 +1,153 @@
 # データベース設計書
 
-## 1. 基本情報
+## 基本情報
 
 | 項目 | 内容 |
 |---|---|
 | ファイル | `%LOCALAPPDATA%\MusicLibrary\library.db` |
 | エンジン | SQLite |
-| 現行スキーマ | 5 |
+| 現行スキーマ | 7 |
 | 外部キー | 有効 |
 | 更新方式 | トランザクション |
+| バックアップ | `%LOCALAPPDATA%\MusicLibrary\Backups` |
 
-## 2. テーブル一覧
+## テーブル一覧
 
 | テーブル | 用途 |
 |---|---|
-| `schema_info` | schemaバージョン、オーナーID、移行完了フラグ |
-| `artists` | アーティスト正規化・表示補正 |
-| `albums` | アルバム正規化・年・アートワーク |
+| `schema_info` | schema番号、移行情報 |
+| `artists` | アーティストと表示補正 |
+| `albums` | アルバム、年、アートワーク |
 | `artworks` | 埋め込み／外部画像の索引 |
-| `tracks` | MP3メタデータ、存在、旧共通状態、補正 |
-| `users` | 利用者プロフィール、オーナー、有効状態 |
-| `user_identities` | ローカル／Tailscale識別情報 |
-| `user_track_state` | 利用者別状態 |
-| `scan_runs` | 走査単位の集計 |
+| `tracks` | MP3メタデータ、相対パス、存在状態、補正 |
+| `users` | 利用者、オーナー、有効状態 |
+| `user_identities` | ローカル／Tailscale識別 |
+| `user_track_state` | 利用者別再生状態 |
+| `user_preferences` | 利用者別スキン |
+| `playlists` | 利用者別プレイリスト |
+| `playlist_tracks` | プレイリストの曲と順序 |
+| `scan_runs` | 走査集計 |
 | `scan_errors` | 走査エラー |
 
-## 3. `users`
+## 主要テーブル
 
-| 列 | 内容 |
-|---|---|
-| `id` | `usr_...`形式の内部ID |
-| `display_name` | UI表示名 |
-| `is_owner` | 0／1。部分ユニーク索引で1人だけ |
-| `is_active` | 停止・再開 |
-| `created_at`／`updated_at` | UTC ISO日時 |
-| `last_seen_at` | 最終識別日時 |
+### `tracks`
 
-`idx_users_single_owner`により`is_owner=1`は最大1行です。
+`relative_path`は音楽ルートからの通常形式の相対パスです。Windows長パス用`\\?\`表現は保存しません。
 
-## 4. `user_identities`
+主な列:
 
-| 列 | 内容 |
-|---|---|
-| `id` | 安定キー |
-| `user_id` | `users.id` |
-| `provider` | `local_owner`または`tailscale` |
-| `subject` | provider内の安定識別子 |
-| `provider_display_name` | providerから得た表示用情報 |
-| `profile_picture_url` | 検証済みURL |
-| `created_at`／`last_seen_at` | 監査用日時 |
+- `title`、`artist_id`、`album_id`、`composer`、`genre`
+- `duration_ms`、`track_number`、`disc_number`
+- `file_size`、`modified_time_ns`、`content_signature`
+- `audio_file`、`artwork_id`
+- `title_override`、`artist_override`、`album_override`
+- `is_available`、`last_scanned_at`
+- 旧共通状態列（互換・移行用）
 
-`UNIQUE(provider, subject)`により同じTailscaleログインを複数利用者へ割り当てません。
+### `users`
 
-ローカルオーナー識別:
+- `id`
+- `display_name`
+- `is_owner`
+- `is_active`
+- 作成・更新・最終確認日時
 
-```text
-provider = local_owner
-subject  = local-owner
-```
+部分ユニーク索引でオーナーは最大1人です。
 
-## 5. `user_track_state`
+### `user_identities`
+
+`UNIQUE(provider, subject)`で同じ外部識別を複数利用者へ割り当てません。
+
+代表provider:
+
+- `local_owner`
+- `tailscale`
+
+### `user_track_state`
 
 複合主キーは`(user_id, track_id)`です。
 
+- `favorite`
+- `rating`
+- `play_count`
+- `last_played_at`
+- 作成・更新日時
+
+表示・更新の正本はこのテーブルです。`tracks`の共通状態列は互換目的で残します。
+
+### `user_preferences`
+
+利用者1人につき1行です。`skin_id`は次のいずれかです。
+
+```text
+library, midnight, neon, cyberpunk, candy, monochrome
+```
+
+### `playlists`
+
 | 列 | 内容 |
 |---|---|
-| `favorite` | 0／1 |
-| `rating` | NULLまたは0～5 |
-| `play_count` | 0以上 |
-| `last_played_at` | UTC ISO日時または空 |
-| `created_at`／`updated_at` | 状態作成・更新日時 |
+| `id` | プレイリスト内部ID |
+| `user_id` | 所有者 |
+| `name` | 表示名 |
+| `normalized_name` | 利用者内重複判定 |
+| `created_at`／`updated_at` | 日時 |
 
-索引:
+`UNIQUE(user_id, normalized_name)`により利用者内の同名を防止します。
 
-- `(user_id, play_count DESC)`
-- `(user_id, last_played_at DESC)`
-- `(user_id, favorite)`
+### `playlist_tracks`
 
-状態がすべて空の場合は行を削除し、疎なテーブルとして維持します。
-
-## 6. `tracks`の旧共通状態
-
-`tracks`には互換性とschema 5移行のため、`play_count`、`last_played_at`、`favorite`、`rating`が残っています。v2.7.0の利用者別表示・更新の正本は`user_track_state`です。
-
-これら旧列を安易に削除すると旧版DBの移行や互換処理へ影響するため、将来のschema変更で明示的に扱います。
-
-## 7. schema 5移行
-
-### 事前条件
-
-- DBがアプリより新しいschemaでない
-- 未処理トランザクションがない
-- 移行前バックアップを作成・検証できる
-
-### 処理
-
-1. 新規テーブル・索引を作成
-2. 既存開発版向けの加算的列移行
-3. オーナーが0人なら作成、2人以上なら中止
-4. ローカルオーナー識別情報を作成・照合
-5. `tracks`の旧共通状態をオーナーの`user_track_state`へコピー
-6. 件数と全項目の一致を検査
-7. `PRAGMA foreign_key_check`
-8. `schema_version=5`を保存
-9. コミット
-
-失敗時はロールバックします。
-
-### バックアップ名
-
-```text
-Backups\library-pre-v2.7.0-YYYYMMDD-HHMMSS.db
-```
-
-## 8. オーナー関連付け時の統合
-
-### 事前検査
-
-- 候補利用者が存在・有効
-- 対象Tailscale識別情報が候補に属する
-- 候補の識別情報が想定件数
-- 日時を解釈可能
-- 評価競合がない
-
-### 統合
-
-| 状態 | 結果 |
+| 列 | 内容 |
 |---|---|
-| オーナー側だけ | 維持 |
-| 候補側だけ | オーナーへ移動 |
-| 両側の再生回数 | 合算 |
-| 両側の最終再生日時 | 新しい方 |
-| 両側のお気に入り | OR |
-| 評価片側のみ | 設定済み側 |
-| 評価同値 | 維持 |
-| 評価異値 | 全処理中止 |
+| `playlist_id` | プレイリスト |
+| `track_id` | 曲 |
+| `position` | 0以上の順序 |
+| `added_at` | 追加日時 |
 
-識別情報移動、候補プロフィール削除、外部キー検査まで同じトランザクションで行います。
+制約:
 
-バックアップ名:
+- 主キー`(playlist_id, track_id)`で同じ曲の重複を防止
+- `UNIQUE(playlist_id, position)`で順序を一意化
+- プレイリスト削除時は中間行をcascade削除
+- 曲削除はrestrictし、プレイリストからMP3を消さない
+
+## スキーマ移行
+
+### v2.7.0／schema 5
+
+利用者、識別、利用者別状態を追加し、旧共通状態をオーナーへ移行しました。
+
+### v2.7.2／schema 6
+
+`user_preferences`を追加しました。
+
+### v2.7.5／schema 7
+
+`playlists`と`playlist_tracks`を追加しました。スキーマ6からの移行前に次を自動作成します。
 
 ```text
-Backups\library-pre-owner-link-YYYYMMDD-HHMMSS.db
+Backups\library-pre-v2.7.5-YYYYMMDD-HHMMSS.db
 ```
 
-## 9. 通常バックアップ
+処理:
 
-起動時に同日のバックアップがなければ作成します。
+1. 現行DBのschemaと整合性を確認
+2. SQLiteバックアップAPIで移行前バックアップ作成
+3. バックアップのschema・件数・quick checkを確認
+4. 新規テーブル・索引をトランザクション内で作成
+5. `schema_version=7`を保存
+6. 外部キーを確認してコミット
+7. 失敗時はロールバック
 
-```text
-Backups\library-YYYYMMDD.db
-```
+## バックアップ・復元
 
-バックアップはSQLiteとして開けること、整合性検査が通ること、元DBと曲件数が一致することを確認します。
+バックアップとして受け入れるschemaは5、6、7です。復元前にSQLite整合性、schema、ファイル名、保存先を確認します。復元は起動中の接続へ直接上書きせず、次回起動時に適用します。
 
-## 10. 削除方針
+## 削除方針
 
-- MP3削除・不在: `tracks.is_available=0`
-- 利用者停止: `users.is_active=0`
-- 利用者完全削除: UIでは提供しない
-- オーナー: 削除・停止不可
-- オーナー統合後の空候補プロフィール: 関連付けトランザクション内で削除
+- プレイリスト削除: プレイリストと中間行だけ
+- プレイリストから曲を外す: 中間行だけ
+- 利用者削除: 現行UIでは完全削除せず停止・再開
+- MP3消失: 曲を`is_available=0`として履歴を保持
+- MP3の再出現・移動: 署名等で既存ID維持を試行

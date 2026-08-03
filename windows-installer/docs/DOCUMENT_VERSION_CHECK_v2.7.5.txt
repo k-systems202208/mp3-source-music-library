@@ -1,35 +1,57 @@
 自宅音楽ライブラリ v2.7.5
-文書バージョン確認
+文書・バージョン整合性確認
 ================================
 
-製品バージョン:
-2.7.5
+現行値
+------
+製品バージョン: 2.7.5
+DBスキーマ: 7
+公開日: 2026-08-03
+インストーラー: MusicLibrary-Setup-2.7.5-x64.exe
 
-DBスキーマ:
-7（v2.7.5で6から更新）
+ソース確認箇所
+--------------
+src/launcher.py                APP_VERSION = 2.7.5
+src/paths.py                   APP_VERSION = 2.7.5
+src/update_check.py            CURRENT_VERSION = 2.7.5
+src/server.py                  MusicLibrary/SQLiteAPI2.7.5
+src/database.py                SCHEMA_VERSION = 7
+build/version_info.txt         FileVersion/ProductVersion 2.7.5
+installer.iss                  2.7.5
 
-インストーラー:
-MusicLibrary-Setup-2.7.5-x64.exe
+現行文書
+--------
+README.md
+RELEASE_NOTES_v2.7.5.md
+docs/DOCUMENT_INDEX_v2.7.5.md
+docs/README_USER.txt
+docs/README_BUILD.txt
+docs/INSTALL_INFO.txt
+docs/MANUAL_TEST_v2.7.5.txt
+docs/GITHUB_RELEASE_2.7.5.txt
+docs/RELEASE_SCOPE_v2.7.5.md
+docs/PLAYLISTS_v2.7.5.md
+docs/PLAYLIST_MOBILE_UI_v2.7.5.md
+docs/LONG_PATH_v2.7.4.md
+docs/STARTUP_AUTH_v2.7.4.md
+docs/DOCUMENTATION_AUDIT_v2.7.5.md
 
-最新版文書:
-・README.md
-・RELEASE_NOTES_v2.7.5.md
-・docs\DOCUMENT_INDEX_v2.7.5.md
-・docs\INSTALL_INFO.txt
-・docs\README_BUILD.txt
-・docs\README_USER.txt
-・docs\REMOTE_ACCESS_USER.txt
-・docs\REMOTE_ACCESS_FAMILY.txt
-・docs\MANUAL_TEST_v2.7.5.txt
-・docs\GITHUB_RELEASE_2.7.5.txt
-・docs\RELEASE_SCOPE_v2.7.5.md
-・docs\PLAYLISTS_v2.7.5.md
-・docs\PLAYLIST_MOBILE_UI_v2.7.5.md
+確認値
+------
+実機ライブラリ: 8,480曲
+アートワーク: 7,708曲
+長いパス: 201曲
+最長パス: 364文字
+プレイリスト実機: 1件・3曲
 
-履歴文書:
-・docs\RC1_v2.7.5_SCOPE.md
-・docs\RC2_v2.7.5_SCOPE.md
-・docs\PLAYLISTS_v2.7.5_PHASE1.md
-・v2.7.4以前の工程・Release文書
+これらは確認環境の値であり、製品固定値ではありません。
 
-公開済みv2.7.4のタグとReleaseは変更しません。
+公開状態
+--------
+v2.7.5の公開完了はユーザー報告で確認済み。
+公開後の新版通知画面は本監査資料に未添付。
+
+履歴文書
+--------
+過去版、RC、Phase文書は当時の記録として保持し、
+現行版の表記へ一括置換しない。

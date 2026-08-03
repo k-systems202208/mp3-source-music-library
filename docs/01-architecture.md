@@ -1,139 +1,70 @@
-# アーキテクチャ構成
+# アーキテクチャ
 
-## 1. 配置
+## 構成要素
 
-```text
-Program Files / インストール先
-└─ アプリ本体、HTML、同梱ライブラリ
-
-%LOCALAPPDATA%\MusicLibrary
-├─ library.db
-├─ config.json
-├─ remote-url.txt
-├─ .artwork-cache\
-├─ Backups\
-├─ Exports\
-├─ Logs\
-├─ library-diagnostics.json
-└─ library-diagnostics.csv
-
-利用者が選択した音楽フォルダ
-└─ MP3・外部アートワーク
-```
-
-アプリ本体の更新と利用者データを分離します。上書きインストールしても`%LOCALAPPDATA%\MusicLibrary`と音楽フォルダは維持されます。
-
-## 2. 実行構成
-
-| モジュール | 責務 |
+| 要素 | 役割 |
 |---|---|
-| `launcher.py` | GUI管理画面、フォルダ選択、走査起動、サーバー起動・停止、ブラウザ起動、Tailscale設定 |
-| `generator.py` | MP3走査、タグ解析、文字化け補正、アートワーク、差分同期、診断出力 |
-| `database.py` | schema 5、検索、状態保存、移行、バックアップ、利用者管理、オーナー統合 |
-| `server.py` | HTTP、API、静的ファイル、MP3 Range配信、利用者解決、権限制御 |
-| `local_auth.py` | ローカルオーナー用一時トークンとセッションCookie |
-| `tailscale_identity.py` | Tailscale Serveヘッダーの検証・正規化 |
-| `owner_link.py` | 関連付けコード、候補、期限、状態機械 |
-| `remote_access.py` | Tailscale CLI検出、Serve有効化・停止、URL保存 |
-| `paths.py` | リソース・データ・音楽・キャッシュのパス境界 |
-| `music-library-search.html` | 検索、ドリルダウン、プレーヤー、お気に入り、利用者UI |
+| `launcher.py` | Windows管理画面、サーバー起動、ブラウザ起動、Tailscale案内 |
+| `generator.py` | MP3走査、タグ解析、アートワーク、差分更新 |
+| `long_paths.py` | Windows長パスの内部表現変換 |
+| `database.py` | スキーマ作成・移行、検索、利用者状態、プレイリスト |
+| `server.py` | HTTP配信、API、認証、Range配信 |
+| `local_auth.py` | ローカルオーナー一時トークンとCookie |
+| `identity.py` | Tailscale利用者の解析 |
+| `owner_link.py` | ローカルオーナーと本人Tailscaleプロフィールの関連付け |
+| `backup_restore.py` | DB検証、バックアップ、次回起動時復元 |
+| `update_check.py` | GitHub Release確認 |
+| `music-library-search.html` | ブラウザUI |
+| `service-worker.js` | PWAシェルキャッシュ |
+| `library.db` | SQLite schema 7 |
+| `.artwork-cache` | 埋め込み画像の展開キャッシュ |
 
-## 3. 起動シーケンス
+## データ境界
 
-```mermaid
-sequenceDiagram
-    participant U as 利用者
-    participant L as launcher.py
-    participant G as generator.py
-    participant D as library.db
-    participant S as server.py
-    participant B as Browser
+- MP3と外部画像は利用者が選択した音楽フォルダーに残る
+- DB、設定、ログ、バックアップ、展開画像は`%LOCALAPPDATA%\MusicLibrary`に置く
+- インストール先には実行ファイルと静的資産を置く
+- PWAは画面シェルだけをキャッシュし、個人データを保持しない
 
-    U->>L: ライブラリを開始
-    L->>G: MP3走査
-    G->>D: schema確認・差分更新
-    G-->>L: 走査結果
-    L->>S: localhostで起動
-    L->>S: 制御秘密付きで一時トークン登録
-    L->>B: /api/local-auth/exchange?token=...
-    B->>S: 一時トークン交換
-    S-->>B: owner session Cookie + 303
-    B->>S: /music-library-search.html
-```
+## 接続経路
 
-## 4. 利用者解決の優先順位
+### ローカル
 
-1. Tailscale Serveの利用者ヘッダーを検証
-2. Tailscale利用者が有効なら、その利用者を採用
-3. Tailscale利用者がなければ、ローカルオーナーCookieを検証
-4. どちらも成立しなければ匿名
+管理画面が短時間の一時トークンを発行し、ブラウザが`/api/local-auth/exchange`でCookieへ交換します。交換後は安全なHTML引き渡しでライブラリ画面へ遷移します。
 
-Tailscale経由の要求にローカルオーナーCookieが混在しても、Tailscaleの利用者境界を優先します。
+### Tailscale
 
-## 5. データ走査
+サーバーはlocalhostへバインドし、Tailscale ServeがHTTPSを終端して利用者情報を付与します。信頼条件を満たす場合だけ利用者ヘッダーを採用します。
 
-- 音楽フォルダ内の`.mp3`を再帰走査
-- ファイルサイズ・更新時刻・内容署名を使用して差分判定
-- Mutagenとフォールバック解析でタグ・再生時間・埋め込み画像を取得
-- 外部画像を同一フォルダから選択
-- 同じ内容署名の旧パスが一意に対応する場合だけ移動と判定
-- 読み取り不能ファイルを診断JSON／CSVと`scan_errors`へ記録
-- 既存レコードを消さず`is_available=0`で不在を表現
+### 匿名
 
-## 6. 検索
+識別情報がない接続は検索・再生に限定します。再生回数、お気に入り、スキン、プレイリストは保存しません。
 
-ブラウザは`/api/browse`へ条件を送り、SQLiteがページ単位で返します。主要ビューは次のとおりです。
+## スキャン処理
 
-- `songs`
-- `artists`
-- `artist_albums`
-- `albums`
-- `artist_tracks`
-- `album_tracks`
+1. 音楽ルートを再帰走査
+2. Windows長パスをファイルI/O用に変換
+3. ファイルサイズ、更新時刻、内容署名を確認
+4. ID3、音声情報、アートワークを解析
+5. 既存キャッシュまたは移動検出を利用
+6. トランザクションでDBを更新
+7. `scan_runs`と`scan_errors`へ結果を記録
+8. 診断JSON／CSVを生成
 
-利用者が識別されている場合、レスポンスへその利用者の`favorite`、`playCount`、`lastPlayedAt`等を結合します。
+DBには通常形式の相対パスを保存し、`\\?\`形式は保存しません。
 
-## 7. 再生
+## 再生処理
 
-MP3は再エンコードせずHTTPで配信します。ブラウザの`Range`要求へ`206 Partial Content`で応答し、シークと途中再生に対応します。
+ブラウザは曲IDでサーバーへ要求します。サーバーはDBから相対パスを取得し、音楽ルート配下であることを確認してからファイルを開き、`Range`に応じて`206 Partial Content`を返します。再エンコードは行いません。
 
-## 8. schema 5移行
+## スキーマ移行
 
-初回接続前にDB形式を確認し、v2.7.0より古いDBでは専用バックアップを作成します。schema 5作成、オーナー作成、旧共通状態の`user_track_state`移行、外部キー検査を一つのトランザクション内で実行します。
+スキーマ6から7では、移行前バックアップを作成・検証後、`playlists`と`playlist_tracks`を追加します。失敗時はロールバックし、スキーマ番号を更新しません。
 
-## 9. オーナー関連付け
+## 信頼境界
 
-```mermaid
-sequenceDiagram
-    participant LP as ローカルオーナー
-    participant S as server.py
-    participant TS as 本人のTailscale画面
-    participant DB as library.db
-
-    LP->>S: コード発行
-    S-->>LP: 一時コード
-    TS->>S: コードをclaim
-    S->>DB: 統合プレビュー
-    S-->>LP: 表示名・ログイン名・状態件数
-    LP->>S: 明示承認
-    S->>DB: 専用バックアップ
-    S->>DB: 個人状態統合・識別情報移動
-    S->>DB: foreign_key_check
-    S-->>LP: 完了
-```
-
-評価競合、識別情報の不整合、候補変更、期限切れがあれば処理を中止します。
-
-## 10. 外部接続
-
-サーバーはlocalhostへバインドしたまま、Tailscale ServeがHTTPSで中継します。
-
-```text
-スマートフォン
-  ↓ Tailscale認証済みHTTPS
-Tailscale Serve
-  ↓ 利用者ヘッダーを付与
-127.0.0.1:8765
-```
-
-Funnelやルーターのポート開放は使用しません。
+- ブラウザ入力はすべて未信頼
+- プレイリストID・曲IDだけで所有権を信頼しない
+- Tailscaleヘッダーは接続条件を満たす場合だけ信頼
+- ローカルオーナー用秘密はブラウザへ恒久保存しない
+- 静的配信は許可リスト方式

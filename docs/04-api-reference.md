@@ -6,47 +6,37 @@
 http://127.0.0.1:8765
 ```
 
-レスポンスはUTF-8 JSONです。APIとHTMLは`Cache-Control: no-store`です。
+レスポンスはUTF-8 JSONです。API、HTML、JSONは原則`Cache-Control: no-store`です。
 
-## 認証表記
+## 権限表記
 
-- **公開**: 匿名でも使用可能
-- **利用者**: ローカルオーナーCookieまたはTailscale利用者が必要
-- **オーナー**: ローカル／Tailscaleのオーナー
-- **ローカルオーナー**: 管理画面から開いた自宅PCだけ
-- **Tailscale利用者**: Tailscale Serveの利用者ヘッダー必須
+| 表記 | 意味 |
+|---|---|
+| 公開 | 匿名でも利用可能 |
+| 利用者 | ローカルオーナーまたは有効なTailscale利用者 |
+| オーナー | `isOwner=true`の利用者 |
+| ローカルオーナー | 管理画面から認証した自宅PCだけ |
+| ランチャー | control secretを持つローカルプロセス |
 
-## GET API
+## GET
 
-### `GET /api/health`
+| パス | 権限 | 内容 |
+|---|---|---|
+| `/api/health` | 公開 | サーバーとDB名 |
+| `/api/current-user` | 公開 | 現在の利用者、匿名状態、スキン |
+| `/api/home` | 公開 | ホーム統計と利用者別セクション |
+| `/api/browse` | 公開 | 曲・アーティスト・アルバム検索 |
+| `/api/tracks` | 公開 | 利用可能曲の互換一覧 |
+| `/api/stats` | 公開 | DB、schema、曲数、利用者別統計 |
+| `/api/users` | オーナー | 利用者管理一覧 |
+| `/api/backups` | ローカルオーナー | バックアップと復元状態 |
+| `/api/update-status` | オーナー | 現在版・最新版・確認状態 |
+| `/api/playlists` | 利用者 | 自分のプレイリスト一覧 |
+| `/api/playlists/{id}` | 利用者 | 自分のプレイリスト詳細と曲 |
+| `/api/owner-link/status?code=...` | ローカルオーナー | 関連付け状態 |
+| `/api/local-auth/exchange?token=...` | 一時トークン | Cookie発行とUI遷移 |
 
-権限: 公開
-
-```json
-{"ok":true,"database":"library.db"}
-```
-
-### `GET /api/current-user`
-
-権限: 公開
-
-```json
-{
-  "authenticated": true,
-  "id": "usr_...",
-  "displayName": "オーナー",
-  "isOwner": true,
-  "provider": "local_owner"
-}
-```
-
-匿名では`authenticated=false`、`id=null`です。
-
-### `GET /api/browse`
-
-権限: 公開。利用者が識別されていれば個人状態を付加。
-
-主なクエリ:
+### `/api/browse`の主なクエリ
 
 | 名前 | 内容 |
 |---|---|
@@ -57,199 +47,77 @@ http://127.0.0.1:8765
 | `sort` | 表示順 |
 | `latinOnly` | 英数字タイトルのみ |
 | `correctedOnly` | 補正済みのみ |
-| `favoriteOnly` | 現在の利用者のお気に入りのみ |
+| `favoriteOnly` | 現在利用者のお気に入りのみ |
 | `artistKey` | アーティスト文脈 |
 | `albumKey` | アーティスト内アルバム文脈 |
 | `albumTitle` | 全体アルバム文脈 |
 | `indexKey` | 索引キー |
 
-### `GET /api/tracks`
+### `/api/home`
 
-権限: 公開。利用者が識別されていれば個人状態を付加。
+現在利用者に応じて、最近再生、お気に入り、よく聴く曲、最近追加した曲と統計を返します。匿名では個人セクションを空または0として返します。
 
-利用可能な全曲を返す互換APIです。通常UIは`/api/browse`を使用します。
-
-### `GET /api/stats`
-
-権限: 公開
-
-主な項目:
+### `/api/stats`の代表例
 
 ```json
 {
-  "database":"library.db",
-  "schemaVersion":5,
-  "totalRows":8280,
-  "availableTracks":8279,
-  "unavailableTracks":1,
-  "artworkTracks":7507,
-  "totalPlays":42,
-  "favoriteTracks":3,
-  "latestScan":{}
+  "database": "library.db",
+  "schemaVersion": 7,
+  "availableTracks": 8480,
+  "artworkTracks": 7708,
+  "totalPlays": 270,
+  "favoriteTracks": 4,
+  "latestScan": {}
 }
 ```
 
-`totalPlays`と`favoriteTracks`は現在の利用者単位です。匿名では0です。
+数値は利用環境で変わります。`totalPlays`と`favoriteTracks`は現在利用者単位です。
 
-### `GET /api/users`
+## POST
 
-権限: オーナー
+| パス | 権限 | 内容 |
+|---|---|---|
+| `/api/local-auth/token` | ランチャー | ワンタイムトークン登録 |
+| `/api/tracks/{id}/played` | 利用者 | 再生回数・最終再生更新 |
+| `/api/tracks/{id}/favorite` | 利用者 | お気に入り更新 |
+| `/api/tracks/{id}/title-correction` | オーナー | 曲名表示補正 |
+| `/api/artists/{id}/correction` | オーナー | アーティスト表示補正 |
+| `/api/users/{id}/active` | ローカルオーナー | 利用者停止・再開 |
+| `/api/me/skin` | 利用者 | スキン保存 |
+| `/api/backups/create` | ローカルオーナー | DBバックアップ作成 |
+| `/api/backups/restore` | ローカルオーナー | 次回起動時の復元予約 |
+| `/api/backups/restore/cancel` | ローカルオーナー | 復元予約取消 |
+| `/api/playlists` | 利用者 | プレイリスト作成 |
+| `/api/playlists/{id}/tracks` | 利用者 | 曲追加 |
+| `/api/playlists/{id}/tracks/order` | 利用者 | 曲順更新 |
+| `/api/owner-link/start` | ローカルオーナー | 関連付け開始 |
+| `/api/owner-link/claim` | Tailscale利用者 | コード申請 |
+| `/api/owner-link/confirm` | ローカルオーナー | 統合確認 |
+| `/api/owner-link/cancel` | ローカルオーナー | 取消 |
 
-現在の閲覧者と利用者一覧を返します。
+## PATCH／DELETE
 
-### `GET /api/owner-link/status?code=...`
+| メソッド・パス | 権限 | 内容 |
+|---|---|---|
+| `PATCH /api/playlists/{id}` | 利用者 | 自分のプレイリスト名変更 |
+| `DELETE /api/playlists/{id}` | 利用者 | 自分のプレイリスト削除 |
+| `DELETE /api/playlists/{id}/tracks/{trackId}` | 利用者 | 曲を外す |
 
-権限: ローカルオーナー
+## プレイリストのエラー
 
-関連付けチャレンジの状態と候補を返します。
+- 未認証: `401`
+- 他利用者のIDまたは存在しないID: 情報漏えいを避けて`404`
+- 同名または同一曲の重複: `409`
+- 不正な名前、空配列、重複した曲順: `400`
 
-### `GET /api/local-auth/exchange?token=...`
+## 音楽・アートワーク配信
 
-権限: 有効な一時トークン
+UIが返すURLからMP3と画像を取得します。MP3は`Range`を受け付け、`206 Partial Content`、`Content-Range`、`Accept-Ranges: bytes`を返します。DBや任意のローカルパスは配信しません。
 
-一時トークンをローカルオーナーCookieへ交換し、`303`でUIへリダイレクトします。通常はランチャーが生成するURLから使用し、手動で呼び出しません。
+## キャッシュとセキュリティ
 
-## POST API
-
-### `POST /api/local-auth/token`
-
-権限: ランチャー制御秘密
-
-ヘッダー:
-
-```text
-X-Music-Library-Control-Secret: <launcher-secret>
-```
-
-本文:
-
-```json
-{"token":"...","expiresInSeconds":60}
-```
-
-成功: `201 Created`
-
-### `POST /api/tracks/{trackId}/played`
-
-権限: 公開。匿名では`200 OK`のまま`recorded=false`を返し、個人状態を作成しません。停止中・不正な利用者IDでは`403`です。
-
-成功例:
-
-```json
-{"id":"trk_...","playCount":4,"lastPlayedAt":"...","recorded":true}
-```
-
-### `POST /api/tracks/{trackId}/favorite`
-
-権限: 利用者
-
-```json
-{"favorite":true}
-```
-
-サーバー側トグルではなく、希望状態を明示します。
-
-### `POST /api/tracks/{trackId}/title-correction`
-
-権限: 現行実装では公開
-
-```json
-{"value":"正式な曲名"}
-```
-
-`null`または空文字で解除します。
-
-### `POST /api/artists/{artistId}/correction`
-
-権限: 現行実装では公開
-
-```json
-{"value":"正式なアーティスト名"}
-```
-
-### `POST /api/users/{userId}/active`
-
-権限: ローカルオーナー
-
-```json
-{"active":false}
-```
-
-オーナー自身は無効化できません。
-
-### `POST /api/owner-link/start`
-
-権限: ローカルオーナー
-
-```json
-{"expiresInSeconds":300}
-```
-
-成功例:
-
-```json
-{"code":"...","expiresInSeconds":300,"status":"waiting_for_tailscale"}
-```
-
-### `POST /api/owner-link/claim`
-
-権限: Tailscale利用者
-
-```json
-{"code":"..."}
-```
-
-候補の個人状態をプレビューし、ローカル側の承認待ちにします。
-
-### `POST /api/owner-link/confirm`
-
-権限: ローカルオーナー
-
-```json
-{
-  "code":"...",
-  "userId":"usr_...",
-  "subject":"tailscale-login"
-}
-```
-
-候補を再照合し、バックアップ作成、状態統合、識別情報移動を実行します。
-
-### `POST /api/owner-link/cancel`
-
-権限: ローカルオーナー
-
-```json
-{"code":"..."}
-```
-
-## メディア配信
-
-MP3はRange要求を受け付けます。
-
-```http
-Range: bytes=1000000-
-```
-
-部分応答:
-
-```http
-HTTP/1.1 206 Partial Content
-Accept-Ranges: bytes
-Content-Range: bytes ...
-```
-
-## 代表的なHTTP状態
-
-| 状態 | 用途 |
-|---|---|
-| `200` | 成功 |
-| `201` | トークン、関連付けコード等の作成 |
-| `303` | ローカルオーナーCookie交換後のリダイレクト |
-| `400` | JSON、型、クエリ不正 |
-| `401` | 利用者識別が必要 |
-| `403` | オーナー／ローカルオーナー／Tailscale権限不足 |
-| `404` | 曲、利用者、コード、APIなし |
-| `409` | オーナー停止、候補競合、評価競合等 |
-| `410` | 関連付けコード期限切れ |
-| `500` | DB・走査・内部処理エラー |
+- API: `no-store`
+- 認証Cookie: `HttpOnly; SameSite=Strict`
+- 認証交換: CSP、`X-Frame-Options: DENY`、明示的接続終了
+- 静的ファイル: 許可リストとルート配下検証
+- PWA: API、音楽、DB、バックアップ、アートワークをキャッシュしない

@@ -1,5 +1,5 @@
 自宅音楽ライブラリ v2.7.5
-GitHub Release設定
+GitHub Release情報
 ================================
 
 タグ:
@@ -8,10 +8,16 @@ v2.7.5
 タイトル:
 自宅音楽ライブラリ v2.7.5
 
-本文:
-RELEASE_NOTES_v2.7.5.mdを使用します。
+公開日:
+2026-08-03
 
-添付:
+状態:
+公開完了（ユーザー報告で確認）
+
+本文:
+RELEASE_NOTES_v2.7.5.md
+
+代表的な添付:
 ・MusicLibrary-Setup-2.7.5-x64.exe
 ・SHA256SUMS.txt
 ・README_USER.txt
@@ -19,12 +25,21 @@ RELEASE_NOTES_v2.7.5.mdを使用します。
 ・REMOTE_ACCESS_FAMILY.txt
 ・RELEASE_NOTES_v2.7.5.md
 
-設定:
-・Draftとして自動作成
-・Set as a pre-releaseを有効
-・内容と添付を人が確認後、Publish releaseを手動実行
+正式版ビルドの基準:
+・組み込みバージョン 2.7.5
+・DBスキーマ 7
+・全ソース回帰試験合格
+・EXEスモーク試験合格
+・Inno Setupコンパイル合格
+・プレイリストとスマートフォン本番表示の実機確認
 
-公開後の確認:
-・アプリの新版通知でv2.7.5が最新版と表示される
-・Release Assetsをダウンロードできる
-・SHA256SUMS.txtとSetup.exeのSHA-256が一致する
+公開後に確認する項目:
+・Release URLが/releases/tag/v2.7.5
+・タグとタイトルが一致
+・6個のAssetsが取得可能
+・Setup.exeとSHA256SUMS.txtが一致
+・アプリの新版通知でv2.7.5が最新版と表示
+
+注記:
+本監査時点で、公開後の新版通知画面は共有されていません。
+公開済みタグやRelease Assetsは文書更新で変更しません。

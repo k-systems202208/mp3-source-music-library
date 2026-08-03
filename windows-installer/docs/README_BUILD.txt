@@ -1,48 +1,53 @@
 自宅音楽ライブラリ v2.7.5
-配布用インストーラーの作成方法
+ビルド手順
 ================================
 
-位置づけ
---------
-このソースは、実機確認済みv2.7.5 RC2と同じ機能コードを使用します。
-正式Release準備ではREADME・利用ガイド・Release文書を最新化した後、
-同じ回帰試験とビルドを再実行します。
+前提
+----
+・Windows 10／11 64bit
+・Python 3.13系
+・Inno Setup 6
+・Git
+・短い作業パス
+・インターネット接続（依存取得時）
 
-完成物
+推奨配置
+--------
+C:\ML275Build
+
+実行
+----
+00_build_installer.bat
+
+処理
+----
+1. パッケージマニフェスト確認
+2. Python仮想環境作成
+3. PyInstaller依存導入
+4. 全ソース回帰試験
+5. PyInstallerで実行ファイル作成
+6. 組み込みEXEスモーク試験
+7. Inno Setupでインストーラー作成
+8. SHA-256、BUILD LOG、BUILD REPORT作成
+
+成果物
 ------
 release\MusicLibrary-Setup-2.7.5-x64.exe
 release\MusicLibrary-Setup-2.7.5-x64_SHA256.txt
-release\BUILD_REPORT_v2.7.5_RC2.txt
-release\BUILD_LOG_v2.7.5_RC2.txt
+release\BUILD_LOG_v2.7.5_*.txt
+release\BUILD_REPORT_v2.7.5_*.txt
 
-必要なもの
-----------
-・Windows 10または11 64bit
-・64bit版Python 3
-・Inno Setup 6または7
-
-ビルド
+整合性
 ------
-短いパス（例 C:\ML275Build）へ配置し、
-00_build_installer.batをダブルクリックします。
+・launcher、paths、update checker、server、EXE metadata、installerが2.7.5
+・database SCHEMA_VERSIONが7
+・Service Workerが本番プレイリストUIの更新を反映
+・Release Notesと利用者文書が2.7.5
 
-自動実行する内容:
-1. パッケージSHA-256検証
-2. Windows BATのBOM・改行・パス検査
-3. Pythonソースのコンパイル検査
-4. 全機能の回帰試験
-5. DBスキーマ7と移行前バックアップの検査
-6. 利用者別プレイリストのDB・API・画面検査
-7. 本番画面のプレビュー案内除去とスマートフォンタブ検査
-8. バックアップ・復元の検査
-9. PWA・スマートフォン表示の検査
-10. 長いWindowsパスの走査・タグ・アートワーク・Range再生検査
-11. 起動時オーナー認証の連続ハンドオフ検査
-12. v2.7.5のバージョン整合性検査
-13. Python不要のMusicLibrary.exe作成
-14. 空の音楽フォルダを使った起動試験
-15. Inno SetupによるSetup.exe作成
-16. Setup.exeのSHA-256とビルド報告作成
-
-成功時:
-BUILD COMPLETED
+注意
+----
+・長い作業パスはPyInstaller等の障害要因になるため避ける
+・ビルド中に実運用DBやMP3を参照・変更しない
+・テスト失敗時はインストーラーを公開しない
+・RC文書は履歴であり、正式版の現行文書を優先
+・公開済みv2.7.5を再ビルドしてAssetsを暗黙差替えしない
