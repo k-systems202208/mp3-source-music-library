@@ -17,6 +17,13 @@ v2.7.4以前からの初回起動ではDBをスキーマ7へ更新し、移行�
 
 ## 2. ライブラリ開始
 
+<!-- USER_MANUAL_GIF_START:library-start -->
+<p align="center">
+  <img src="assets/user-manual-library-home.gif" alt="ライブラリ開始からホーム画面利用までのイメージ" width="720">
+</p>
+<p align="center"><em>ライブラリ開始後は、ホーム画面から最近再生やお気に入りをすぐ開けます。</em></p>
+<!-- USER_MANUAL_GIF_END:library-start -->
+
 初回は管理画面でMP3フォルダーを選択し、「ライブラリを開始」を押します。走査完了後、ブラウザが自動で開きます。
 
 起動直後に認証画面で止まった場合は、管理画面の「ブラウザで開く」を押します。v2.7.4以降では自動遷移の安定化を実装しています。繰り返す場合は[トラブルシューティング](08-troubleshooting.md)を参照してください。
@@ -60,6 +67,13 @@ MP3は再エンコードしません。
 認証済み利用者では、お気に入り、再生回数、最終再生日時を個別保存します。他の家族の状態とは混ざりません。匿名接続では保存しません。
 
 ## 7. プレイリスト
+
+<!-- USER_MANUAL_GIF_START:playlists -->
+<p align="center">
+  <img src="assets/user-manual-playlists.gif" alt="プレイリスト作成と再生のイメージ" width="720">
+</p>
+<p align="center"><em>プレイリストを作成し、曲順を調整して、そのまままとめ再生できます。</em></p>
+<!-- USER_MANUAL_GIF_END:playlists -->
 
 ### 作成
 
@@ -105,6 +119,13 @@ MP3は再エンコードしません。
 「今すぐ確認」でGitHub Releaseを確認します。自動インストールはしません。通信失敗しても検索・再生には影響しません。
 
 ## 11. スマートフォンのホーム画面
+
+<!-- USER_MANUAL_GIF_START:smartphone-home -->
+<p align="center">
+  <img src="assets/user-manual-smartphone-home.gif" alt="スマートフォンのホーム画面追加イメージ" width="720">
+</p>
+<p align="center"><em>TailscaleのHTTPS URLをホーム画面に追加すると、専用アイコンから開きやすくなります。</em></p>
+<!-- USER_MANUAL_GIF_END:smartphone-home -->
 
 普段使用するTailscaleのHTTPS URLを開いて追加します。
 
