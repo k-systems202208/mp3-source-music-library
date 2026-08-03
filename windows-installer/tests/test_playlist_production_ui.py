@@ -30,6 +30,6 @@ for required in (
     assert required in view_tab_block, required
 
 # Invalidate the RC1 PWA shell so iPhone/Android receives the corrected HTML.
-assert "music-library-shell-v2.7.5-rc2" in worker
+assert "music-library-shell-v2.7.6" in worker
 
 print("Production playlist banner removal, PWA cache refresh and mobile tab tests passed.")

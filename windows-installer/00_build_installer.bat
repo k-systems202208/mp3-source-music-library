@@ -2,13 +2,13 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-set "BUILD_LOG=%CD%\release\BUILD_LOG_v2.7.5_RC2.txt"
-set "BUILD_REPORT=%CD%\release\BUILD_REPORT_v2.7.5_RC2.txt"
-set "INSTALLER=%CD%\release\MusicLibrary-Setup-2.7.5-x64.exe"
-set "HASH_FILE=%CD%\release\MusicLibrary-Setup-2.7.5-x64_SHA256.txt"
+set "BUILD_LOG=%CD%\release\BUILD_LOG_v2.7.6.txt"
+set "BUILD_REPORT=%CD%\release\BUILD_REPORT_v2.7.6.txt"
+set "INSTALLER=%CD%\release\MusicLibrary-Setup-2.7.6-x64.exe"
+set "HASH_FILE=%CD%\release\MusicLibrary-Setup-2.7.6-x64_SHA256.txt"
 
 if not exist "release" mkdir "release"
-> "%BUILD_LOG%" echo Music Library v2.7.5 RC2 Build Log
+> "%BUILD_LOG%" echo Music Library v2.7.6 Release Build Log
 >>"%BUILD_LOG%" echo ======================================
 >>"%BUILD_LOG%" echo Started: %DATE% %TIME%
 >>"%BUILD_LOG%" echo Package: %CD%
@@ -16,7 +16,7 @@ if not exist "release" mkdir "release"
 
 echo.
 echo ============================================================
-echo Music Library v2.7.5 RC2 installer build
+echo Music Library v2.7.6 Release installer build
 echo ============================================================
 echo.
 echo This step builds the installer only.
@@ -144,9 +144,9 @@ if not exist "dist\MusicLibrary\MusicLibrary.exe" (
 
 echo Checking bundled version...
 for /f "delims=" %%V in ('"dist\MusicLibrary\MusicLibrary.exe" --version') do set "BUNDLED_VERSION=%%V"
-if not "%BUNDLED_VERSION%"=="2.7.5" (
-  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.5".
-  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.5".>>"%BUILD_LOG%"
+if not "%BUNDLED_VERSION%"=="2.7.6" (
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.6".
+  echo ERROR: Bundled version is "%BUNDLED_VERSION%"; expected "2.7.6".>>"%BUILD_LOG%"
   goto :error
 )
 
@@ -186,21 +186,21 @@ if exist "%INSTALLER%" del /q "%INSTALLER%"
 if errorlevel 1 goto :error
 
 if not exist "%INSTALLER%" (
-  echo ERROR: The v2.7.5 installer was not created.
-  echo ERROR: The v2.7.5 installer was not created.>>"%BUILD_LOG%"
+  echo ERROR: The v2.7.6 installer was not created.
+  echo ERROR: The v2.7.6 installer was not created.>>"%BUILD_LOG%"
   goto :error
 )
 
 echo Calculating SHA-256...
-powershell.exe -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath '%INSTALLER%').Hash.ToLower(); Set-Content -LiteralPath '%HASH_FILE%' -Value ($h + '  MusicLibrary-Setup-2.7.5-x64.exe') -Encoding ascii; Write-Output $h" > "%TEMP%\music-library-v275-hash.txt"
+powershell.exe -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath '%INSTALLER%').Hash.ToLower(); Set-Content -LiteralPath '%HASH_FILE%' -Value ($h + '  MusicLibrary-Setup-2.7.6-x64.exe') -Encoding ascii; Write-Output $h" > "%TEMP%\music-library-v276-hash.txt"
 if errorlevel 1 goto :error
-set /p "INSTALLER_HASH="<"%TEMP%\music-library-v275-hash.txt"
-del /q "%TEMP%\music-library-v275-hash.txt" >nul 2>&1
+set /p "INSTALLER_HASH="<"%TEMP%\music-library-v276-hash.txt"
+del /q "%TEMP%\music-library-v276-hash.txt" >nul 2>&1
 
-> "%BUILD_REPORT%" echo Music Library v2.7.5 RC2 Build Report
+> "%BUILD_REPORT%" echo Music Library v2.7.6 Release Build Report
 >>"%BUILD_REPORT%" echo =======================================
 >>"%BUILD_REPORT%" echo Finished: %DATE% %TIME%
->>"%BUILD_REPORT%" echo Installer: MusicLibrary-Setup-2.7.5-x64.exe
+>>"%BUILD_REPORT%" echo Installer: MusicLibrary-Setup-2.7.6-x64.exe
 >>"%BUILD_REPORT%" echo SHA256: %INSTALLER_HASH%
 >>"%BUILD_REPORT%" echo Bundled version: %BUNDLED_VERSION%
 >>"%BUILD_REPORT%" echo.
@@ -208,7 +208,7 @@ del /q "%TEMP%\music-library-v275-hash.txt" >nul 2>&1
 >>"%BUILD_REPORT%" echo Bundled executable smoke test passed.
 >>"%BUILD_REPORT%" echo Inno Setup compilation passed.
 >>"%BUILD_REPORT%" echo.
->>"%BUILD_REPORT%" echo This RC2 installer has not yet been installed on the live system.
+>>"%BUILD_REPORT%" echo This release installer has not yet been installed on the live system.
 
 >>"%BUILD_LOG%" echo.
 >>"%BUILD_LOG%" echo BUILD COMPLETED
@@ -227,11 +227,11 @@ echo SHA256:
 echo %INSTALLER_HASH%
 echo.
 echo IMPORTANT:
-echo Do not install this RC2 yet.
-echo Share BUILD_REPORT_v2.7.5_RC2.txt or the final screen first.
+echo Review this release build before publishing.
+echo Review BUILD_REPORT_v2.7.6.txt and SHA-256 before publishing.
 echo.
-start "" explorer.exe "%CD%\release"
-pause
+if not defined MUSIC_LIBRARY_NONINTERACTIVE start "" explorer.exe "%CD%\release"
+if not defined MUSIC_LIBRARY_NONINTERACTIVE pause
 exit /b 0
 
 :RUN_TEST

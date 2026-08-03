@@ -140,7 +140,7 @@ BLOCKED_STATIC_NAMES = {
 class MusicLibraryHandler(SimpleHTTPRequestHandler):
     """SQLite API and UTF-8 static server with MP3 byte-range support."""
 
-    server_version = "MusicLibrary/SQLiteAPI2.7.5"
+    server_version = "MusicLibrary/SQLiteAPI2.7.6"
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
         ".html": "text/html; charset=utf-8",
@@ -1458,6 +1458,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         return value
 
     def handle_title_correction(self, track_id: str) -> None:
+        if self._require_owner() is None:
+            return
+
         try:
             body = self.read_json_body()
             value = body.get("value")
@@ -1479,6 +1482,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             )
 
     def handle_artist_correction(self, artist_id: str) -> None:
+        if self._require_owner() is None:
+            return
+
         try:
             body = self.read_json_body()
             value = body.get("value")

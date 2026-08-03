@@ -420,24 +420,11 @@
     transition:color .12s ease, border-color .12s ease;
   }
   .card .meta a.xref:hover{color:var(--stamp); border-bottom-color:var(--stamp);}
-  .card .meta a.xref.corrected{color:var(--stamp); border-bottom-style:solid;}
   .card .meta .artist-wrap{display:inline-flex; align-items:center; gap:1px;}
   .card .meta .icon-btn{font-size:11px; opacity:.45;}
 
   .title-row{display:flex; align-items:baseline; gap:6px;}
   .title-row .title{flex:1; min-width:0;}
-  .title-row .title.corrected::after{
-    content:"訂正済";
-    font-family:'JetBrains Mono', monospace;
-    font-size:9px;
-    color:var(--stamp);
-    border:1px solid var(--stamp);
-    border-radius:2px;
-    padding:0 4px;
-    margin-left:8px;
-    vertical-align:middle;
-    letter-spacing:.02em;
-  }
   .icon-btn{
     background:none;
     border:none;
@@ -594,6 +581,17 @@
   }
   .player-title{font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .player-artist{font-size:11px; color:rgba(239,232,216,.7); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .player-meta-link{
+    color:inherit;
+    text-decoration:none;
+    border-bottom:1px dotted rgba(239,232,216,.52);
+    cursor:pointer;
+  }
+  .player-meta-link:hover,
+  .player-meta-link:focus-visible{
+    color:var(--paper);
+    border-bottom-color:var(--brass);
+  }
   .player-control-deck{
     min-width:0;
     display:grid;
@@ -2347,7 +2345,6 @@
     </div>
     <div class="toggle-row" id="toggleRow">
       <button type="button" class="pill-btn" id="btnLatin">英数字タイトルのみ</button>
-      <button type="button" class="pill-btn" id="btnCorrectedOnly">訂正済のみ</button>
       <button type="button" class="pill-btn" id="btnFavoritesOnly" aria-pressed="false" title="利用者を確認するとお気に入りだけを表示できます">☆ お気に入りのみ</button>
     </div>
     <div class="sort-row" id="sortRow">
@@ -2649,7 +2646,6 @@
     selectedAlbumKey: null,
     selectedAlbumTitle: '',
     filterLatin: false,
-    filterCorrectedOnly: false,
     filterFavoritesOnly: false,
     sort: 'title',
     indexKey: '',
@@ -2696,7 +2692,6 @@
     kanaIndex: document.getElementById('kanaIndex'),
     toggleRow: document.getElementById('toggleRow'),
     btnLatin: document.getElementById('btnLatin'),
-    btnCorrectedOnly: document.getElementById('btnCorrectedOnly'),
     btnFavoritesOnly: document.getElementById('btnFavoritesOnly'),
     sortRow: document.getElementById('sortRow'),
     sortSelect: document.getElementById('sortSelect'),
@@ -3055,7 +3050,6 @@
     const albumDetail = renderKind === 'song-in-album' || renderKind === 'song-in-album-global';
     els.sortRow.style.display = isSongLevel() && !albumDetail ? 'flex' : 'none';
     els.btnLatin.classList.toggle('active', state.filterLatin);
-    els.btnCorrectedOnly.classList.toggle('active', state.filterCorrectedOnly);
     updateFavoriteFilterButton();
     if (state.sort !== 'album_order') els.sortSelect.value = state.sort;
     renderCatalogIndex();
@@ -3142,7 +3136,6 @@
       offset: String(offset),
       sort: state.sort,
       latinOnly: state.filterLatin ? '1' : '0',
-      correctedOnly: state.filterCorrectedOnly ? '1' : '0',
     });
     if (isSongLevel() && state.filterFavoritesOnly) params.set('favoriteOnly', '1');
     if (state.selectedArtistKey) params.set('artistKey', state.selectedArtistKey);
@@ -3253,7 +3246,7 @@
     els.pwaGuideText.textContent = guide;
 
     if (PWA_PREVIEW_MODE) {
-      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.5 RCのTailscale URLで確認します。');
+      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.6のTailscale URLで確認します。');
     } else if (provider === 'tailscale') {
       setMessage(els.pwaInstallMessage, 'この接続先を追加すると、Tailscale接続時にホーム画面から直接開けます。', 'success');
     } else if (provider === 'local_owner' || isLocalPwaOrigin()) {
@@ -3763,7 +3756,7 @@
     } catch (error) {
       if (serial !== updateRequestSerial) return;
       renderUpdateStatus({
-        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.5',
+        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.6',
         latestVersion: '',
         updateAvailable: false,
         source: 'error',
@@ -4186,6 +4179,31 @@
     void reloadBrowse();
   }
 
+  function openTrackMetadataView(track, type){
+    if (!track) return;
+    if (type === 'artist') {
+      state.view = 'artists';
+      state.indexKey = '';
+      state.selectedArtistKey = track.artistDbId || UNKNOWN_ARTIST_KEY;
+      state.selectedArtistLabel = track.artist || ARTIST_FALLBACK;
+      state.selectedAlbumKey = null;
+      state.selectedAlbumTitle = '';
+      state.sort = 'title';
+    } else if (type === 'album') {
+      state.view = 'albums';
+      state.indexKey = '';
+      state.selectedArtistKey = null;
+      state.selectedArtistLabel = '';
+      state.selectedAlbumKey = null;
+      state.selectedAlbumTitle = track.album || ALBUM_FALLBACK;
+      state.sort = 'album_order';
+    } else {
+      return;
+    }
+    els.search.value = '';
+    void reloadBrowse();
+  }
+
   function captureHomePlaybackContext(sectionKey, trackId){
     if (!homeData || !homeData[sectionKey]) return;
     const section = homeData[sectionKey];
@@ -4195,7 +4213,6 @@
       view:'songs',
       sort:String(section.sort || 'title'),
       latinOnly:'0',
-      correctedOnly:'0',
     });
     if (section.favoriteOnly) params.set('favoriteOnly', '1');
     if (section.playedOnly) params.set('playedOnly', '1');
@@ -4305,11 +4322,12 @@
   function songCardHtml(track, options){
     options = options || {};
     const showMeta = options.showMeta !== false;
+    const editable = canEditMetadata();
     let metaHtml = '';
     if (showMeta) {
       const albumHtml = track.album ? `<span><span class="label">album</span><a class="xref" data-type="album">${escapeHtml(track.album)}</a></span>` : '';
-      const artistEdit = track.artistDbId ? `<button type="button" class="icon-btn" data-action="edit-artist" title="アーティスト名を編集（同じアーティストの全曲に反映）">✎</button>` : '';
-      const artistHtml = track.artist ? `<span class="artist-wrap"><span class="label">artist</span><a class="xref${track.isArtistCorrected ? ' corrected' : ''}" data-type="artist">${escapeHtml(track.artist)}</a>${artistEdit}</span>` : '';
+      const artistEdit = editable && track.artistDbId ? `<button type="button" class="icon-btn" data-action="edit-artist" title="アーティスト名を編集（同じアーティストの全曲に反映）">✎</button>` : '';
+      const artistHtml = track.artist ? `<span class="artist-wrap"><span class="label">artist</span><a class="xref" data-type="artist">${escapeHtml(track.artist)}</a>${artistEdit}</span>` : '';
       metaHtml = [albumHtml, artistHtml].filter(Boolean).join('<span class="sep">・</span>');
     } else {
       const bits = [];
@@ -4333,8 +4351,8 @@
       <div class="info"><div class="song-main${track.artworkUrl ? ' has-artwork' : ''}">
         ${artworkHtml}<div class="song-text">
           <div class="title-row">
-            <span class="title${track.isCorrected ? ' corrected' : ''}" data-role="title-text">${escapeHtml(track.name || '(無題)')}</span>
-            <button type="button" class="icon-btn" data-action="edit" title="表記を編集">✎</button>
+            <span class="title" data-role="title-text">${escapeHtml(track.name || '(無題)')}</span>
+            ${editable ? '<button type="button" class="icon-btn" data-action="edit" title="曲名を編集">✎</button>' : ''}
             <a class="icon-btn" href="${searchUrl}" target="_blank" rel="noopener" title="正式表記を検索で確認">🔍</a>
           </div>
           <div class="meta">${metaHtml}</div>
@@ -4352,11 +4370,11 @@
   }
 
   function artistCardHtml(group){
-    const edit = group.key !== UNKNOWN_ARTIST_KEY
+    const edit = canEditMetadata() && group.key !== UNKNOWN_ARTIST_KEY
       ? `<button type="button" class="icon-btn" data-action="edit-artist-group" title="アーティスト名を編集（全曲に反映）">✎</button>`
       : '';
     return `<div class="card clickable" data-artist-key="${escapeHtml(group.key)}" data-artist-label="${escapeHtml(group.display)}">
-      <div class="info"><div class="title-row"><span class="title${group.isCorrected ? ' corrected' : ''}">${escapeHtml(group.display || ARTIST_FALLBACK)}</span>${edit}</div><div class="meta">${Number(group.albumCount || 0).toLocaleString()} アルバム</div></div>
+      <div class="info"><div class="title-row"><span class="title">${escapeHtml(group.display || ARTIST_FALLBACK)}</span>${edit}</div><div class="meta">${Number(group.albumCount || 0).toLocaleString()} アルバム</div></div>
       <div class="side"><span class="count-badge">${Number(group.count || 0).toLocaleString()}曲</span><span class="chevron">›</span></div>
     </div>`;
   }
@@ -4391,6 +4409,8 @@
   }
 
   let currentTrackId = null;
+  let currentPlayerTrack = null;
+  let playerMetadataMessage = '';
   let playCountRecordedForCurrentLoad = false;
   let playbackContext = null;
   let playbackTransitioning = false;
@@ -4581,6 +4601,10 @@
     });
   }
 
+  function canEditMetadata(){
+    return Boolean(currentUser && currentUser.authenticated && currentUser.isOwner);
+  }
+
   async function setTrackFavorite(track, favorite, button){
     if (!currentUser || !currentUser.authenticated) {
       alert('お気に入りを保存するには、管理画面またはTailscale経由で利用者を確認してください。');
@@ -4630,12 +4654,39 @@
     });
   }
 
+  function renderPlayerMetadata(container, track){
+    container.replaceChildren();
+    const parts = [
+      {type:'artist', label:track && track.artist ? String(track.artist) : ''},
+      {type:'album', label:track && track.album ? String(track.album) : ''},
+    ].filter(part => part.label);
+    parts.forEach((part, index) => {
+      if (index > 0) container.append(document.createTextNode(' · '));
+      const link = document.createElement('a');
+      link.href = '#';
+      link.className = 'player-meta-link';
+      link.dataset.playerBrowse = part.type;
+      link.textContent = part.label;
+      link.title = part.type === 'artist'
+        ? 'このアーティストを表示'
+        : 'このアルバムを表示';
+      container.append(link);
+    });
+  }
+
+  function setPlayerMetadataMessage(message){
+    playerMetadataMessage = String(message || '');
+    els.playerArtist.textContent = playerMetadataMessage;
+  }
+
   function setPlayerTrack(track){
     currentTrackId = track.id;
+    currentPlayerTrack = track;
+    playerMetadataMessage = '';
     playCountRecordedForCurrentLoad = false;
     els.audioPlayer.src = track.audioUrl;
     els.playerTitle.textContent = track.name || '(無題)';
-    els.playerArtist.textContent = [track.artist, track.album].filter(Boolean).join(' · ');
+    renderPlayerMetadata(els.playerArtist, track);
     if (track.artworkUrl) {
       els.playerArtwork.src = track.artworkUrl;
       els.playerArtwork.hidden = false;
@@ -4669,7 +4720,7 @@
       return true;
     } catch (error) {
       console.error('MP3再生エラー:', error);
-      els.playerArtist.textContent = 'MP3を再生できませんでした。ファイル名や形式を確認してください。';
+      setPlayerMetadataMessage('MP3を再生できませんでした。ファイル名や形式を確認してください。');
       if (!els.playerModal.hidden) syncPlayerModal();
       updatePlayButtons();
       return false;
@@ -4747,7 +4798,7 @@
       return played;
     } catch (error) {
       console.error('曲送りエラー:', error);
-      els.playerArtist.textContent = '次の曲を取得できませんでした。もう一度お試しください。';
+      setPlayerMetadataMessage('次の曲を取得できませんでした。もう一度お試しください。');
       if (!els.playerModal.hidden) syncPlayerModal();
       return false;
     } finally {
@@ -4761,7 +4812,8 @@
 
   function syncPlayerModal(){
     els.playerModalTitle.textContent = els.playerTitle.textContent || '—';
-    els.playerModalArtist.textContent = els.playerArtist.textContent || '';
+    if (playerMetadataMessage) els.playerModalArtist.textContent = playerMetadataMessage;
+    else renderPlayerMetadata(els.playerModalArtist, currentPlayerTrack);
     const artworkSrc = els.playerArtwork.getAttribute('src');
     if (artworkSrc && !els.playerArtwork.hidden) {
       els.playerModalArtwork.src = artworkSrc;
@@ -4803,6 +4855,8 @@
     els.audioPlayer.removeAttribute('src');
     els.audioPlayer.load();
     currentTrackId = null;
+    currentPlayerTrack = null;
+    playerMetadataMessage = '';
     playCountRecordedForCurrentLoad = false;
     playbackContext = null;
     shuffleOrder = [];
@@ -4838,6 +4892,7 @@
   }
 
   function startEditTitle(button){
+    if (!canEditMetadata()) return;
     const card = button.closest('.card[data-id]');
     const track = card ? idMap.get(card.dataset.id) : null;
     if (!track) return;
@@ -4872,6 +4927,7 @@
   }
 
   function startEditArtist(button, artistId, currentDisplay){
+    if (!canEditMetadata()) return;
     if (!artistId || artistId === UNKNOWN_ARTIST_KEY) return;
     const target = button.closest('.title-row')?.querySelector('.title') || button.closest('.artist-wrap')?.querySelector('a.xref');
     if (!target) return;
@@ -4897,7 +4953,9 @@
             const current = idMap.get(currentTrackId);
             if (current && current.artistDbId === artistId) {
               current.artist = result.artist;
-              els.playerArtist.textContent = [current.artist, current.album].filter(Boolean).join(' · ');
+              currentPlayerTrack = current;
+              playerMetadataMessage = '';
+              renderPlayerMetadata(els.playerArtist, current);
               if (!els.playerModal.hidden) syncPlayerModal();
             }
           }
@@ -5276,10 +5334,6 @@
     state.filterLatin = !state.filterLatin;
     void reloadBrowse();
   });
-  els.btnCorrectedOnly.addEventListener('click', () => {
-    state.filterCorrectedOnly = !state.filterCorrectedOnly;
-    void reloadBrowse();
-  });
   els.btnFavoritesOnly.addEventListener('click', () => {
     if (!currentUser || !currentUser.authenticated || !isSongLevel()) return;
     state.filterFavoritesOnly = !state.filterFavoritesOnly;
@@ -5350,25 +5404,7 @@
       const card = xref.closest('.card[data-id]');
       const track = card ? idMap.get(card.dataset.id) : null;
       if (!track) return;
-      if (xref.dataset.type === 'artist') {
-        state.view = 'artists';
-        state.indexKey = '';
-        state.selectedArtistKey = track.artistDbId || UNKNOWN_ARTIST_KEY;
-        state.selectedArtistLabel = track.artist || ARTIST_FALLBACK;
-        state.selectedAlbumKey = null;
-        state.selectedAlbumTitle = '';
-        state.sort = 'title';
-      } else {
-        state.view = 'albums';
-        state.indexKey = '';
-        state.selectedArtistKey = null;
-        state.selectedArtistLabel = '';
-        state.selectedAlbumKey = null;
-        state.selectedAlbumTitle = track.album || ALBUM_FALLBACK;
-        state.sort = 'album_order';
-      }
-      els.search.value = '';
-      void reloadBrowse();
+      openTrackMetadataView(track, xref.dataset.type);
       return;
     }
 
@@ -5464,10 +5500,20 @@
   });
   els.audioPlayer.addEventListener('error', () => {
     if (!els.audioPlayer.getAttribute('src')) return;
-    els.playerArtist.textContent = 'MP3を読み込めませんでした。ファイル名やファイル形式を確認してください。';
+    setPlayerMetadataMessage('MP3を読み込めませんでした。ファイル名やファイル形式を確認してください。');
     if (!els.playerModal.hidden) syncPlayerModal();
     updatePlayButtons();
   });
+  function handlePlayerMetadataClick(event){
+    const link = event.target.closest('a[data-player-browse]');
+    if (!link) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!els.playerModal.hidden) closePlayerModal({restoreFocus:false});
+    openTrackMetadataView(currentPlayerTrack, link.dataset.playerBrowse);
+  }
+  els.playerArtist.addEventListener('click', handlePlayerMetadataClick);
+  els.playerModalArtist.addEventListener('click', handlePlayerMetadataClick);
   els.playerArtwork.addEventListener('click', () => openPlayerModal(els.playerArtwork));
   els.playerNow.addEventListener('click', () => openPlayerModal(els.playerNow));
   els.playerExpand.addEventListener('click', event => {

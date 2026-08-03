@@ -32,7 +32,7 @@ RC／Phase文書は履歴として保持し、正式仕様へ後書きで改変�
 短いパスへ`windows-installer`を置きます。
 
 ```text
-C:\ML275Build
+C:\ML276Build
 ```
 
 `00_build_installer.bat`を実行し、次を確認します。
@@ -47,34 +47,34 @@ C:\ML275Build
 
 ## タグ・Release
 
-v2.7.5の例:
+v2.7.6の例:
 
 ```text
-tag: v2.7.5
-title: 自宅音楽ライブラリ v2.7.5
+tag: v2.7.6
+title: 自宅音楽ライブラリ v2.7.6
 ```
 
 Release本文は正式なRelease Notesを使用します。Draft／pre-releaseで作成し、人が内容・添付を確認してから公開する運用を採用できます。
 
 ## 代表的なRelease Assets
 
-- `MusicLibrary-Setup-2.7.5-x64.exe`
+- `MusicLibrary-Setup-2.7.6-x64.exe`
 - `SHA256SUMS.txt`
 - `README_USER.txt`
 - `REMOTE_ACCESS_USER.txt`
 - `REMOTE_ACCESS_FAMILY.txt`
-- `RELEASE_NOTES_v2.7.5.md`
+- `RELEASE_NOTES_v2.7.6.md`
 
 ## 公開後確認
 
-- Release URLが`/releases/tag/v2.7.5`
+- Release URLが`/releases/tag/v2.7.6`
 - タグとReleaseが一致
 - Assetsをダウンロード可能
 - Setup.exeのSHA-256一致
 - READMEの最新版リンク・版表記
 - アプリの新版通知
 
-v2.7.5は2026-08-03に公開完了したことをユーザーが確認しています。本監査ではRelease画面や新版通知の追加取得は行っていません。
+v2.7.6は、ソース・文書・インストーラーの版を揃え、全試験とSHA-256を確認してから公開します。
 
 ## 既公開タグの扱い
 

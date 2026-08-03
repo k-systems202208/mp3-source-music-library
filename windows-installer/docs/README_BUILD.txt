@@ -1,4 +1,4 @@
-自宅音楽ライブラリ v2.7.5
+自宅音楽ライブラリ v2.7.6
 ビルド手順
 ================================
 
@@ -13,7 +13,7 @@
 
 推奨配置
 --------
-C:\ML275Build
+C:\ML276Build
 
 実行
 ----
@@ -32,17 +32,17 @@ C:\ML275Build
 
 成果物
 ------
-release\MusicLibrary-Setup-2.7.5-x64.exe
-release\MusicLibrary-Setup-2.7.5-x64_SHA256.txt
-release\BUILD_LOG_v2.7.5_*.txt
-release\BUILD_REPORT_v2.7.5_*.txt
+release\MusicLibrary-Setup-2.7.6-x64.exe
+release\MusicLibrary-Setup-2.7.6-x64_SHA256.txt
+release\BUILD_LOG_v2.7.6.txt
+release\BUILD_REPORT_v2.7.6.txt
 
 整合性
 ------
-・launcher、paths、update checker、server、EXE metadata、installerが2.7.5
+・launcher、paths、update checker、server、EXE metadata、installerが2.7.6
 ・database SCHEMA_VERSIONが7
 ・Service Workerが本番プレイリストUIの更新を反映
-・Release Notesと利用者文書が2.7.5
+・Release Notesと利用者文書が2.7.6
 
 注意
 ----
@@ -50,4 +50,4 @@ release\BUILD_REPORT_v2.7.5_*.txt
 ・ビルド中に実運用DBやMP3を参照・変更しない
 ・テスト失敗時はインストーラーを公開しない
 ・RC文書は履歴であり、正式版の現行文書を優先
-・公開済みv2.7.5を再ビルドしてAssetsを暗黙差替えしない
+・公開済みの過去タグを移動せず、Release Assetsを暗黙差替えしない

@@ -46,7 +46,6 @@ http://127.0.0.1:8765
 | `offset` | 0以上 |
 | `sort` | 表示順 |
 | `latinOnly` | 英数字タイトルのみ |
-| `correctedOnly` | 補正済みのみ |
 | `favoriteOnly` | 現在利用者のお気に入りのみ |
 | `artistKey` | アーティスト文脈 |
 | `albumKey` | アーティスト内アルバム文脈 |

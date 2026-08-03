@@ -1,10 +1,10 @@
 # ソース確認対応表
 
-本書はv2.7.5の仕様記述を、主要ソースと試験へ対応付けます。
+本書はv2.7.6の仕様記述を、主要ソースと試験へ対応付けます。
 
 | 仕様 | 主なソース | 主な試験 |
 |---|---|---|
-| 製品版2.7.5 | `src/launcher.py`、`src/paths.py`、`src/update_check.py`、`build/version_info.txt` | RC consistency |
+| 製品版2.7.6 | `src/launcher.py`、`src/paths.py`、`src/update_check.py`、`build/version_info.txt` | RC consistency |
 | DB schema 7 | `src/database.py` | schema migration through v7 |
 | ローカル認証 | `src/local_auth.py`、`src/server.py` | local owner auth、startup handoff |
 | Tailscale識別 | `src/identity.py`、`src/server.py` | tailscale identity |
@@ -21,9 +21,9 @@
 
 ## 現行値
 
-- `APP_VERSION = 2.7.5`
-- `CURRENT_VERSION = 2.7.5`
-- server version `MusicLibrary/SQLiteAPI2.7.5`
+- `APP_VERSION = 2.7.6`
+- `CURRENT_VERSION = 2.7.6`
+- server version `MusicLibrary/SQLiteAPI2.7.6`
 - `SCHEMA_VERSION = 7`
 - 対応復元schema: 5、6、7
 

@@ -1,6 +1,6 @@
 # 文書一覧
 
-対象は自宅音楽ライブラリv2.7.5、DBスキーマ7です。
+対象は自宅音楽ライブラリv2.7.6、DBスキーマ7です。
 
 ## 最初に読む文書
 
@@ -37,11 +37,12 @@
 | `15-source-verification.md` | 仕様とソース・試験の対応 |
 | `16-requirements-traceability.md` | 要件追跡表 |
 | `17-ui-ux-design-history.md` | UI/UXの変遷 |
-| `18-documentation-audit-v2.7.5.md` | 今回の全文書監査 |
+| `18-documentation-audit-v2.7.5.md` | v2.7.5時点の全文書監査 |
+| `20-release-audit-v2.7.6.md` | v2.7.6の変更・試験・公開監査 |
 | `19-owner-setup-guide.md` | PC初心者向けの導入、Tailscale、家族招待、運用手順 |
 | `THIRD_PARTY_NOTICES.md` | 第三者ライブラリ通知 |
 
-Windowsインストーラーと配布物の文書は[DOCUMENT_INDEX_v2.7.5](../windows-installer/docs/DOCUMENT_INDEX_v2.7.5.md)を参照してください。
+Windowsインストーラーと配布物の文書は[DOCUMENT_INDEX_v2.7.6](../windows-installer/docs/DOCUMENT_INDEX_v2.7.6.md)を参照してください。
 
 ## 履歴文書の扱い
 

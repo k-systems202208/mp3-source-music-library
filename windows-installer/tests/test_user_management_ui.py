@@ -144,12 +144,46 @@ def test_http_user_management() -> None:
     thread = threading.Thread(target=music_server.serve_forever, daemon=True)
     thread.start()
 
+    with db.database() as db_connection:
+        db.initialize_database(db_connection)
+        timestamp = db.utc_now()
+        artist_id = db.upsert_artist(
+            db_connection,
+            "Original Artist",
+            timestamp,
+        )
+        assert artist_id is not None
+        db_connection.execute(
+            """
+            INSERT INTO tracks(
+                id, relative_path, filename, title, normalized_title,
+                artist_id, file_size, modified_time_ns, audio_file,
+                last_scanned_at, created_at, updated_at
+            ) VALUES (
+                'track_metadata_permissions', 'Test/metadata.mp3', 'metadata.mp3',
+                'Original Title', 'original title', ?, 1, 1,
+                'Music/Test/metadata.mp3', ?, ?, ?
+            )
+            """,
+            (artist_id, timestamp, timestamp, timestamp),
+        )
+        db_connection.commit()
+
     family_headers = {
         TAILSCALE_LOGIN_HEADER: "family@example.com",
         TAILSCALE_NAME_HEADER: "Family A",
     }
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
     try:
+        status, _, payload = request(
+            connection,
+            "POST",
+            "/api/tracks/track_metadata_permissions/title-correction",
+            value={"value": "Anonymous Title"},
+        )
+        assert status == 403
+        assert payload["error"] == "owner authentication required"
+
         status, _, payload = request(connection, "GET", "/api/users")
         assert status == 403
         assert payload["error"] == "owner authentication required"
@@ -164,6 +198,39 @@ def test_http_user_management() -> None:
         assert current["authenticated"] is True
         assert current["isOwner"] is False
         family_id = current["id"]
+
+        # Metadata edits are owner-only even when a family user is authenticated.
+        status, _, payload = request(
+            connection,
+            "POST",
+            "/api/tracks/track_metadata_permissions/title-correction",
+            headers=family_headers,
+            value={"value": "Family Title"},
+        )
+        assert status == 403
+        assert payload["error"] == "owner authentication required"
+
+        status, _, payload = request(
+            connection,
+            "POST",
+            f"/api/artists/{artist_id}/correction",
+            headers=family_headers,
+            value={"value": "Family Artist"},
+        )
+        assert status == 403
+        assert payload["error"] == "owner authentication required"
+
+        with db.database() as db_connection:
+            row = db_connection.execute(
+                """
+                SELECT t.title_override, ar.display_name_override
+                  FROM tracks t
+                  JOIN artists ar ON ar.id = t.artist_id
+                 WHERE t.id = 'track_metadata_permissions'
+                """
+            ).fetchone()
+            assert row["title_override"] is None
+            assert row["display_name_override"] is None
 
         status, _, _ = request(
             connection,
@@ -195,6 +262,16 @@ def test_http_user_management() -> None:
         users = payload["users"]
         owner = next(user for user in users if user["isOwner"])
         family = next(user for user in users if user["id"] == family_id)
+
+        status, _, payload = request(
+            connection,
+            "POST",
+            "/api/tracks/track_metadata_permissions/title-correction",
+            headers=owner_headers,
+            value={"value": "Owner Title"},
+        )
+        assert status == 200
+        assert payload["name"] == "Owner Title"
 
         # A Tailscale identity already linked to the owner may view the list,
         # but sensitive enable/disable changes still require the local owner.
@@ -231,6 +308,16 @@ def test_http_user_management() -> None:
         assert status == 200
         assert remote_payload["viewer"]["isOwner"] is True
         assert remote_payload["viewer"]["provider"] == "tailscale"
+
+        status, _, payload = request(
+            connection,
+            "POST",
+            f"/api/artists/{artist_id}/correction",
+            headers=owner_remote_headers,
+            value={"value": "Owner Artist"},
+        )
+        assert status == 200
+        assert payload["artist"] == "Owner Artist"
 
         status, _, _ = request(
             connection,
@@ -335,11 +422,22 @@ def test_html_user_interface() -> None:
         "loadManagedUsers",
         "updateUserActive",
         "confirmed:true",
+        "function canEditMetadata()",
+        "const editable = canEditMetadata();",
+        "const artistEdit = editable && track.artistDbId",
+        "const edit = canEditMetadata() && group.key",
+        "${editable ? '<button type=\"button\" class=\"icon-btn\" data-action=\"edit\"",
+        "data-player-browse",
+        "openTrackMetadataView",
+        "renderPlayerMetadata(els.playerArtist, track)",
+        "renderPlayerMetadata(els.playerModalArtist, currentPlayerTrack)",
     ]
     for marker in required:
         assert marker in html, marker
 
     assert "ユーザーを削除" not in html
+    assert 'id="btnCorrectedOnly"' not in html
+    assert "訂正済" not in html
     assert "利用を停止" in html
     assert "自宅PCの管理画面から" in html
 

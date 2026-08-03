@@ -1,12 +1,19 @@
-# 自宅音楽ライブラリ v2.7.5
+# 自宅音楽ライブラリ v2.7.6
 
 手元のMP3を音源の正本として、タグ、アートワーク、検索情報、利用者別状態とプレイリストをSQLiteで管理し、Windows PC・スマートフォン・タブレットから検索・再生する個人／家庭向け音楽ライブラリです。
 
-> 製品バージョン: 2.7.5
+> 製品バージョン: 2.7.6
 > DBスキーマ: 7
 > 対応OS: Windows 10／11 64bit
 > 公開日: 2026-08-03
 > 文書監査日: 2026-08-03
+
+## v2.7.6
+
+- 曲名・アーティスト名の変更をオーナー限定化
+- 「訂正済」表示と絞り込みを削除
+- プレーヤーのアーティスト名・アルバム名をリンク化
+- DBスキーマ7を継続
 
 ## v2.7.5
 
@@ -40,7 +47,7 @@
 初めて設定する場合は、[オーナー導入・家族共有ガイド](../docs/19-owner-setup-guide.md)にダウンロード、インストール、初回設定、Tailscale、家族招待をまとめています。
 
 1. 自宅音楽ライブラリを終了
-2. `MusicLibrary-Setup-2.7.5-x64.exe`を実行
+2. `MusicLibrary-Setup-2.7.6-x64.exe`を実行
 3. 旧版をアンインストールせず上書き
 4. スタートメニューから起動
 
@@ -68,12 +75,23 @@ schema 6から7への移行前バックアップ:
 
 TailscaleのHTTPS URLをSafariまたは対応ブラウザで開き、ホーム画面へ追加します。PWAは画面シェルだけをキャッシュし、MP3、API、DB、バックアップ、アートワーク、認証情報を端末へ保存しません。
 
+## 修正内容の確認
+
+`05_preview_current_source.bat`をダブルクリックすると、インストール済みライブラリのDBを一時コピーし、`src`配下の最新画面をブラウザで開きます。
+
+- オーナー画面と非オーナー画面を別タブで表示
+- 確認中の編集は一時DBだけへ保存
+- 本番DBとMP3は変更しない
+- バッチ画面で`Ctrl+C`を押すと終了し、一時DBを削除
+
+埋め込みアートワークは、安全な一時確認のため表示されない場合があります。
+
 ## ビルド
 
 短いパスへ配置します。
 
 ```text
-C:\ML275Build
+C:\ML276Build
 ```
 
 `00_build_installer.bat`を実行します。成功すると`release`へSetup、SHA-256、BUILD LOG、BUILD REPORTを作成します。
@@ -81,11 +99,11 @@ C:\ML275Build
 ## 文書
 
 - [オーナー導入・家族共有ガイド](../docs/19-owner-setup-guide.md)
-- `RELEASE_NOTES_v2.7.5.md`
-- `docs/DOCUMENT_INDEX_v2.7.5.md`
+- `RELEASE_NOTES_v2.7.6.md`
+- `docs/DOCUMENT_INDEX_v2.7.6.md`
 - `docs/README_USER.txt`
 - `docs/README_BUILD.txt`
-- `docs/MANUAL_TEST_v2.7.5.txt`
-- `docs/DOCUMENTATION_AUDIT_v2.7.5.md`
+- `docs/MANUAL_TEST_v2.7.6.txt`
+- `docs/RELEASE_SCOPE_v2.7.6.md`
 
 過去バージョン、RC、Phase文書は履歴資料として保持します。

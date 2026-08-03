@@ -2,7 +2,7 @@
 
 ## `paths.py`
 
-アプリ名、バージョン、データ保存先、DB、ログ、バックアップ、静的資産のパスを一元管理します。現行`APP_VERSION`は`2.7.5`です。
+アプリ名、バージョン、データ保存先、DB、ログ、バックアップ、静的資産のパスを一元管理します。現行`APP_VERSION`は`2.7.6`です。
 
 ## `launcher.py`
 
@@ -110,7 +110,7 @@ Tailscale利用者情報を解析し、制御文字、重複値、不正URL等�
 
 ## `update_check.py`
 
-`CURRENT_VERSION = 2.7.5`としてGitHub Releases APIを確認します。公開済みReleaseとプレリリースを比較し、現在版より新しい場合だけ通知します。通信失敗はライブラリ機能へ影響させません。
+`CURRENT_VERSION = 2.7.6`としてGitHub Releases APIを確認します。公開済みReleaseとプレリリースを比較し、現在版より新しい場合だけ通知します。通信失敗はライブラリ機能へ影響させません。
 
 ## `music-library-search.html`
 

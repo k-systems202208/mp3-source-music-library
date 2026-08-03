@@ -1,5 +1,5 @@
-﻿param(
-    [string]$Version = '2.7.5'
+param(
+    [string]$Version = '2.7.6'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -80,4 +80,6 @@ Write-Host ''
 Write-Host $hashLine
 Write-Host ''
 
-Start-Process explorer.exe -ArgumentList "`"$output`""
+if (-not $env:MUSIC_LIBRARY_NONINTERACTIVE) {
+    Start-Process explorer.exe -ArgumentList "`"$output`""
+}
