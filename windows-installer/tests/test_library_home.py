@@ -296,9 +296,9 @@ def test_library_home_ui_contract() -> None:
     paths_text = (ROOT / "src" / "paths.py").read_text(encoding="utf-8")
     launcher_text = (ROOT / "src" / "launcher.py").read_text(encoding="utf-8")
 
-    assert 'APP_VERSION = "2.7.4"' in paths_text
-    assert 'APP_VERSION = "2.7.4"' in launcher_text
-    assert 'server_version = "MusicLibrary/SQLiteAPI2.7.4"' in server_text
+    assert 'APP_VERSION = "2.7.5"' in paths_text
+    assert 'APP_VERSION = "2.7.5"' in launcher_text
+    assert 'server_version = "MusicLibrary/SQLiteAPI2.7.5"' in server_text
     assert 'data-view="home"' in html
     assert "view: 'home'" in html
     assert "const HOME_API_URL = './api/home';" in html
