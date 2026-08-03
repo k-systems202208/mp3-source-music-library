@@ -2,16 +2,11 @@
 
 <!-- README_APP_INTRO_START -->
 <p align="center">
-  <a href="docs/assets/music-library-intro.mp4">
-    <img src="docs/assets/music-library-intro-preview.gif" alt="自宅音楽ライブラリ 紹介動画" width="720">
-  </a>
+  <img src="docs/assets/music-library-intro-preview.gif" alt="自宅音楽ライブラリ 紹介動画" width="720">
 </p>
 <p align="center">
   <strong>数千曲のMP3を、PCでもスマートフォンでも。</strong><br>
   検索・再生・お気に入り・プレイリスト・Tailscale経由の外出先利用
-</p>
-<p align="center">
-  <a href="docs/assets/music-library-intro.mp4">▶ 紹介動画を再生（約17秒）</a>
 </p>
 <!-- README_APP_INTRO_END -->
 
