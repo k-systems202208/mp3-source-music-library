@@ -180,6 +180,7 @@ C:\ML277Build
 ## ドキュメント
 
 - [文書一覧](docs/00-document-index.md)
+- [再実装用詳細設計書](docs/23-reimplementation-detailed-design.md)
 - [アプリ仕様](docs/02-application-specification.md)
 - [APIリファレンス](docs/04-api-reference.md)
 - [DB設計](docs/05-database-design.md)
