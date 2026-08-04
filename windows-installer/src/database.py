@@ -33,6 +33,7 @@ OWNER_IDENTITY_PROVIDER = "local_owner"
 OWNER_IDENTITY_SUBJECT = "local-owner"
 OWNER_DEFAULT_DISPLAY_NAME = "オーナー"
 TAILSCALE_IDENTITY_PROVIDER = "tailscale"
+USER_DISPLAY_NAME_MAX_LENGTH = 60
 
 
 class OwnerIdentityLinkError(RuntimeError):
@@ -1242,6 +1243,8 @@ def row_to_track(row: sqlite3.Row) -> dict[str, Any]:
         "albumArtist": row["album_artist"] or "",
         "album": album,
         "originalAlbum": row["album_title"] or "",
+        "albumDbId": row["album_id"] or "",
+        "isAlbumCorrected": bool(row["album_override"]),
         "genre": row["genre"] or "",
         "composer": row["composer"] or "",
         "year": row["year"] if row["year"] is not None else "",
@@ -1709,6 +1712,7 @@ def browse_artist_albums(
         f"""
         SELECT {album_key_expr} AS key,
                {ALBUM_EXPR} AS display,
+               MIN(al.title) AS original_display,
                COUNT(*) AS track_count,
                MAX(t.year) AS year,
                MIN(CASE WHEN aw.relative_path IS NOT NULL AND aw.relative_path <> ''
@@ -1727,7 +1731,13 @@ def browse_artist_albums(
     items = [
         {
             "key": str(row["key"]),
+            "albumId": (
+                str(row["key"])
+                if str(row["key"]) != UNKNOWN_ALBUM_KEY
+                else ""
+            ),
             "display": str(row["display"] or "(不明なアルバム)"),
+            "originalDisplay": str(row["original_display"] or ""),
             "count": int(row["track_count"] or 0),
             "year": row["year"] if row["year"] is not None else "",
             "artworkFile": str(row["artwork_file"] or ""),
@@ -1772,6 +1782,8 @@ def browse_albums(
             SELECT {ALBUM_EXPR} AS key,
                    MIN(catalog_sort_key({ALBUM_SORT_EXPR})) AS sort_key,
                    MIN(catalog_bucket({ALBUM_SORT_EXPR})) AS bucket,
+                   MIN(t.album_id) AS album_id,
+                   COUNT(DISTINCT t.album_id) AS album_id_count,
                    COUNT(*) AS track_count,
                    GROUP_CONCAT(DISTINCT {ARTIST_EXPR}) AS artist_names,
                    MIN(CASE WHEN aw.relative_path IS NOT NULL AND aw.relative_path <> ''
@@ -1800,7 +1812,8 @@ def browse_albums(
     rows = connection.execute(
         grouped_cte
         + f"""
-          SELECT key, bucket, track_count, artist_names, artwork_file
+          SELECT key, bucket, album_id, album_id_count,
+                 track_count, artist_names, artwork_file
             FROM grouped{filter_sql}
            ORDER BY sort_key COLLATE NOCASE, key COLLATE NOCASE
            LIMIT ? OFFSET ?
@@ -1813,6 +1826,11 @@ def browse_albums(
         items.append(
             {
                 "key": str(row["key"] or "(不明なアルバム)"),
+                "albumId": (
+                    str(row["album_id"] or "")
+                    if int(row["album_id_count"] or 0) == 1
+                    else ""
+                ),
                 "display": str(row["key"] or "(不明なアルバム)"),
                 "indexKey": str(row["bucket"] or "他"),
                 "count": int(row["track_count"] or 0),
@@ -2513,6 +2531,42 @@ def set_artist_override(
         "updatedTracks": int(count_row["count"] or 0),
     }
 
+
+def set_album_override(
+    connection: sqlite3.Connection, album_id: str, value: str | None
+) -> dict[str, Any] | None:
+    """Change the displayed album name without modifying MP3 metadata.
+
+    Album display overrides live on tracks for schema-7 compatibility. Updating
+    every track in the album keeps artist-album and global-album grouping
+    consistent after the next library scan.
+    """
+    row = connection.execute(
+        "SELECT title FROM albums WHERE id = ?",
+        (str(album_id),),
+    ).fetchone()
+    if row is None:
+        return None
+    original = str(row["title"] or "")
+    cleaned = re.sub(r"\s+", " ", str(value or "").strip())
+    override = cleaned if cleaned and cleaned != original else None
+    timestamp = utc_now()
+    cursor = connection.execute(
+        """
+        UPDATE tracks
+           SET album_override = ?, updated_at = ?
+         WHERE album_id = ?
+        """,
+        (override, timestamp, str(album_id)),
+    )
+    return {
+        "albumId": str(album_id),
+        "album": override or original,
+        "originalAlbum": original,
+        "isCorrected": bool(override),
+        "updatedTracks": int(cursor.rowcount),
+    }
+
 def database_stats(
     connection: sqlite3.Connection,
     *,
@@ -2563,6 +2617,74 @@ def database_stats(
         "totalPlays": int(plays_row["total_plays"] or 0),
         "favoriteTracks": int(favorite_row["favorite_tracks"] or 0),
         "latestScan": dict(latest) if latest else None,
+    }
+
+
+def management_diagnostics(connection: sqlite3.Connection) -> dict[str, Any]:
+    """Return owner-facing health information without modifying the database."""
+    quick_rows = connection.execute("PRAGMA quick_check").fetchall()
+    quick_messages = [str(row[0]) for row in quick_rows]
+    quick_check = "ok" if quick_messages == ["ok"] else "; ".join(quick_messages)
+    counts = connection.execute(
+        """
+        SELECT (SELECT COUNT(*) FROM users) AS users,
+               (SELECT COUNT(*) FROM users WHERE is_active = 1) AS active_users,
+               (SELECT COUNT(*) FROM user_identities) AS identities,
+               (SELECT COUNT(*) FROM tracks) AS tracks,
+               (SELECT COUNT(*) FROM tracks WHERE is_available = 1) AS available_tracks,
+               (SELECT COUNT(*) FROM playlists) AS playlists,
+               (SELECT COUNT(*) FROM playlist_tracks) AS playlist_tracks
+        """
+    ).fetchone()
+    latest = connection.execute(
+        """
+        SELECT id, started_at, completed_at, status,
+               mp3_files, loaded, errors, cache_hits
+          FROM scan_runs
+         ORDER BY id DESC LIMIT 1
+        """
+    ).fetchone()
+    issue_rows: list[sqlite3.Row] = []
+    issue_samples: list[sqlite3.Row] = []
+    if latest is not None:
+        issue_rows = connection.execute(
+            """
+            SELECT severity, COUNT(*) AS issue_count
+              FROM scan_errors
+             WHERE scan_run_id = ?
+             GROUP BY severity
+             ORDER BY severity
+            """,
+            (int(latest["id"]),),
+        ).fetchall()
+        issue_samples = connection.execute(
+            """
+            SELECT severity, category, relative_path, message
+              FROM scan_errors
+             WHERE scan_run_id = ?
+             ORDER BY CASE severity WHEN 'error' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END,
+                      id
+             LIMIT 20
+            """,
+            (int(latest["id"]),),
+        ).fetchall()
+    return {
+        "quickCheck": quick_check,
+        "healthy": quick_check == "ok",
+        "schemaVersion": read_schema_version(connection),
+        "users": int(counts["users"] or 0),
+        "activeUsers": int(counts["active_users"] or 0),
+        "identities": int(counts["identities"] or 0),
+        "tracks": int(counts["tracks"] or 0),
+        "availableTracks": int(counts["available_tracks"] or 0),
+        "playlists": int(counts["playlists"] or 0),
+        "playlistTracks": int(counts["playlist_tracks"] or 0),
+        "latestScan": dict(latest) if latest else None,
+        "latestScanIssues": {
+            str(row["severity"]): int(row["issue_count"] or 0)
+            for row in issue_rows
+        },
+        "issueSamples": [dict(row) for row in issue_samples],
     }
 
 
@@ -3319,6 +3441,36 @@ def set_user_active(
         (1 if is_active else 0, timestamp, str(user_id or "")),
     )
     return cursor.rowcount == 1
+
+
+def set_user_display_name(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str,
+    display_name: str,
+) -> dict[str, Any] | None:
+    """Allow an authenticated user to update only their own display name."""
+    name = re.sub(r"\s+", " ", str(display_name or "").strip())
+    if not name:
+        raise ValueError("表示名を入力してください。")
+    if len(name) > USER_DISPLAY_NAME_MAX_LENGTH:
+        raise ValueError(f"表示名は{USER_DISPLAY_NAME_MAX_LENGTH}文字以内にしてください。")
+    if any(ord(char) < 32 for char in name):
+        raise ValueError("表示名に制御文字は使用できません。")
+    timestamp = utc_now()
+    cursor = connection.execute(
+        """
+        UPDATE users
+           SET display_name = ?, updated_at = ?
+         WHERE id = ? AND is_active = 1
+        """,
+        (name, timestamp, str(user_id or "")),
+    )
+    if cursor.rowcount != 1:
+        return None
+    return get_user_by_id(connection, str(user_id))
+
+
 def manual_backup(destination: Path | None = None) -> Path:
     if not DATABASE_PATH.exists():
         raise FileNotFoundError("library.db がまだ作成されていません。先にライブラリを起動してください。")
@@ -3453,6 +3605,50 @@ def create_user_playlist(
         "createdAt": timestamp,
         "updatedAt": timestamp,
     }
+
+
+def duplicate_user_playlist(
+    connection: sqlite3.Connection,
+    *,
+    user_id: str,
+    playlist_id: str,
+) -> dict[str, Any]:
+    """Duplicate an owned playlist and choose a collision-free display name."""
+    source = _owned_playlist_row(connection, user_id, playlist_id)
+    source_name = str(source["name"])
+    copy_name = ""
+    for number in range(1, 1001):
+        suffix = " のコピー" if number == 1 else f" のコピー {number}"
+        base = source_name[: max(1, PLAYLIST_NAME_MAX_LENGTH - len(suffix))].rstrip()
+        candidate, normalized_name = _playlist_name(f"{base}{suffix}")
+        exists = connection.execute(
+            "SELECT 1 FROM playlists WHERE user_id = ? AND normalized_name = ?",
+            (str(user_id), normalized_name),
+        ).fetchone()
+        if exists is None:
+            copy_name = candidate
+            break
+    if not copy_name:
+        raise PlaylistConflict("複製先のプレイリスト名を作成できませんでした。")
+
+    created = create_user_playlist(connection, user_id=user_id, name=copy_name)
+    timestamp = utc_now()
+    connection.execute(
+        """
+        INSERT INTO playlist_tracks(playlist_id, track_id, position, added_at)
+        SELECT ?, track_id, position, ?
+          FROM playlist_tracks
+         WHERE playlist_id = ?
+         ORDER BY position
+        """,
+        (str(created["id"]), timestamp, str(playlist_id)),
+    )
+    _touch_playlist(connection, str(created["id"]))
+    return get_user_playlist(
+        connection,
+        user_id=str(user_id),
+        playlist_id=str(created["id"]),
+    )
 
 
 def rename_user_playlist(

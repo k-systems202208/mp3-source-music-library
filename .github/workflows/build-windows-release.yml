@@ -34,7 +34,7 @@ jobs:
       - name: Upload verified release files
         uses: actions/upload-artifact@v4
         with:
-          name: music-library-v2.7.6-release
+          name: music-library-v2.7.7-release
           path: windows-installer/release/*
           if-no-files-found: error
           retention-days: 7

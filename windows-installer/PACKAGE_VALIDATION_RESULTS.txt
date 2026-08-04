@@ -1,16 +1,15 @@
-自宅音楽ライブラリ v2.7.6
+自宅音楽ライブラリ v2.7.7
 パッケージ検証項目
 ========================================
 
-・ソース、EXE、インストーラー、文書の版を2.7.6へ統一
+・ソース、EXE、インストーラー、文書の版を2.7.7へ統一
 ・DBスキーマ7を継続
-・メタデータ変更のオーナー権限をUIとAPIで試験
-・訂正済表示・フィルターの除去を試験
-・プレーヤーリンクを試験
-・GitHub Actions run 30828732192で全34ソース回帰試験に合格
-・PyInstaller EXE作成、組み込み版2.7.6、空ライブラリスモーク試験に合格
-・Inno Setupコンパイルに合格
-・Release Assets 6ファイルを生成
-・インストーラーSHA-256:
-  89edd0f25bcb613605874dd4c737be14cfd75c1d68ad4a5e709f81e36cd98145
-・MusicLibrary-Setup-2.7.6-x64.exeとSHA256SUMS.txtの一致を確認
+・プレイリスト複製・ドラッグ並べ替え・所有権を試験
+・アルバム表示名変更のオーナー権限を試験
+・本人表示名と管理・診断の権限を試験
+・ローカルで全33テストファイルに合格
+・PyInstaller EXE作成、組み込み版2.7.7、空ライブラリスモーク試験に合格
+・Inno SetupコンパイルはGitHub ActionsのWindows環境で実行
+・Release Assets 6ファイルはGitHub Actions成功後に生成
+・インストーラーSHA-256はreleaseのSHA256SUMS.txtで確認
+・MusicLibrary-Setup-2.7.7-x64.exeとSHA256SUMS.txtの一致を確認

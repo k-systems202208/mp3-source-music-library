@@ -15,7 +15,15 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from paths import DATA_ROOT, RESOURCE_ROOT, resolve_virtual_path
+from paths import (
+    APP_VERSION,
+    BACKUP_DIR,
+    DATA_ROOT,
+    LOG_DIR,
+    MUSIC_ROOT,
+    RESOURCE_ROOT,
+    resolve_virtual_path,
+)
 from long_paths import is_dir_path, open_path
 import backup_restore
 import update_check
@@ -49,7 +57,9 @@ from database import (
     get_available_tracks,
     record_user_playback,
     set_user_favorite,
+    set_user_display_name,
     set_artist_override,
+    set_album_override,
     set_title_override,
     initialize_database,
     get_owner_user,
@@ -58,6 +68,7 @@ from database import (
     set_user_skin,
     DEFAULT_SKIN_ID,
     list_users_for_management,
+    management_diagnostics,
     set_user_active,
     get_or_create_tailscale_user,
     get_owner_link_merge_preview,
@@ -68,6 +79,7 @@ from database import (
     list_user_playlists,
     get_user_playlist,
     create_user_playlist,
+    duplicate_user_playlist,
     rename_user_playlist,
     delete_user_playlist,
     add_track_to_user_playlist,
@@ -102,15 +114,18 @@ PLAYED_ROUTE = re.compile(r"^/api/tracks/([^/]+)/played$")
 FAVORITE_ROUTE = re.compile(r"^/api/tracks/([^/]+)/favorite$")
 TITLE_CORRECTION_ROUTE = re.compile(r"^/api/tracks/([^/]+)/title-correction$")
 ARTIST_CORRECTION_ROUTE = re.compile(r"^/api/artists/([^/]+)/correction$")
+ALBUM_CORRECTION_ROUTE = re.compile(r"^/api/albums/([^/]+)/correction$")
 USER_ACTIVE_ROUTE = re.compile(r"^/api/users/([^/]+)/active$")
 PLAYLIST_ROUTE = re.compile(r"^/api/playlists/([^/]+)$")
 PLAYLIST_TRACKS_ROUTE = re.compile(r"^/api/playlists/([^/]+)/tracks$")
 PLAYLIST_TRACK_ROUTE = re.compile(r"^/api/playlists/([^/]+)/tracks/([^/]+)$")
 PLAYLIST_ORDER_ROUTE = re.compile(r"^/api/playlists/([^/]+)/tracks/order$")
+PLAYLIST_DUPLICATE_ROUTE = re.compile(r"^/api/playlists/([^/]+)/duplicate$")
 LOCAL_OWNER_TOKEN_ROUTE = "/api/local-auth/token"
 LOCAL_OWNER_EXCHANGE_ROUTE = "/api/local-auth/exchange"
 CURRENT_USER_ROUTE = "/api/current-user"
 CURRENT_USER_SKIN_ROUTE = "/api/me/skin"
+CURRENT_USER_PROFILE_ROUTE = "/api/me/profile"
 USERS_ROUTE = "/api/users"
 PLAYLISTS_ROUTE = "/api/playlists"
 HOME_ROUTE = "/api/home"
@@ -119,6 +134,7 @@ BACKUPS_CREATE_ROUTE = "/api/backups/create"
 BACKUPS_RESTORE_ROUTE = "/api/backups/restore"
 BACKUPS_CANCEL_RESTORE_ROUTE = "/api/backups/restore/cancel"
 UPDATE_STATUS_ROUTE = "/api/update-status"
+DIAGNOSTICS_ROUTE = "/api/diagnostics"
 OWNER_LINK_START_ROUTE = "/api/owner-link/start"
 OWNER_LINK_CLAIM_ROUTE = "/api/owner-link/claim"
 OWNER_LINK_STATUS_ROUTE = "/api/owner-link/status"
@@ -140,7 +156,7 @@ BLOCKED_STATIC_NAMES = {
 class MusicLibraryHandler(SimpleHTTPRequestHandler):
     """SQLite API and UTF-8 static server with MP3 byte-range support."""
 
-    server_version = "MusicLibrary/SQLiteAPI2.7.6"
+    server_version = "MusicLibrary/SQLiteAPI2.7.7"
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
         ".html": "text/html; charset=utf-8",
@@ -297,6 +313,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         if parsed.path == UPDATE_STATUS_ROUTE:
             self.handle_update_status(parsed.query)
             return
+        if parsed.path == DIAGNOSTICS_ROUTE:
+            self.handle_diagnostics()
+            return
         if parsed.path == OWNER_LINK_STATUS_ROUTE:
             self.handle_owner_link_status(parsed.query)
             return
@@ -359,6 +378,10 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         if parsed.path == PLAYLISTS_ROUTE:
             self.handle_playlist_create()
             return
+        playlist_duplicate_match = PLAYLIST_DUPLICATE_ROUTE.fullmatch(parsed.path)
+        if playlist_duplicate_match:
+            self.handle_playlist_duplicate(unquote(playlist_duplicate_match.group(1)))
+            return
         playlist_tracks_match = PLAYLIST_TRACKS_ROUTE.fullmatch(parsed.path)
         if playlist_tracks_match:
             self.handle_playlist_track_add(unquote(playlist_tracks_match.group(1)))
@@ -383,6 +406,10 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         if match:
             self.handle_artist_correction(unquote(match.group(1)))
             return
+        match = ALBUM_CORRECTION_ROUTE.fullmatch(parsed.path)
+        if match:
+            self.handle_album_correction(unquote(match.group(1)))
+            return
         self.send_json({"error": "API endpoint not found"}, HTTPStatus.NOT_FOUND)
 
     def do_PUT(self) -> None:
@@ -395,6 +422,9 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == CURRENT_USER_SKIN_ROUTE:
             self.handle_current_user_skin()
+            return
+        if parsed.path == CURRENT_USER_PROFILE_ROUTE:
+            self.handle_current_user_profile()
             return
         playlist_order_match = PLAYLIST_ORDER_ROUTE.fullmatch(parsed.path)
         if playlist_order_match:
@@ -624,6 +654,46 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
             )
 
 
+    def handle_current_user_profile(self) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            body = self.read_json_body()
+            display_name = body.get("displayName")
+            if not isinstance(display_name, str):
+                raise ValueError("displayName must be a string")
+            with database() as connection:
+                initialize_database(connection)
+                user = set_user_display_name(
+                    connection,
+                    user_id=str(current["id"]),
+                    display_name=display_name,
+                )
+            if user is None:
+                self.send_json(
+                    {"error": "利用者が見つからないか、利用停止中です。"},
+                    HTTPStatus.NOT_FOUND,
+                )
+                return
+            self.send_json(
+                {
+                    "updated": True,
+                    "user": {
+                        **current,
+                        "displayName": str(user["displayName"]),
+                    },
+                }
+            )
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"表示名を保存できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+
     def _require_authenticated_user(self) -> dict[str, Any] | None:
         current = self._resolve_current_user()
         if not bool(current.get("authenticated")):
@@ -788,6 +858,29 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                 HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 
+    def handle_playlist_duplicate(self, playlist_id: str) -> None:
+        current = self._require_authenticated_user()
+        if current is None:
+            return
+        try:
+            with database() as connection:
+                initialize_database(connection)
+                item = duplicate_user_playlist(
+                    connection,
+                    user_id=str(current["id"]),
+                    playlist_id=playlist_id,
+                )
+            self.send_json({"created": True, "playlist": item}, HTTPStatus.CREATED)
+        except PlaylistNotFound as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except PlaylistConflict as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.CONFLICT)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"プレイリストを複製できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
     def handle_playlist_rename(self, playlist_id: str) -> None:
         current = self._require_authenticated_user()
         if current is None:
@@ -942,6 +1035,70 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
                         f"{type(exc).__name__}: {exc}"
                     )
                 },
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_diagnostics(self) -> None:
+        owner = self._require_owner()
+        if owner is None:
+            return
+
+        def path_status(path: Path) -> dict[str, Any]:
+            try:
+                exists = path.exists()
+                return {
+                    "path": str(path),
+                    "exists": exists,
+                    "isDirectory": bool(exists and path.is_dir()),
+                    "sizeBytes": int(path.stat().st_size) if exists and path.is_file() else 0,
+                }
+            except OSError as exc:
+                return {
+                    "path": str(path),
+                    "exists": False,
+                    "isDirectory": False,
+                    "sizeBytes": 0,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+
+        try:
+            with database() as connection:
+                initialize_database(connection)
+                details = management_diagnostics(connection)
+            backups = backup_restore.list_backups()
+            backup_bytes = sum(int(item.get("sizeBytes") or 0) for item in backups)
+            valid_backups = sum(1 for item in backups if bool(item.get("valid")))
+            self.send_json(
+                {
+                    "viewer": owner,
+                    "application": {
+                        "version": APP_VERSION,
+                        "python": sys.version.split()[0],
+                        "frozen": bool(getattr(sys, "frozen", False)),
+                    },
+                    "database": {
+                        **details,
+                        **path_status(DATABASE_PATH),
+                        "walSizeBytes": path_status(Path(str(DATABASE_PATH) + "-wal"))["sizeBytes"],
+                    },
+                    "paths": {
+                        "music": path_status(MUSIC_ROOT),
+                        "data": path_status(DATA_ROOT),
+                        "backups": path_status(BACKUP_DIR),
+                        "logs": path_status(LOG_DIR),
+                    },
+                    "backups": {
+                        "count": len(backups),
+                        "validCount": valid_backups,
+                        "sizeBytes": backup_bytes,
+                        "latest": backups[0] if backups else None,
+                        "pendingRestore": backup_restore.pending_restore(),
+                    },
+                }
+            )
+        except Exception as exc:
+            self.send_json(
+                {"error": f"診断情報を取得できませんでした: {type(exc).__name__}: {exc}"},
                 HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 
@@ -1502,6 +1659,30 @@ class MusicLibraryHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             self.send_json(
                 {"error": f"アーティスト名補正を保存できませんでした: {type(exc).__name__}: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_album_correction(self, album_id: str) -> None:
+        if self._require_owner() is None:
+            return
+
+        try:
+            body = self.read_json_body()
+            value = body.get("value")
+            if value is not None and not isinstance(value, str):
+                raise ValueError("value must be a string or null")
+            with database() as connection:
+                initialize_database(connection)
+                result = set_album_override(connection, album_id, value)
+            if result is None:
+                self.send_json({"error": "album not found"}, HTTPStatus.NOT_FOUND)
+                return
+            self.send_json(result)
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except Exception as exc:
+            self.send_json(
+                {"error": f"アルバム名を保存できませんでした: {type(exc).__name__}: {exc}"},
                 HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 

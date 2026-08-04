@@ -97,7 +97,7 @@ def release_list(latest: str = "2.8.0") -> list[dict]:
 
 
 def test_version_and_url_validation() -> None:
-    assert update_check.CURRENT_VERSION == "2.7.6"
+    assert update_check.CURRENT_VERSION == "2.7.7"
     assert update_check.GITHUB_API_URL.endswith("/releases?per_page=100")
     assert "/releases/latest" not in update_check.GITHUB_API_URL
     assert update_check.parse_version("v2.7.5") == (2, 7, 5)

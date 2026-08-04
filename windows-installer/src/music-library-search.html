@@ -1563,6 +1563,40 @@
     line-height:1.55;
     overflow-wrap:anywhere;
   }
+  .profile-name-row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+    align-items:end;
+    margin-top:10px;
+  }
+  .profile-name-row label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .profile-name-row .owner-link-input{margin-top:5px;font-family:'Zen Kaku Gothic New',sans-serif;}
+  .diagnostic-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+    margin-top:10px;
+  }
+  .diagnostic-card{
+    padding:10px 11px;
+    border:1px solid var(--card-edge);
+    border-radius:5px;
+    background:var(--paper);
+  }
+  .diagnostic-card strong{display:block;font-family:'JetBrains Mono',monospace;font-size:14px;overflow-wrap:anywhere;}
+  .diagnostic-card small{display:block;margin-top:3px;color:var(--ink-soft);font-size:10px;}
+  .diagnostic-card.good{border-color:#6d9367;background:#e4eee0;}
+  .diagnostic-card.warn{border-color:#c86c63;background:#f7e8e5;}
+  .diagnostic-path-list{display:grid;gap:7px;margin-top:10px;}
+  .diagnostic-path{
+    padding:8px 10px;
+    border:1px solid var(--card-edge);
+    border-radius:5px;
+    background:var(--paper);
+  }
+  .diagnostic-path strong{display:block;font-size:11px;}
+  .diagnostic-path code{display:block;margin-top:3px;color:var(--ink-soft);font-size:10px;overflow-wrap:anywhere;white-space:normal;}
 
   @media (max-width:600px){
     header.plate{padding-top:60px;}
@@ -1584,6 +1618,9 @@
     }
     .managed-user{grid-template-columns:1fr;}
     .managed-user .user-action-btn{width:100%;}
+    .profile-name-row{grid-template-columns:1fr;}
+    .profile-name-row .user-action-btn{width:100%;}
+    .diagnostic-summary-grid{grid-template-columns:1fr;}
     .backup-summary-grid{grid-template-columns:1fr;}
     .backup-card{grid-template-columns:1fr;}
     .backup-card .user-action-btn{width:100%;}
@@ -2212,6 +2249,11 @@
   .playlist-track-list{display:grid;gap:8px;margin-top:14px;}
   .playlist-track-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:11px;align-items:center;border:1px solid var(--card-edge);border-left:4px solid var(--brass);border-radius:var(--skin-radius);background:var(--paper);padding:10px;}
   .playlist-track-order{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--brass-deep);min-width:2.2em;text-align:center;}
+  .playlist-track-order[draggable="true"]{cursor:grab;user-select:none;}
+  .playlist-track-order[draggable="true"]:active{cursor:grabbing;}
+  .playlist-track-card.dragging{opacity:.4;}
+  .playlist-track-card.drag-before{box-shadow:inset 0 4px 0 var(--brass);}
+  .playlist-track-card.drag-after{box-shadow:inset 0 -4px 0 var(--brass);}
   .playlist-track-main{min-width:0;display:grid;grid-template-columns:46px minmax(0,1fr);gap:10px;align-items:center;}
   .playlist-track-main.no-artwork{grid-template-columns:minmax(0,1fr);}
   .playlist-track-artwork{width:46px;height:46px;object-fit:cover;border-radius:3px;background:var(--paper-deep);}
@@ -2417,6 +2459,18 @@
       </div>
     </div>
 
+    <section class="user-section" id="profileSection" hidden>
+      <h3>自分の表示名</h3>
+      <p>家族ユーザーを含め、現在ログインしている本人だけが自分の表示名を変更できます。Tailscaleのアカウント名は変更されません。</p>
+      <div class="profile-name-row">
+        <label>表示名
+          <input class="owner-link-input" id="profileDisplayNameInput" type="text" maxlength="60" autocomplete="nickname" placeholder="表示名を入力">
+        </label>
+        <button type="button" class="user-action-btn" id="profileSaveButton">表示名を保存</button>
+      </div>
+      <div class="user-message" id="profileMessage" hidden aria-live="polite"></div>
+    </section>
+
     <section class="user-section" id="skinSection" hidden>
       <h3>スキンを変更</h3>
       <p>カードを選ぶと画面全体へ一時的に反映します。「適用する」で現在の利用者の設定として保存します。</p>
@@ -2536,6 +2590,18 @@
       <div class="backup-list" id="backupList"></div>
     </section>
 
+    <section class="user-section" id="diagnosticsSection" hidden>
+      <h3>管理・診断</h3>
+      <p>アプリ、データベース、音楽フォルダー、最新スキャン、バックアップの状態をまとめて確認します。表示と診断結果の保存はオーナーだけが利用できます。</p>
+      <div class="diagnostic-summary-grid" id="diagnosticsSummary"></div>
+      <div class="diagnostic-path-list" id="diagnosticsPaths"></div>
+      <div class="user-actions">
+        <button type="button" class="user-action-btn secondary" id="diagnosticsReloadButton">診断を更新</button>
+        <button type="button" class="user-action-btn" id="diagnosticsDownloadButton" disabled>診断結果を保存</button>
+      </div>
+      <div class="user-message" id="diagnosticsMessage" hidden aria-live="polite"></div>
+    </section>
+
     <section class="user-section" id="updateSection" hidden>
       <h3>新版通知</h3>
       <p>GitHubの公開済みRelease（プレリリース設定を含む）を1日1回確認します。確認に失敗しても、音楽ライブラリの起動・検索・再生には影響しません。</p>
@@ -2601,12 +2667,14 @@
   const STATS_API_URL = './api/stats';
   const CURRENT_USER_API_URL = './api/current-user';
   const CURRENT_USER_SKIN_API_URL = './api/me/skin';
+  const CURRENT_USER_PROFILE_API_URL = './api/me/profile';
   const USERS_API_URL = './api/users';
   const BACKUPS_API_URL = './api/backups';
   const BACKUPS_CREATE_API_URL = './api/backups/create';
   const BACKUPS_RESTORE_API_URL = './api/backups/restore';
   const BACKUPS_CANCEL_RESTORE_API_URL = './api/backups/restore/cancel';
   const UPDATE_STATUS_API_URL = './api/update-status';
+  const DIAGNOSTICS_API_URL = './api/diagnostics';
   const UPDATE_DISMISS_KEY_PREFIX = 'music-library-dismissed-update-';
   const OWNER_LINK_START_API_URL = './api/owner-link/start';
   const OWNER_LINK_CLAIM_API_URL = './api/owner-link/claim';
@@ -2725,6 +2793,10 @@
     currentUserMark: document.getElementById('currentUserMark'),
     currentUserName: document.getElementById('currentUserName'),
     currentUserDetail: document.getElementById('currentUserDetail'),
+    profileSection: document.getElementById('profileSection'),
+    profileDisplayNameInput: document.getElementById('profileDisplayNameInput'),
+    profileSaveButton: document.getElementById('profileSaveButton'),
+    profileMessage: document.getElementById('profileMessage'),
     skinSection: document.getElementById('skinSection'),
     skinGrid: document.getElementById('skinGrid'),
     skinApplyButton: document.getElementById('skinApplyButton'),
@@ -2762,6 +2834,12 @@
     backupCancelRestoreButton: document.getElementById('backupCancelRestoreButton'),
     backupMessage: document.getElementById('backupMessage'),
     backupList: document.getElementById('backupList'),
+    diagnosticsSection: document.getElementById('diagnosticsSection'),
+    diagnosticsSummary: document.getElementById('diagnosticsSummary'),
+    diagnosticsPaths: document.getElementById('diagnosticsPaths'),
+    diagnosticsReloadButton: document.getElementById('diagnosticsReloadButton'),
+    diagnosticsDownloadButton: document.getElementById('diagnosticsDownloadButton'),
+    diagnosticsMessage: document.getElementById('diagnosticsMessage'),
     updateBanner: document.getElementById('updateBanner'),
     updateBannerTitle: document.getElementById('updateBannerTitle'),
     updateBannerNote: document.getElementById('updateBannerNote'),
@@ -2806,6 +2884,7 @@
   let ownerLinkCandidateValue = null;
   let ownerLinkPollTimer = null;
   let backupData = null;
+  let diagnosticData = null;
   let updateData = null;
   let updateRequestSerial = 0;
   let committedSkinId = 'library';
@@ -2816,6 +2895,7 @@
   let currentPlaylist = null;
   let playlistAddTrack = null;
   let playlistRequestSerial = 0;
+  let playlistDragTrackId = '';
 
 
   function normalizeSkinId(value){
@@ -2941,6 +3021,7 @@
   function prepareTrack(track){
     track.id = String(track.id || '');
     track.artistDbId = String(track.artistDbId || '');
+    track.albumDbId = String(track.albumDbId || '');
     track.audioUrl = mediaUrl(track.audioFile || track.relativePath);
     track.artworkUrl = mediaUrl(track.artworkFile);
     track.favorite = Boolean(track.favorite);
@@ -3246,7 +3327,7 @@
     els.pwaGuideText.textContent = guide;
 
     if (PWA_PREVIEW_MODE) {
-      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.6のTailscale URLで確認します。');
+      setMessage(els.pwaInstallMessage, 'プレビュー終了後は接続先が使えなくなるため、実際の追加はv2.7.7のTailscale URLで確認します。');
     } else if (provider === 'tailscale') {
       setMessage(els.pwaInstallMessage, 'この接続先を追加すると、Tailscale接続時にホーム画面から直接開けます。', 'success');
     } else if (provider === 'local_owner' || isLocalPwaOrigin()) {
@@ -3371,6 +3452,10 @@
       : '利用者情報を確認できませんでした。';
     updatePwaInstallUi();
 
+    els.profileSection.hidden = !authenticated;
+    if (authenticated && document.activeElement !== els.profileDisplayNameInput) {
+      els.profileDisplayNameInput.value = displayName;
+    }
     els.skinSection.hidden = !authenticated;
     if (authenticated && els.skinMessage) {
       els.skinMessage.textContent = `現在は「${SKIN_OPTIONS[committedSkinId]}」です。`;
@@ -3386,6 +3471,7 @@
     els.ownerLinkSection.hidden = !owner;
     els.userManagementSection.hidden = !owner;
     els.backupSection.hidden = !(owner && currentUser.provider === 'local_owner');
+    els.diagnosticsSection.hidden = !owner;
     els.updateSection.hidden = !owner;
     if (!owner) els.updateBanner.hidden = true;
     updateFavoriteButtons();
@@ -3408,6 +3494,34 @@
       void loadUpdateStatus();
     }
     return user;
+  }
+
+  async function saveCurrentUserDisplayName(){
+    if (!currentUser || !currentUser.authenticated) return;
+    const displayName = els.profileDisplayNameInput.value.trim();
+    if (!displayName) {
+      setMessage(els.profileMessage, '表示名を入力してください。', 'error');
+      els.profileDisplayNameInput.focus();
+      return;
+    }
+    els.profileSaveButton.disabled = true;
+    setMessage(els.profileMessage, '表示名を保存しています。');
+    try {
+      const payload = await fetchJson(CURRENT_USER_PROFILE_API_URL, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({displayName}),
+      });
+      if (!payload.user) throw new Error('更新結果を確認できませんでした。');
+      updateCurrentUserUi(payload.user);
+      setMessage(els.profileMessage, `表示名を「${payload.user.displayName}」へ変更しました。`, 'success');
+      if (payload.user.isOwner) await loadManagedUsers();
+      if (state.view === 'home') await loadHome();
+    } catch (error) {
+      setMessage(els.profileMessage, `表示名を保存できませんでした。${error.message}`, 'error');
+    } finally {
+      els.profileSaveButton.disabled = false;
+    }
   }
 
   function identityText(identity){
@@ -3621,6 +3735,77 @@
     }
   }
 
+  function renderDiagnostics(payload){
+    diagnosticData = payload || null;
+    const database = payload && payload.database ? payload.database : {};
+    const application = payload && payload.application ? payload.application : {};
+    const backups = payload && payload.backups ? payload.backups : {};
+    const latestScan = database.latestScan || null;
+    const scanOk = latestScan && latestScan.status === 'completed' && Number(latestScan.errors || 0) === 0;
+    const cards = [
+      {label:'アプリ', value:`v${application.version || '不明'}`, kind:''},
+      {label:'DB整合性', value:database.healthy ? '正常' : (database.quickCheck || '要確認'), kind:database.healthy ? 'good' : 'warn'},
+      {label:'DB形式', value:`schema ${database.schemaVersion ?? '不明'}`, kind:''},
+      {label:'最新スキャン', value:latestScan ? (scanOk ? '完了・エラーなし' : `${latestScan.status || '不明'}・エラー ${Number(latestScan.errors || 0)}`) : '履歴なし', kind:latestScan && !scanOk ? 'warn' : ''},
+      {label:'ライブラリ', value:`${Number(database.availableTracks || 0)} / ${Number(database.tracks || 0)} 曲利用可能`, kind:''},
+      {label:'利用者', value:`${Number(database.activeUsers || 0)} / ${Number(database.users || 0)} 人有効`, kind:''},
+      {label:'プレイリスト', value:`${Number(database.playlists || 0)} 件・${Number(database.playlistTracks || 0)} 曲`, kind:''},
+      {label:'バックアップ', value:`${Number(backups.validCount || 0)} / ${Number(backups.count || 0)} 件正常`, kind:Number(backups.count || 0) > 0 && Number(backups.validCount || 0) < Number(backups.count || 0) ? 'warn' : ''},
+      {label:'DB容量', value:formatBytes(Number(database.sizeBytes || 0) + Number(database.walSizeBytes || 0)), kind:''},
+      {label:'バックアップ容量', value:formatBytes(backups.sizeBytes || 0), kind:''},
+    ];
+    els.diagnosticsSummary.innerHTML = cards.map(card => `<article class="diagnostic-card ${card.kind}"><strong>${escapeHtml(card.value)}</strong><small>${escapeHtml(card.label)}</small></article>`).join('');
+
+    const pathLabels = {music:'音楽フォルダー', data:'データ保存先', backups:'バックアップ保存先', logs:'ログ保存先'};
+    const paths = payload && payload.paths ? payload.paths : {};
+    els.diagnosticsPaths.innerHTML = Object.entries(pathLabels).map(([key,label]) => {
+      const item = paths[key] || {};
+      const stateLabel = item.exists ? '確認済み' : '見つかりません';
+      return `<div class="diagnostic-path"><strong>${escapeHtml(label)} · ${escapeHtml(stateLabel)}</strong><code>${escapeHtml(item.path || '未設定')}</code></div>`;
+    }).join('');
+    const issueCounts = database.latestScanIssues || {};
+    const issueText = Object.entries(issueCounts).map(([key,value]) => `${key} ${Number(value)}件`).join('・');
+    setMessage(
+      els.diagnosticsMessage,
+      database.healthy
+        ? `診断を更新しました。${issueText ? `最新スキャン記録：${issueText}` : 'DB整合性に問題はありません。'}`
+        : `DB整合性の確認が必要です：${database.quickCheck || '詳細不明'}`,
+      database.healthy ? 'success' : 'error',
+    );
+    els.diagnosticsDownloadButton.disabled = false;
+  }
+
+  async function loadDiagnostics(){
+    if (!currentUser || !currentUser.isOwner) return;
+    els.diagnosticsReloadButton.disabled = true;
+    setMessage(els.diagnosticsMessage, '診断情報を取得しています。');
+    try {
+      renderDiagnostics(await fetchJson(DIAGNOSTICS_API_URL));
+    } catch (error) {
+      diagnosticData = null;
+      els.diagnosticsSummary.innerHTML = '';
+      els.diagnosticsPaths.innerHTML = '';
+      els.diagnosticsDownloadButton.disabled = true;
+      setMessage(els.diagnosticsMessage, `診断情報を取得できませんでした。${error.message}`, 'error');
+    } finally {
+      els.diagnosticsReloadButton.disabled = false;
+    }
+  }
+
+  function downloadDiagnostics(){
+    if (!diagnosticData) return;
+    const blob = new Blob([`${JSON.stringify(diagnosticData, null, 2)}\n`], {type:'application/json'});
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.href = URL.createObjectURL(blob);
+    link.download = `music-library-diagnostics-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    setMessage(els.diagnosticsMessage, '診断結果をJSONファイルとして保存しました。', 'success');
+  }
+
   function updateDismissed(latestVersion){
     if (!latestVersion) return false;
     try {
@@ -3756,7 +3941,7 @@
     } catch (error) {
       if (serial !== updateRequestSerial) return;
       renderUpdateStatus({
-        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.6',
+        currentVersion: updateData && updateData.currentVersion ? updateData.currentVersion : '2.7.7',
         latestVersion: '',
         updateAvailable: false,
         source: 'error',
@@ -3774,6 +3959,7 @@
       await loadCurrentUser();
       await loadManagedUsers();
       await loadBackups();
+      await loadDiagnostics();
       await loadUpdateStatus();
     } catch (error) {
       updateCurrentUserUi(null);
@@ -4388,8 +4574,12 @@
     const artworkHtml = group.artworkUrl
       ? `<img class="album-artwork" src="${escapeHtml(group.artworkUrl)}" alt="" loading="lazy" onerror="this.closest('.album-main').classList.remove('has-artwork');this.remove()">`
       : '';
-    return `<div class="card clickable" data-album-key="${escapeHtml(group.key)}" data-album-title="${escapeHtml(group.display || group.key || ALBUM_FALLBACK)}">
-      <div class="info"><div class="album-main${group.artworkUrl ? ' has-artwork' : ''}">${artworkHtml}<div class="album-text"><div class="title-row"><span class="title">${escapeHtml(group.display || group.key || ALBUM_FALLBACK)}</span></div>${artistLine}</div></div></div>
+    const albumId = String(group.albumId || '');
+    const edit = canEditMetadata() && albumId
+      ? `<button type="button" class="icon-btn" data-action="edit-album" title="アルバム名を編集（アルバム内の全曲に反映）">✎</button>`
+      : '';
+    return `<div class="card clickable" data-album-key="${escapeHtml(group.key)}" data-album-id="${escapeHtml(albumId)}" data-album-title="${escapeHtml(group.display || group.key || ALBUM_FALLBACK)}">
+      <div class="info"><div class="album-main${group.artworkUrl ? ' has-artwork' : ''}">${artworkHtml}<div class="album-text"><div class="title-row"><span class="title">${escapeHtml(group.display || group.key || ALBUM_FALLBACK)}</span>${edit}</div>${artistLine}</div></div></div>
       <div class="side"><span class="count-badge">${Number(group.count || 0).toLocaleString()}曲</span><span class="chevron">›</span></div>
     </div>`;
   }
@@ -4972,6 +5162,58 @@
     input.addEventListener('blur', () => void finish(true));
   }
 
+  async function saveAlbumCorrection(albumId, value){
+    return fetchJson(`./api/albums/${encodeURIComponent(albumId)}/correction`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value})
+    });
+  }
+
+  function startEditAlbum(button, albumId, currentDisplay){
+    if (!canEditMetadata() || !albumId) return;
+    const target = button.closest('.title-row')?.querySelector('.title');
+    if (!target) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'title-edit-input';
+    input.value = currentDisplay || '';
+    target.replaceWith(input);
+    button.style.display = 'none';
+    input.focus();
+    input.select();
+    let done = false;
+
+    async function finish(commit){
+      if (done) return;
+      done = true;
+      try {
+        if (commit) {
+          const result = await saveAlbumCorrection(albumId, input.value.trim() || null);
+          for (const track of idMap.values()) {
+            if (track.albumDbId === albumId) {
+              track.album = result.album;
+              track.originalAlbum = result.originalAlbum;
+              track.isAlbumCorrected = Boolean(result.isCorrected);
+            }
+          }
+          if (currentPlayerTrack && currentPlayerTrack.albumDbId === albumId) {
+            currentPlayerTrack.album = result.album;
+            playerMetadataMessage = '';
+            renderPlayerMetadata(els.playerArtist, currentPlayerTrack);
+            if (!els.playerModal.hidden) syncPlayerModal();
+          }
+        }
+      } catch (error) {
+        alert(`アルバム名を保存できませんでした。\n${error.message}`);
+      }
+      await reloadBrowse();
+    }
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); void finish(true); }
+      if (event.key === 'Escape') { event.preventDefault(); void finish(false); }
+    });
+    input.addEventListener('blur', () => void finish(true));
+  }
+
 
   function playlistDurationLabel(ms){
     const totalMinutes = Math.round(Number(ms || 0) / 60000);
@@ -5000,7 +5242,7 @@
       : '';
     const isPlaying = currentTrackId === track.id && !els.audioPlayer.paused && !els.audioPlayer.ended;
     return `<article class="playlist-track-card" data-id="${escapeHtml(track.id)}">
-      <span class="playlist-track-order">${String(index + 1).padStart(2, '0')}</span>
+      <span class="playlist-track-order" draggable="true" data-playlist-drag-handle title="ドラッグして並び替え">${String(index + 1).padStart(2, '0')}</span>
       <div class="playlist-track-main${artwork ? '' : ' no-artwork'}">${artwork}<div class="playlist-track-copy"><strong>${escapeHtml(track.name || '(無題)')}</strong><small>${escapeHtml([track.artist, track.album].filter(Boolean).join(' · '))}</small></div></div>
       <div class="playlist-track-actions">
         <button type="button" class="play-btn${isPlaying ? ' playing' : ''}" data-playlist-action="play" title="${isPlaying ? '一時停止' : '再生'}">${isPlaying ? 'Ⅱ' : '▶'}</button>
@@ -5020,9 +5262,10 @@
     const unavailable = Number(currentPlaylist.unavailableCount || 0);
     const unavailableNote = unavailable ? ` · 利用不可 ${unavailable.toLocaleString()}曲` : '';
     els.playlistDetail.innerHTML = `<div class="playlist-detail-head">
-      <div><h3>${escapeHtml(currentPlaylist.name)}</h3><p class="playlist-detail-meta">${tracks.length.toLocaleString()}曲 · ${playlistDurationLabel(currentPlaylist.durationMs)}${unavailableNote}</p></div>
+      <div><h3>${escapeHtml(currentPlaylist.name)}</h3><p class="playlist-detail-meta">${tracks.length.toLocaleString()}曲 · ${playlistDurationLabel(currentPlaylist.durationMs)}${unavailableNote}${tracks.length > 1 ? ' · 番号をドラッグして並び替え' : ''}</p></div>
       <div class="playlist-detail-actions">
         <button type="button" class="playlist-mini-btn primary" data-playlist-detail-action="play-all"${tracks.length ? '' : ' disabled'}>すべて再生</button>
+        <button type="button" class="playlist-mini-btn" data-playlist-detail-action="duplicate">複製</button>
         <button type="button" class="playlist-mini-btn" data-playlist-detail-action="rename">名前変更</button>
         <button type="button" class="playlist-mini-btn danger" data-playlist-detail-action="delete">削除</button>
       </div>
@@ -5122,6 +5365,20 @@
     }
   }
 
+  async function duplicateCurrentPlaylist(){
+    if (!currentPlaylist) return;
+    try {
+      const payload = await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(currentPlaylist.id)}/duplicate`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}',
+      });
+      if (!payload.playlist) throw new Error('複製結果を確認できませんでした。');
+      state.selectedPlaylistId = String(payload.playlist.id);
+      await loadPlaylists({selectId:payload.playlist.id});
+    } catch (error) {
+      alert(`プレイリストを複製できませんでした。\n${error.message}`);
+    }
+  }
+
   async function deleteCurrentPlaylist(){
     if (!currentPlaylist) return;
     if (!confirm(`「${currentPlaylist.name}」を削除しますか？\n曲ファイルは削除されません。`)) return;
@@ -5167,15 +5424,44 @@
     if (index < 0 || target < 0 || target >= tracks.length) return;
     [tracks[index], tracks[target]] = [tracks[target], tracks[index]];
     renderPlaylistDetail();
+    await saveCurrentPlaylistTrackOrder();
+  }
+
+  async function saveCurrentPlaylistTrackOrder(){
+    if (!currentPlaylist) return;
     try {
       await fetchJson(`${PLAYLISTS_API_URL}/${encodeURIComponent(currentPlaylist.id)}/tracks/order`, {
-        method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({trackIds:tracks.map(track => track.id)}),
+        method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({trackIds:currentPlaylist.tracks.map(track => track.id)}),
       });
       await loadPlaylistDetail(currentPlaylist.id);
     } catch (error) {
       alert(`曲順を保存できませんでした。\n${error.message}`);
       await loadPlaylistDetail(currentPlaylist.id);
     }
+  }
+
+  async function reorderPlaylistByDrop(sourceId, targetId, insertAfter){
+    if (!currentPlaylist || !sourceId || !targetId || sourceId === targetId) return;
+    const tracks = currentPlaylist.tracks;
+    const sourceIndex = tracks.findIndex(track => String(track.id) === String(sourceId));
+    if (sourceIndex < 0) return;
+    const [source] = tracks.splice(sourceIndex, 1);
+    let targetIndex = tracks.findIndex(track => String(track.id) === String(targetId));
+    if (targetIndex < 0) {
+      tracks.splice(sourceIndex, 0, source);
+      return;
+    }
+    if (insertAfter) targetIndex += 1;
+    tracks.splice(targetIndex, 0, source);
+    renderPlaylistDetail();
+    await saveCurrentPlaylistTrackOrder();
+  }
+
+  function clearPlaylistDragUi(){
+    playlistDragTrackId = '';
+    els.playlistDetail.querySelectorAll('.playlist-track-card').forEach(card => {
+      card.classList.remove('dragging', 'drag-before', 'drag-after');
+    });
   }
 
   async function removePlaylistTrack(trackId){
@@ -5398,6 +5684,15 @@
       return;
     }
 
+    const editAlbumButton = event.target.closest('button[data-action="edit-album"]');
+    if (editAlbumButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const card = editAlbumButton.closest('.card[data-album-id]');
+      if (card) startEditAlbum(editAlbumButton, card.dataset.albumId, card.dataset.albumTitle);
+      return;
+    }
+
     const xref = event.target.closest('a.xref');
     if (xref) {
       event.preventDefault();
@@ -5447,6 +5742,7 @@
     if (detailAction) {
       const action = String(detailAction.dataset.playlistDetailAction || '');
       if (action === 'play-all') void playPlaylistAll();
+      else if (action === 'duplicate') void duplicateCurrentPlaylist();
       else if (action === 'rename') void renameCurrentPlaylist();
       else if (action === 'delete') void deleteCurrentPlaylist();
       return;
@@ -5461,6 +5757,37 @@
     else if (action === 'down') void reorderPlaylistTrack(card.dataset.id, 1);
     else if (action === 'remove') void removePlaylistTrack(card.dataset.id);
   });
+  els.playlistDetail.addEventListener('dragstart', event => {
+    const handle = event.target.closest('[data-playlist-drag-handle]');
+    const card = handle ? handle.closest('.playlist-track-card[data-id]') : null;
+    if (!card || !event.dataTransfer) { event.preventDefault(); return; }
+    playlistDragTrackId = String(card.dataset.id || '');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', playlistDragTrackId);
+    requestAnimationFrame(() => card.classList.add('dragging'));
+  });
+  els.playlistDetail.addEventListener('dragover', event => {
+    if (!playlistDragTrackId) return;
+    const card = event.target.closest('.playlist-track-card[data-id]');
+    if (!card || String(card.dataset.id || '') === playlistDragTrackId) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    const insertAfter = event.clientY >= card.getBoundingClientRect().top + card.offsetHeight / 2;
+    els.playlistDetail.querySelectorAll('.playlist-track-card').forEach(item => item.classList.remove('drag-before', 'drag-after'));
+    card.classList.add(insertAfter ? 'drag-after' : 'drag-before');
+  });
+  els.playlistDetail.addEventListener('drop', event => {
+    if (!playlistDragTrackId) return;
+    const card = event.target.closest('.playlist-track-card[data-id]');
+    if (!card) return;
+    event.preventDefault();
+    const sourceId = playlistDragTrackId;
+    const targetId = String(card.dataset.id || '');
+    const insertAfter = card.classList.contains('drag-after');
+    clearPlaylistDragUi();
+    void reorderPlaylistByDrop(sourceId, targetId, insertAfter);
+  });
+  els.playlistDetail.addEventListener('dragend', clearPlaylistDragUi);
   els.playlistAddModalClose.addEventListener('click', closePlaylistAddModal);
   els.playlistAddModal.addEventListener('click', event => {
     if (event.target === els.playlistAddModal) closePlaylistAddModal();
@@ -5585,6 +5912,10 @@
   els.skinApplyButton.addEventListener('click', () => void commitSkinPreview());
   els.skinCancelButton.addEventListener('click', cancelSkinPreview);
   els.skinPreviewResetButton.addEventListener('click', resetSkinPreview);
+  els.profileSaveButton.addEventListener('click', () => void saveCurrentUserDisplayName());
+  els.profileDisplayNameInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); void saveCurrentUserDisplayName(); }
+  });
   els.ownerLinkStartButton.addEventListener('click', () => void startOwnerLink());
   els.ownerLinkCopyButton.addEventListener('click', async () => {
     if (!ownerLinkCodeValue) return;
@@ -5619,6 +5950,8 @@
     const button = event.target.closest('button[data-restore-backup]');
     if (button) void scheduleBackupRestore(button.dataset.restoreBackup || '');
   });
+  els.diagnosticsReloadButton.addEventListener('click', () => void loadDiagnostics());
+  els.diagnosticsDownloadButton.addEventListener('click', downloadDiagnostics);
   els.updateCheckButton.addEventListener('click', () => void loadUpdateStatus({force:true}));
   els.updateBannerDismissButton.addEventListener('click', dismissUpdateBanner);
   els.pwaCopyUrlButton.addEventListener('click', () => void copyPwaUrl());

@@ -7,11 +7,15 @@
 | 再生・シーク | Range配信、Audio | Range試験、実機再生 |
 | アートワーク | artworks、cache | generator・UI試験 |
 | 文字補正 | metadata parser、override | generator・補正API |
+| アルバム表示名補正 | album_override、アルバム補正API | オーナー権限・同一アルバム一括反映試験 |
 | 移動・改名検出 | content signature | scan regression |
 | 利用者識別 | local auth、Tailscale identity | 認証試験 |
 | 利用者別状態 | user_track_state | playback／favorites |
 | 利用者別スキン | user_preferences | skin persistence |
+| 自分の表示名管理 | users.display_name、profile API | 本人限定更新・識別情報再取得後の維持試験 |
 | プレイリスト | playlists、playlist_tracks | DB／API／UI／実機 |
+| プレイリスト複製・並べ替え | duplicate API、order API、drag UI | 曲順複製・所有権・UI契約試験 |
+| 管理・診断 | diagnostics API、オーナーUI | 権限・DB整合性・保存先・JSON試験 |
 | バックアップ・復元 | backup_restore | schema 5/6/7試験 |
 | 長いパス | long_paths | 201曲・最大364文字 |
 | PWA | manifest、Service Worker | PWA回帰・iPhone実機 |

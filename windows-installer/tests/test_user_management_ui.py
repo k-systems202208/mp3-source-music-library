@@ -129,6 +129,24 @@ def test_database_user_listing() -> None:
 
         assert db.get_user_by_id(connection, member["id"])["id"] == member["id"]
         assert db.get_user_by_id(connection, "missing") is None
+        renamed = db.set_user_display_name(
+            connection,
+            user_id=member["id"],
+            display_name="  家族の表示名  ",
+        )
+        assert renamed is not None and renamed["displayName"] == "家族の表示名"
+        resolved_again = db.get_or_create_tailscale_user(
+            connection,
+            subject="member@example.com",
+            display_name="Tailscale側の新しい名前",
+        )
+        assert resolved_again["displayName"] == "家族の表示名"
+        try:
+            db.set_user_display_name(connection, user_id=member["id"], display_name=" ")
+        except ValueError as exc:
+            assert "表示名" in str(exc)
+        else:
+            raise AssertionError("blank display name was accepted")
     finally:
         connection.close()
 
@@ -153,19 +171,44 @@ def test_http_user_management() -> None:
             timestamp,
         )
         assert artist_id is not None
+        album_id = db.upsert_album(
+            db_connection,
+            title="Original Album",
+            album_artist="Original Artist",
+            fallback_artist="Original Artist",
+            sort_title="",
+            year=None,
+            artwork_id=None,
+            timestamp=timestamp,
+        )
+        assert album_id is not None
         db_connection.execute(
             """
             INSERT INTO tracks(
                 id, relative_path, filename, title, normalized_title,
-                artist_id, file_size, modified_time_ns, audio_file,
+                artist_id, album_id, file_size, modified_time_ns, audio_file,
                 last_scanned_at, created_at, updated_at
             ) VALUES (
                 'track_metadata_permissions', 'Test/metadata.mp3', 'metadata.mp3',
-                'Original Title', 'original title', ?, 1, 1,
+                'Original Title', 'original title', ?, ?, 1, 1,
                 'Music/Test/metadata.mp3', ?, ?, ?
             )
             """,
-            (artist_id, timestamp, timestamp, timestamp),
+            (artist_id, album_id, timestamp, timestamp, timestamp),
+        )
+        db_connection.execute(
+            """
+            INSERT INTO tracks(
+                id, relative_path, filename, title, normalized_title,
+                artist_id, album_id, file_size, modified_time_ns, audio_file,
+                last_scanned_at, created_at, updated_at
+            ) VALUES (
+                'track_album_permissions_2', 'Test/album2.mp3', 'album2.mp3',
+                'Album Track 2', 'album track 2', ?, ?, 1, 1,
+                'Music/Test/album2.mp3', ?, ?, ?
+            )
+            """,
+            (artist_id, album_id, timestamp, timestamp, timestamp),
         )
         db_connection.commit()
 
@@ -188,6 +231,18 @@ def test_http_user_management() -> None:
         assert status == 403
         assert payload["error"] == "owner authentication required"
 
+        status, _, payload = request(connection, "GET", "/api/diagnostics")
+        assert status == 403
+        assert payload["error"] == "owner authentication required"
+
+        status, _, payload = request(
+            connection,
+            "PUT",
+            "/api/me/profile",
+            value={"displayName": "Anonymous"},
+        )
+        assert status == 401
+
         status, _, current = request(
             connection,
             "GET",
@@ -198,6 +253,31 @@ def test_http_user_management() -> None:
         assert current["authenticated"] is True
         assert current["isOwner"] is False
         family_id = current["id"]
+
+        status, _, payload = request(
+            connection,
+            "PUT",
+            "/api/me/profile",
+            headers=family_headers,
+            value={"displayName": "わたしの表示名"},
+        )
+        assert status == 200
+        assert payload["user"]["displayName"] == "わたしの表示名"
+        status, _, current = request(
+            connection,
+            "GET",
+            "/api/current-user",
+            headers=family_headers,
+        )
+        assert status == 200 and current["displayName"] == "わたしの表示名"
+        status, _, _ = request(
+            connection,
+            "PUT",
+            "/api/me/profile",
+            headers=family_headers,
+            value={"displayName": " "},
+        )
+        assert status == 400
 
         # Metadata edits are owner-only even when a family user is authenticated.
         status, _, payload = request(
@@ -216,6 +296,16 @@ def test_http_user_management() -> None:
             f"/api/artists/{artist_id}/correction",
             headers=family_headers,
             value={"value": "Family Artist"},
+        )
+        assert status == 403
+        assert payload["error"] == "owner authentication required"
+
+        status, _, payload = request(
+            connection,
+            "POST",
+            f"/api/albums/{album_id}/correction",
+            headers=family_headers,
+            value={"value": "Family Album"},
         )
         assert status == 403
         assert payload["error"] == "owner authentication required"
@@ -319,6 +409,44 @@ def test_http_user_management() -> None:
         assert status == 200
         assert payload["artist"] == "Owner Artist"
 
+        status, _, payload = request(
+            connection,
+            "POST",
+            f"/api/albums/{album_id}/correction",
+            headers=owner_remote_headers,
+            value={"value": "Owner Album"},
+        )
+        assert status == 200
+        assert payload["album"] == "Owner Album"
+        assert payload["updatedTracks"] == 2
+
+        status, _, albums_payload = request(
+            connection,
+            "GET",
+            "/api/browse?view=albums&limit=20",
+            headers=owner_remote_headers,
+        )
+        assert status == 200
+        album_group = next(
+            item for item in albums_payload["items"] if item["display"] == "Owner Album"
+        )
+        assert album_group["albumId"] == album_id
+        assert album_group["count"] == 2
+
+        status, _, diagnostics = request(
+            connection,
+            "GET",
+            "/api/diagnostics",
+            headers=owner_remote_headers,
+        )
+        assert status == 200
+        assert diagnostics["application"]["version"] == "2.7.7"
+        assert diagnostics["database"]["healthy"] is True
+        assert diagnostics["database"]["schemaVersion"] == 7
+        assert diagnostics["database"]["tracks"] == 2
+        assert diagnostics["database"]["availableTracks"] == 2
+        assert diagnostics["paths"]["music"]["exists"] is True
+
         status, _, _ = request(
             connection,
             "POST",
@@ -410,10 +538,17 @@ def test_html_user_interface() -> None:
         'id="userMenuButton"',
         'id="userModal"',
         'id="currentUserName"',
+        'id="profileSection"',
+        'id="profileDisplayNameInput"',
+        'id="profileSaveButton"',
         'id="tailscaleClaimSection"',
         'id="ownerLinkSection"',
         'id="userManagementSection"',
+        'id="diagnosticsSection"',
+        'id="diagnosticsDownloadButton"',
         "CURRENT_USER_API_URL",
+        "CURRENT_USER_PROFILE_API_URL",
+        "DIAGNOSTICS_API_URL",
         "USERS_API_URL",
         "OWNER_LINK_START_API_URL",
         "OWNER_LINK_CLAIM_API_URL",
@@ -421,6 +556,9 @@ def test_html_user_interface() -> None:
         "OWNER_LINK_CANCEL_API_URL",
         "loadManagedUsers",
         "updateUserActive",
+        "saveCurrentUserDisplayName",
+        "loadDiagnostics",
+        "downloadDiagnostics",
         "confirmed:true",
         "function canEditMetadata()",
         "const editable = canEditMetadata();",
@@ -429,6 +567,8 @@ def test_html_user_interface() -> None:
         "${editable ? '<button type=\"button\" class=\"icon-btn\" data-action=\"edit\"",
         "data-player-browse",
         "openTrackMetadataView",
+        'data-action="edit-album"',
+        "startEditAlbum",
         "renderPlayerMetadata(els.playerArtist, track)",
         "renderPlayerMetadata(els.playerModalArtist, currentPlayerTrack)",
     ]

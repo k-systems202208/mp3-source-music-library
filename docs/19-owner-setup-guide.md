@@ -2,11 +2,11 @@
 
 ## オーナー導入・初期設定・家族共有ガイド
 
-**対象:** Windows 10／11 64bit・自宅音楽ライブラリ v2.7.6
+**対象:** Windows 10／11 64bit・自宅音楽ライブラリ v2.7.7
 **文書版:** 1.0（2026-08-03）  
 **読者:** PCのインストールやネットワーク設定に慣れていないオーナー
 
-印刷・配布用: [Word版オーナーガイド](downloads/music-library-owner-setup-guide-v2.7.6.docx)
+印刷・配布用: [Word版オーナーガイド](downloads/music-library-owner-setup-guide-v2.7.7.docx)
 
 > このガイドでは、ダウンロードから家族が外出先で再生できるところまでを、順番どおりに説明します。図中のメールアドレス、PC名、URL、曲名は例です。Windows、GitHub、Tailscaleの画面は更新により少し変わる場合があります。
 
@@ -80,11 +80,11 @@
 
 ブラウザで次のページを開きます。
 
-<https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.7.6>
+<https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.7.7>
 
 ページ上部で次を確認します。
 
-- タイトルが「自宅音楽ライブラリ v2.7.6」
+- タイトルが「自宅音楽ライブラリ v2.7.7」
 - URLの所有者が `k-systems202208`
 - `Assets` が表示されている
 
@@ -92,7 +92,7 @@
 
 `Assets` 内から次の2ファイルをダウンロードします。
 
-1. `MusicLibrary-Setup-2.7.6-x64.exe`
+1. `MusicLibrary-Setup-2.7.7-x64.exe`
 2. `SHA256SUMS.txt`
 
 ブラウザの右上にあるダウンロードアイコンから、フォルダアイコンを押すと保存場所を開けます。通常は「ダウンロード」フォルダです。
@@ -108,7 +108,7 @@ SHA-256は、ダウンロードしたファイルが途中で壊れたり差し�
 3. 次をコピーして貼り付け、Enterを押します。
 
 ```powershell
-Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\MusicLibrary-Setup-2.7.6-x64.exe"
+Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\MusicLibrary-Setup-2.7.7-x64.exe"
 ```
 
 4. 表示された `Hash` の64文字と、`SHA256SUMS.txt` 内で同じファイル名の横にある64文字を比較します。
@@ -126,7 +126,7 @@ Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\MusicLibrary-Setup-2.
 
 ### 3-1. Setupを起動する
 
-1. `MusicLibrary-Setup-2.7.6-x64.exe` をダブルクリックします。
+1. `MusicLibrary-Setup-2.7.7-x64.exe` をダブルクリックします。
 2. ユーザーアカウント制御が表示された場合は、ファイル名と入手元を確認して「はい」を押します。
 
 Windows Defender SmartScreenで「WindowsによってPCが保護されました」と表示される場合があります。次の両方を確認できたときだけ、「詳細情報」→「実行」と進みます。
@@ -152,7 +152,7 @@ Windows Defender SmartScreenで「WindowsによってPCが保護されました�
 4. 「インストール」を押します。
 5. 「自宅音楽ライブラリを起動」を選んだまま「完了」を押します。
 
-**完了の目印:** 「自宅音楽ライブラリ 2.7.6」の管理画面が開きます。
+**完了の目印:** 「自宅音楽ライブラリ 2.7.7」の管理画面が開きます。
 
 ---
 
@@ -600,7 +600,7 @@ Tailscale側で既に作ったお気に入りや再生回数がある場合、�
 
 ### F. 問い合わせ時に控える情報
 
-- アプリ版（例 2.7.6）
+- アプリ版（例 2.7.7）
 - Windows 10／11
 - 発生時刻
 - どのボタンを押した後か
@@ -641,7 +641,7 @@ Tailscaleも使わなくなる場合は、Tailscale管理コンソールでPCと
 
 - [ ] 公式ReleaseからSetupとSHA256SUMSを取得した
 - [ ] SHA-256が一致した
-- [ ] 自宅音楽ライブラリ 2.7.6をインストールした
+- [ ] 自宅音楽ライブラリ 2.7.7をインストールした
 - [ ] MP3フォルダを選び、曲数を確認した
 - [ ] ローカルオーナーとして1曲再生した
 - [ ] DBバックアップを作った
@@ -675,8 +675,8 @@ Tailscaleも使わなくなる場合は、Tailscale管理コンソールでPCと
 
 ## 17. 公式リンク
 
-- 自宅音楽ライブラリ v2.7.6 Release
-  <https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.7.6>
+- 自宅音楽ライブラリ v2.7.7 Release
+  <https://github.com/k-systems202208/mp3-source-music-library/releases/tag/v2.7.7>
 - Tailscale Windows版のインストール  
   <https://tailscale.com/docs/install/windows>
 - Tailscaleへユーザーを招待  
@@ -690,4 +690,4 @@ Tailscaleも使わなくなる場合は、Tailscale管理コンソールでPCと
 
 ## 文書について
 
-本書の操作ラベルは自宅音楽ライブラリ v2.7.6の実装、同梱文書、公開情報に合わせています。図とGIFは個人情報を含まない再現画面です。Tailscaleの画面・用語は公式サービスの更新によって変わる場合があるため、迷った場合は上記の公式リンクも確認してください。
+本書の操作ラベルは自宅音楽ライブラリ v2.7.7の実装、同梱文書、公開情報に合わせています。図とGIFは個人情報を含まない再現画面です。Tailscaleの画面・用語は公式サービスの更新によって変わる場合があるため、迷った場合は上記の公式リンクも確認してください。

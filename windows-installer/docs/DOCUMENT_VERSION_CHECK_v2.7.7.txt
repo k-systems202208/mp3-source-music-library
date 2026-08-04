@@ -1,0 +1,28 @@
+自宅音楽ライブラリ v2.7.7
+文書・ソースバージョン確認
+================================
+
+製品バージョン: 2.7.7
+DBスキーマ: 7
+インストーラー: MusicLibrary-Setup-2.7.7-x64.exe
+
+ソース:
+src/launcher.py                APP_VERSION = 2.7.7
+src/paths.py                   APP_VERSION = 2.7.7
+src/update_check.py            CURRENT_VERSION = 2.7.7
+src/server.py                  MusicLibrary/SQLiteAPI2.7.7
+src/service-worker.js          music-library-shell-v2.7.7
+build/version_info.txt         FileVersion/ProductVersion 2.7.7
+installer/MusicLibrary.iss     2.7.7
+
+リリース文書:
+RELEASE_NOTES_v2.7.7.md
+docs/DOCUMENT_INDEX_v2.7.7.md
+docs/MANUAL_TEST_v2.7.7.txt
+docs/GITHUB_RELEASE_2.7.7.txt
+docs/RELEASE_SCOPE_v2.7.7.md
+
+互換性:
+・schema 7を継続
+・既存利用者状態、表示補正、プレイリストを維持
+・MP3とタグを書き換えない

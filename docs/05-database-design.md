@@ -55,6 +55,8 @@
 
 部分ユニーク索引でオーナーは最大1人です。
 
+`display_name`は本人が変更できます。Tailscaleの安定識別には表示名ではなく`user_identities.subject`を使用するため、表示名変更後も同じ利用者として認識します。
+
 ### `user_identities`
 
 `UNIQUE(provider, subject)`で同じ外部識別を複数利用者へ割り当てません。
@@ -111,6 +113,16 @@ library, midnight, neon, cyberpunk, candy, monochrome
 - `UNIQUE(playlist_id, position)`で順序を一意化
 - プレイリスト削除時は中間行をcascade削除
 - 曲削除はrestrictし、プレイリストからMP3を消さない
+
+プレイリスト複製は新しい`playlists.id`を作り、`playlist_tracks.position`を維持して中間行をコピーします。元プレイリストとの共有参照は持ちません。
+
+## 表示名override
+
+- 曲名: `tracks.title_override`
+- アーティスト名: `artists.display_name_override`
+- アルバム名: 同一`album_id`を持つ全曲の`tracks.album_override`
+
+アルバム表示名はスキーマ7の既存列へ保存します。MP3タグと`albums.title`は変更せず、空欄または元の名称を指定するとoverrideを解除します。
 
 ## スキーマ移行
 

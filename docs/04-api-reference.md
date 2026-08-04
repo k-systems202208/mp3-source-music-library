@@ -31,6 +31,7 @@ http://127.0.0.1:8765
 | `/api/users` | オーナー | 利用者管理一覧 |
 | `/api/backups` | ローカルオーナー | バックアップと復元状態 |
 | `/api/update-status` | オーナー | 現在版・最新版・確認状態 |
+| `/api/diagnostics` | オーナー | DB整合性、保存先、スキャン、利用者、プレイリスト、バックアップの診断 |
 | `/api/playlists` | 利用者 | 自分のプレイリスト一覧 |
 | `/api/playlists/{id}` | 利用者 | 自分のプレイリスト詳細と曲 |
 | `/api/owner-link/status?code=...` | ローカルオーナー | 関連付け状態 |
@@ -81,24 +82,27 @@ http://127.0.0.1:8765
 | `/api/tracks/{id}/favorite` | 利用者 | お気に入り更新 |
 | `/api/tracks/{id}/title-correction` | オーナー | 曲名表示補正 |
 | `/api/artists/{id}/correction` | オーナー | アーティスト表示補正 |
+| `/api/albums/{id}/correction` | オーナー | アルバム内全曲のアルバム表示補正 |
 | `/api/users/{id}/active` | ローカルオーナー | 利用者停止・再開 |
-| `/api/me/skin` | 利用者 | スキン保存 |
 | `/api/backups/create` | ローカルオーナー | DBバックアップ作成 |
 | `/api/backups/restore` | ローカルオーナー | 次回起動時の復元予約 |
 | `/api/backups/restore/cancel` | ローカルオーナー | 復元予約取消 |
 | `/api/playlists` | 利用者 | プレイリスト作成 |
 | `/api/playlists/{id}/tracks` | 利用者 | 曲追加 |
-| `/api/playlists/{id}/tracks/order` | 利用者 | 曲順更新 |
+| `/api/playlists/{id}/duplicate` | 利用者 | 自分のプレイリストを曲順ごと複製 |
 | `/api/owner-link/start` | ローカルオーナー | 関連付け開始 |
 | `/api/owner-link/claim` | Tailscale利用者 | コード申請 |
 | `/api/owner-link/confirm` | ローカルオーナー | 統合確認 |
 | `/api/owner-link/cancel` | ローカルオーナー | 取消 |
 
-## PATCH／DELETE
+## PUT／DELETE
 
 | メソッド・パス | 権限 | 内容 |
 |---|---|---|
-| `PATCH /api/playlists/{id}` | 利用者 | 自分のプレイリスト名変更 |
+| `PUT /api/me/skin` | 利用者 | 自分のスキンを保存 |
+| `PUT /api/me/profile` | 利用者 | 自分の表示名を変更 |
+| `PUT /api/playlists/{id}` | 利用者 | 自分のプレイリスト名変更 |
+| `PUT /api/playlists/{id}/tracks/order` | 利用者 | 自分のプレイリスト曲順を更新 |
 | `DELETE /api/playlists/{id}` | 利用者 | 自分のプレイリスト削除 |
 | `DELETE /api/playlists/{id}/tracks/{trackId}` | 利用者 | 曲を外す |
 

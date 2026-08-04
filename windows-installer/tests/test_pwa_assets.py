@@ -48,7 +48,7 @@ assert (SRC / "favicon.ico").is_file()
 
 worker = (SRC / "service-worker.js").read_text(encoding="utf-8")
 for required in (
-    "music-library-shell-v2.7.6",
+    "music-library-shell-v2.7.7",
     "self.addEventListener('install'",
     "self.addEventListener('activate'",
     "self.addEventListener('fetch'",

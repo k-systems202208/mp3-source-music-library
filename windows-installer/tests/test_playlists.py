@@ -153,6 +153,22 @@ def test_schema_v6_to_v7_backup_and_database_operations() -> None:
             "track_2", "track_0", "track_1"
         ]
 
+        copied = db.duplicate_user_playlist(
+            connection,
+            user_id=owner["id"],
+            playlist_id=created["id"],
+        )
+        assert copied["name"] == "ドライブ のコピー"
+        assert [track["id"] for track in copied["tracks"]] == [
+            "track_2", "track_0", "track_1"
+        ]
+        second_copy = db.duplicate_user_playlist(
+            connection,
+            user_id=owner["id"],
+            playlist_id=created["id"],
+        )
+        assert second_copy["name"] == "ドライブ のコピー 2"
+
         connection.execute("UPDATE tracks SET is_available=0 WHERE id='track_1'")
         reordered = db.reorder_user_playlist_tracks(
             connection,
@@ -261,6 +277,29 @@ def test_http_playlist_crud_and_user_isolation() -> None:
         )
         assert status == 200 and payload["reordered"] is True
 
+        status, payload = request_json(
+            connection,
+            "POST",
+            f"/api/playlists/{playlist_id}/duplicate",
+            headers=owner_headers,
+            value={},
+        )
+        assert status == 201
+        copied_id = payload["playlist"]["id"]
+        assert payload["playlist"]["name"] == "夜に聴く のコピー"
+        assert [item["id"] for item in payload["playlist"]["tracks"]] == [
+            "http_track_b", "http_track_a"
+        ]
+
+        status, _ = request_json(
+            connection,
+            "POST",
+            f"/api/playlists/{playlist_id}/duplicate",
+            headers=family_headers,
+            value={},
+        )
+        assert status == 404
+
         status, _ = request_json(
             connection,
             "GET",
@@ -312,6 +351,10 @@ def test_playlist_ui_contract() -> None:
         "loadPlaylists",
         "createPlaylistAndAdd",
         "reorderPlaylistTrack",
+        "reorderPlaylistByDrop",
+        "duplicateCurrentPlaylist",
+        'data-playlist-drag-handle',
+        'data-playlist-detail-action="duplicate"',
         "trackIds",
         "PERSONAL PLAYLISTS",
     ]

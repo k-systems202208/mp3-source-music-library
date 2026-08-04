@@ -1,0 +1,37 @@
+自宅音楽ライブラリ v2.7.7
+GitHub Release情報
+================================
+
+タグ:
+v2.7.7
+
+タイトル:
+自宅音楽ライブラリ v2.7.7
+
+公開日:
+2026-08-04
+
+本文:
+RELEASE_NOTES_v2.7.7.md
+
+添付:
+・MusicLibrary-Setup-2.7.7-x64.exe
+・SHA256SUMS.txt
+・README_USER.txt
+・REMOTE_ACCESS_USER.txt
+・REMOTE_ACCESS_FAMILY.txt
+・RELEASE_NOTES_v2.7.7.md
+
+公開条件:
+・組み込みバージョン 2.7.7
+・DBスキーマ 7
+・全ソース回帰試験合格
+・EXEスモーク試験合格
+・Inno Setupコンパイル合格
+・Setup.exeとSHA256SUMS.txtが一致
+
+公開後確認:
+・Release URLが/releases/tag/v2.7.7
+・タグとタイトルが一致
+・6個のAssetsが取得可能
+・アプリの新版通知でv2.7.7を取得可能
