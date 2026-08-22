@@ -126,6 +126,8 @@ required_files = [
     ROOT / "docs" / "GITHUB_RELEASE_2.7.7.txt",
     ROOT / "docs" / "DOCUMENT_VERSION_CHECK_v2.7.7.txt",
     ROOT / "docs" / "DOCUMENT_INDEX_v2.7.7.md",
+    ROOT / "docs" / "TEST_MATRIX_v2.7.7.md",
+    ROOT / "docs" / "DEVELOPMENT_BASELINE_v2.7.7.md",
     ROOT / "docs" / "RELEASE_SCOPE_v2.7.7.md",
     ROOT / "docs" / "RC1_v2.7.5_SCOPE.md",
     ROOT / "docs" / "RC2_v2.7.5_SCOPE.md",
