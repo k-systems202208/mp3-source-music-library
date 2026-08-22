@@ -95,7 +95,7 @@ Windowsのローカル絶対パスを`\\?\C:\...`、UNCパスを`\\?\UNC\server\
 - トークンを本文へ含めない
 - CSPと`X-Frame-Options: DENY`
 
-## `identity.py`
+## `tailscale_identity.py`
 
 Tailscale利用者情報を解析し、制御文字、重複値、不正URL等を拒否します。利用者の安定識別には表示名ではなくprovider内subjectを使用します。
 

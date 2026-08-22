@@ -7,7 +7,7 @@
 | 製品版2.7.7 | `src/launcher.py`、`src/paths.py`、`src/update_check.py`、`build/version_info.txt` | RC consistency |
 | DB schema 7 | `src/database.py` | schema migration through v7 |
 | ローカル認証 | `src/local_auth.py`、`src/server.py` | local owner auth、startup handoff |
-| Tailscale識別 | `src/identity.py`、`src/server.py` | tailscale identity |
+| Tailscale識別 | `src/tailscale_identity.py`、`src/server.py` | tailscale identity |
 | オーナー関連付け | `src/owner_link.py` | owner and Tailscale linking |
 | 利用者別状態 | `src/database.py`、`src/server.py` | playback state、favorites |
 | ライブラリホーム | `src/database.py`、`src/server.py`、HTML | library home |
