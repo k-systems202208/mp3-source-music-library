@@ -88,6 +88,8 @@ maintenance/<topic>
 
 変更内容に応じた関連テストを実行する。
 
+必須テストの選択は `windows-installer/docs/TEST_MATRIX_v2.7.7.md` に従う。
+
 通常の機能変更では、関連テストに加えて次を実行する。
 
 ```text

@@ -10,6 +10,8 @@
 - `GITHUB_RELEASE_2.7.7.txt`: GitHub Release情報
 - `DOCUMENT_VERSION_CHECK_v2.7.7.txt`: バージョン・schema・文書整合性
 - `RELEASE_SCOPE_v2.7.7.md`: 正式リリース範囲
+- `TEST_MATRIX_v2.7.7.md`: 変更内容ごとの必須テストと正式ビルドの試験ルール
+- `DEVELOPMENT_BASELINE_v2.7.7.md`: 次機能追加前の正常なv2.7.7開発基準点とブランチ運用
 - `../RELEASE_NOTES_v2.7.7.md`: Release本文
 
 ## 継続利用する文書

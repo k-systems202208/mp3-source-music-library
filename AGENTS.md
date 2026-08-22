@@ -30,6 +30,12 @@ If a root-level historical file and a current file disagree, the current `window
 
 For normal user-driven repository changes, prefer the one-batch workflow in `docs/25-one-batch-workflow.md`. Avoid requiring the user to execute a long sequence of Git commands manually when the workflow can be packaged safely into one `.bat` file. Destructive or irreversible steps must still require explicit confirmation inside the batch.
 
+## v2.7.7 development baseline and test selection
+
+The verified v2.7.7 comparison baseline is documented in `windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md`. Start new work from the latest clean `main`, create a dedicated `feature/`, `fix/`, `maintenance/`, or `docs/` branch, and never commit current development directly to `main`.
+
+Select mandatory tests from `windows-installer/docs/TEST_MATRIX_v2.7.7.md`. For normal code changes, run the affected subsystem tests and the daily regression verification before merge. Before a formal release, run `windows-installer/00_build_installer.bat`.
+
 ## Before changing current behavior
 
 1. Read `docs/23-reimplementation-detailed-design.md`.
