@@ -43,6 +43,7 @@
 | `21-next-update-implementation.md` | v2.7.7の実装機能、権限、確認方法 |
 | `22-release-audit-v2.7.7.md` | v2.7.7の変更・試験・公開監査 |
 | `23-reimplementation-detailed-design.md` | 同じアプリを再実装するための統合詳細設計、DB、API、画面、処理、ビルド |
+| `24-playback-count-policy.md` | 再生回数を記録するタイミングと利用者別保存の互換仕様 |
 | `THIRD_PARTY_NOTICES.md` | 第三者ライブラリ通知 |
 
 Windowsインストーラーと配布物の文書は[DOCUMENT_INDEX_v2.7.7](../windows-installer/docs/DOCUMENT_INDEX_v2.7.7.md)を参照してください。

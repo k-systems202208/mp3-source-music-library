@@ -2320,7 +2320,7 @@ def record_user_playback(
     user_id: str | None,
     track_id: str,
 ) -> dict[str, Any] | None:
-    """Record one completed playback for the authenticated user.
+    """Record one successful playback start for the authenticated user.
 
     Anonymous requests may still play audio, but they do not create or update
     personal state. Legacy columns in ``tracks`` remain as migration fallback
