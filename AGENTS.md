@@ -26,6 +26,10 @@ Use these current equivalents instead:
 
 If a root-level historical file and a current file disagree, the current `windows-installer/` implementation wins.
 
+## One-batch workflow
+
+For normal user-driven repository changes, prefer the one-batch workflow in `docs/25-one-batch-workflow.md`. Avoid requiring the user to execute a long sequence of Git commands manually when the workflow can be packaged safely into one `.bat` file. Destructive or irreversible steps must still require explicit confirmation inside the batch.
+
 ## Before changing current behavior
 
 1. Read `docs/23-reimplementation-detailed-design.md`.

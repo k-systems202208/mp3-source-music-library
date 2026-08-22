@@ -13,6 +13,7 @@
 | 障害を切り分ける | [トラブルシューティング](08-troubleshooting.md) |
 | 実装を確認する | [再実装用詳細設計](23-reimplementation-detailed-design.md) → [アーキテクチャ](01-architecture.md) → [API](04-api-reference.md) → [DB](05-database-design.md) |
 | ビルド・公開する | [試験計画](09-test-plan.md) → [GitHub公開ガイド](11-github-publishing-guide.md) |
+| 開発変更を安全に反映する | [ワンバッチ開発運用](25-one-batch-workflow.md) |
 | 経緯を追う | [起点と要件](00-project-origin-and-requirements.md) → [変更履歴](10-changelog.md) → [UI/UX履歴](17-ui-ux-design-history.md) |
 
 ## 現行文書
@@ -44,6 +45,7 @@
 | `22-release-audit-v2.7.7.md` | v2.7.7の変更・試験・公開監査 |
 | `23-reimplementation-detailed-design.md` | 同じアプリを再実装するための統合詳細設計、DB、API、画面、処理、ビルド |
 | `24-playback-count-policy.md` | 再生回数を記録するタイミングと利用者別保存の互換仕様 |
+| `25-one-batch-workflow.md` | 1回のバッチ実行で変更・試験・PR・Merge・後処理まで行う開発運用 |
 | `THIRD_PARTY_NOTICES.md` | 第三者ライブラリ通知 |
 
 Windowsインストーラーと配布物の文書は[DOCUMENT_INDEX_v2.7.7](../windows-installer/docs/DOCUMENT_INDEX_v2.7.7.md)を参照してください。
