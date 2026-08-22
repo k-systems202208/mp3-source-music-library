@@ -87,6 +87,8 @@ call :RUN_TEST "tests\test_user_management_ui.py" "User management UI"
 if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_user_playback_state.py" "User playback state"
 if errorlevel 1 goto :error
+call :RUN_TEST "tests\test_playback_count_policy.py" "Playback count policy"
+if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_user_favorites.py" "User favorites"
 if errorlevel 1 goto :error
 call :RUN_TEST "tests\test_favorite_filter.py" "Favorite filter"

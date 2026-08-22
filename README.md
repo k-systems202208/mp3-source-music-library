@@ -18,6 +18,10 @@
 > 最新公開版: `v2.7.7`（2026-08-04公開）
 > ドキュメント監査日: 2026-08-04
 
+> [!IMPORTANT]
+> 開発・改修時の現行製品ソースは `windows-installer/src/` が正本です。リポジトリ直下の同名Python／HTML等は履歴資産であり、現行機能の修正先にしません。
+> 詳細は [LEGACY_SOURCE_NOTICE.md](LEGACY_SOURCE_NOTICE.md) と [再実装用詳細設計書](docs/23-reimplementation-detailed-design.md) を参照してください。
+
 ## v2.7.7の主な変更
 
 - プレイリストの複製と、PCでのドラッグ並び替え

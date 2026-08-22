@@ -10,7 +10,7 @@
 | `database.py` | スキーマ作成・移行、検索、利用者状態、プレイリスト |
 | `server.py` | HTTP配信、API、認証、Range配信 |
 | `local_auth.py` | ローカルオーナー一時トークンとCookie |
-| `identity.py` | Tailscale利用者の解析 |
+| `tailscale_identity.py` | Tailscale利用者の解析 |
 | `owner_link.py` | ローカルオーナーと本人Tailscaleプロフィールの関連付け |
 | `backup_restore.py` | DB検証、バックアップ、次回起動時復元 |
 | `update_check.py` | GitHub Release確認 |
