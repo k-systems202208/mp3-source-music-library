@@ -10,7 +10,8 @@
 | アルバム表示名補正 | album_override、アルバム補正API | オーナー権限・同一アルバム一括反映試験 |
 | 移動・改名検出 | content signature | scan regression |
 | 利用者識別 | local auth、Tailscale identity | 認証試験 |
-| 利用者別状態 | user_track_state | playback／favorites |
+| 再生回数・最終再生 | user_track_state、played API、Audio UI | playback state／playback count policy |
+| お気に入り | user_track_state、favorite API | favorites／favorite filter |
 | 利用者別スキン | user_preferences | skin persistence |
 | 自分の表示名管理 | users.display_name、profile API | 本人限定更新・識別情報再取得後の維持試験 |
 | プレイリスト | playlists、playlist_tracks | DB／API／UI／実機 |

@@ -6,7 +6,7 @@
 ----
 ・Windows 10／11 64bit
 ・Python 3.13系
-・Inno Setup 6
+・Inno Setup 6／7
 ・Git
 ・短い作業パス
 ・インターネット接続（依存取得時）
@@ -17,6 +17,9 @@ C:\ML277Build
 
 実行
 ----
+通常の変更内容別試験は TEST_MATRIX_v2.7.7.md を参照。
+正式リリース候補では次を最終ゲートとして実行する。
+
 00_build_installer.bat
 
 処理
@@ -51,3 +54,5 @@ release\BUILD_REPORT_v2.7.7.txt
 ・テスト失敗時はインストーラーを公開しない
 ・RC文書は履歴であり、正式版の現行文書を優先
 ・公開済みの過去タグを移動せず、Release Assetsを暗黙差替えしない
+・機能追加前の正常なv2.7.7比較基準点は DEVELOPMENT_BASELINE_v2.7.7.md を参照
+・開発変更は最新mainから専用ブランチを作り、Pull Request経由で反映する

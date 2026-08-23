@@ -1,32 +1,36 @@
-# Legacy source notice
+# 旧ソースに関する注意
 
-This repository contains both the current Windows product and older historical source files.
+このリポジトリには、現行のWindows製品ソースと、開発途中の履歴として残している旧ソースの両方が含まれています。
 
-## Current product source of truth
+## 現行製品ソースの正本
 
-For the current product, use:
+現行製品では、次のディレクトリをソースの正本として使用します。
 
-`windows-installer/src/`
+```text
+windows-installer/src/
+```
 
-The release build, Windows launcher, server, database implementation, browser UI, tests, PyInstaller bundle, and installer are all maintained under `windows-installer/`.
+リリースビルド、Windowsランチャー、サーバー、データベース実装、ブラウザUI、テスト、PyInstaller構成、インストーラーは、すべて `windows-installer/` 配下で保守します。
 
-The integrated implementation contract is:
+統合された実装仕様の正本は次です。
 
-`docs/23-reimplementation-detailed-design.md`
+```text
+docs/23-reimplementation-detailed-design.md
+```
 
-## Historical root-level files
+## リポジトリ直下の履歴ソース
 
-Several similarly named files remain at the repository root because they document earlier stages of the project. They are not the source of truth for current product changes.
+リポジトリ直下には、プロジェクトの以前の段階を記録するため、現行ソースと似た名前のファイルが残っています。これらは現行製品を変更する際のソース正本ではありません。
 
-| Historical root item | Current product source |
+| リポジトリ直下の履歴資産 | 現行製品ソース |
 |---|---|
 | `database.py` | `windows-installer/src/database.py` |
 | `generate-library.py` | `windows-installer/src/generator.py` |
 | `serve-library.py` | `windows-installer/src/server.py` |
 | `music-library-search.html` | `windows-installer/src/music-library-search.html` |
-| `templates/` | current UI is bundled from `windows-installer/src/` |
+| `templates/` | 現行UIは `windows-installer/src/` から同梱 |
 | `vendor/` | `windows-installer/src/vendor/` |
 
-Do not delete these historical files solely because they are obsolete. Do not apply current product fixes to them unless a task explicitly targets legacy history or compatibility.
+旧版だからという理由だけで、これらの履歴ファイルを削除しません。また、旧版履歴や互換性を明示的に対象とする作業でない限り、現行製品の修正をこれらへ適用しません。
 
-When documentation and historical root files disagree with the current implementation, verify against `windows-installer/src/` and the current tests.
+ドキュメントまたはリポジトリ直下の履歴ファイルと現行実装が食い違う場合は、`windows-installer/src/` 配下の実装と現行テストを確認してください。
