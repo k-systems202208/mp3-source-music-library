@@ -16,7 +16,7 @@
 > DBスキーマ: `7`
 > 対応OS: Windows 10／11 64bit
 > 最新公開版: `v2.7.7`（2026-08-04公開）
-> ドキュメント監査日: 2026-08-04
+> ドキュメント監査日: 2026-08-23
 
 > [!IMPORTANT]
 > 開発・改修時の現行製品ソースは `windows-installer/src/` が正本です。リポジトリ直下の同名Python／HTML等は履歴資産であり、現行機能の修正先にしません。
@@ -181,6 +181,12 @@ C:\ML277Build
 
 成果物は`windows-installer\release`へ作成されます。正式手順は[Windowsインストーラー文書](windows-installer/docs/README_BUILD.txt)を参照してください。
 
+## 開発・保守運用
+
+現行機能の変更は最新のcleanな`main`から専用ブランチを作成し、Pull Request経由で反映します。通常作業は[ワンバッチ開発運用](docs/25-one-batch-workflow.md)を標準とし、変更領域ごとの必須試験は[変更内容別 必須テストマトリクス](windows-installer/docs/TEST_MATRIX_v2.7.7.md)に従います。
+
+機能追加前の正常なv2.7.7比較基準点は[v2.7.7 開発基準点](windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md)に固定しています。再生回数の互換仕様は[再生回数記録規約](docs/24-playback-count-policy.md)を正本とします。
+
 ## ドキュメント
 
 - [文書一覧](docs/00-document-index.md)
@@ -194,6 +200,10 @@ C:\ML277Build
 - [変更履歴](docs/10-changelog.md)
 - [v2.7.7実装・確認記録](docs/21-next-update-implementation.md)
 - [v2.7.7リリース監査結果](docs/22-release-audit-v2.7.7.md)
+- [再生回数記録規約](docs/24-playback-count-policy.md)
+- [ワンバッチ開発運用](docs/25-one-batch-workflow.md)
+- [変更内容別 必須テストマトリクス](windows-installer/docs/TEST_MATRIX_v2.7.7.md)
+- [v2.7.7 開発基準点](windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md)
 
 Windows配布物に同梱する文書は[インストーラー文書一覧](windows-installer/docs/DOCUMENT_INDEX_v2.7.7.md)を参照してください。
 

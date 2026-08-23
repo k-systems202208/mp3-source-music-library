@@ -6,7 +6,7 @@
 > DBスキーマ: 7
 > 対応OS: Windows 10／11 64bit
 > 公開日: 2026-08-04
-> 文書監査日: 2026-08-04
+> 文書監査日: 2026-08-23
 
 ## v2.7.7
 
@@ -16,7 +16,9 @@
 - オーナー限定の管理・診断画面、診断JSON保存
 - DBスキーマ7を継続
 
-`06_verify_next_improvements.bat`で関連する自動試験をまとめて実行できます。
+`06_verify_next_improvements.bat`で日常回帰をまとめて実行できます。変更内容ごとの個別必須テストは`docs/TEST_MATRIX_v2.7.7.md`に従います。正式リリース前は`00_build_installer.bat`を最終ゲートとします。
+
+今後の機能追加・保守変更は、最新のcleanな`main`から専用ブランチを作成してPull Request経由で反映します。v2.7.7の比較基準点は`docs/DEVELOPMENT_BASELINE_v2.7.7.md`を参照してください。
 
 ## v2.7.6
 
@@ -117,5 +119,7 @@ C:\ML277Build
 - `docs/README_BUILD.txt`
 - `docs/MANUAL_TEST_v2.7.7.txt`
 - `docs/RELEASE_SCOPE_v2.7.7.md`
+- `docs/TEST_MATRIX_v2.7.7.md`
+- `docs/DEVELOPMENT_BASELINE_v2.7.7.md`
 
 過去バージョン、RC、Phase文書は履歴資料として保持します。

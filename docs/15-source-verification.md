@@ -10,6 +10,7 @@
 | Tailscale識別 | `src/tailscale_identity.py`、`src/server.py` | tailscale identity |
 | オーナー関連付け | `src/owner_link.py` | owner and Tailscale linking |
 | 利用者別状態 | `src/database.py`、`src/server.py` | playback state、favorites |
+| 再生回数記録規約 | `src/database.py`、`src/music-library-search.html`、`docs/24-playback-count-policy.md` | playback count policy、playback state |
 | ライブラリホーム | `src/database.py`、`src/server.py`、HTML | library home |
 | バックアップ・復元 | `src/backup_restore.py`、`src/database.py` | backup and restore |
 | 新版通知 | `src/update_check.py`、`src/server.py` | update notification |
@@ -18,6 +19,13 @@
 | 長いパス | `src/long_paths.py`、generator、server | long path support、probe、copied scan |
 | プレイリスト | `playlists`、`playlist_tracks`、server、HTML | per-user playlists |
 | 本番モバイル表示 | HTML、Service Worker | production playlist UI |
+
+## 開発時の確認ルール
+
+- 変更内容ごとの個別必須試験は`windows-installer/docs/TEST_MATRIX_v2.7.7.md`に従う
+- 通常コード変更では個別試験に加えて`windows-installer/06_verify_next_improvements.bat`をMerge前に実行する
+- 正式リリース前は`windows-installer/00_build_installer.bat`を最終ゲートとする
+- v2.7.7の正常比較基準点は`windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md`を参照する
 
 ## 現行値
 

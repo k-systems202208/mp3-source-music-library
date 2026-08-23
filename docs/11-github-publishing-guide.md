@@ -2,9 +2,11 @@
 
 ## 前提
 
-- ブランチは`main`
+- 公開作業を開始する時点では最新の`main`
+- 通常の変更は最新`main`から専用ブランチを作成し、Pull Requestで`main`へMerge済み
 - 作業ツリーがclean
 - `origin/main`と同期
+- v2.7.7の比較基準点は`windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md`で確認
 - ソース、インストーラー、文書の版が一致
 - 全試験合格
 - 実機受入完了
@@ -24,6 +26,9 @@
 - 文書内ローカルリンク
 - 末尾空白とEOF
 - `git diff --check`
+- `docs/25-one-batch-workflow.md`
+- `windows-installer/docs/TEST_MATRIX_v2.7.7.md`
+- `windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md`
 
 RC／Phase文書は履歴として保持し、正式仕様へ後書きで改変しません。
 
@@ -35,7 +40,7 @@ RC／Phase文書は履歴として保持し、正式仕様へ後書きで改変�
 C:\ML277Build
 ```
 
-`00_build_installer.bat`を実行し、次を確認します。
+変更中の個別試験は`windows-installer/docs/TEST_MATRIX_v2.7.7.md`に従います。正式公開前は個別試験や`06_verify_next_improvements.bat`だけで代替せず、`00_build_installer.bat`を最終ゲートとして実行し、次を確認します。
 
 - 全ソース回帰試験
 - PyInstaller

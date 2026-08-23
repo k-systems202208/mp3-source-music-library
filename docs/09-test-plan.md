@@ -20,6 +20,7 @@ v2.7.7のインストール、DBスキーマ7、既存機能、メタデータ�
 - 曲名・アーティスト名変更のオーナー権限
 - プレーヤーからアーティスト・アルバム一覧への移動
 - 利用者別再生状態・お気に入り
+- 再生回数記録規約（新規ロード／リプレイの成功開始だけ加算、pause→resume非加算、失敗非加算、anonymous非保存）
 - ライブラリホーム
 - バックアップ・復元
 - プレイリストDB・API・UI・所有権
@@ -49,7 +50,9 @@ v2.7.7では、これらのグループ化された回帰・機能確認をリ�
 - 管理・診断画面と診断JSONをオーナーだけが取得できる
 - PC幅とスマートフォン幅で管理画面に横方向の崩れがない
 
-`windows-installer/06_verify_next_improvements.bat`で追加機能の構文・API・DB・UI・権限試験をまとめて実行できます。2026年8月4日に全33テストファイルの回帰試験が成功しています。
+`windows-installer/06_verify_next_improvements.bat`は通常開発の共通回帰として、Python／JavaScript構文、プレイリスト、利用者管理、再生状態、お気に入り、再生回数規約、ホーム、RC整合性をまとめて確認します。
+
+変更領域ごとの個別必須テストは`windows-installer/docs/TEST_MATRIX_v2.7.7.md`を正本とします。正式リリース候補では個別試験や日常回帰だけで代替せず、`windows-installer/00_build_installer.bat`を最終ゲートとして全回帰、PyInstaller、実EXEスモーク試験、Inno Setupまで実行します。
 
 ## DB移行受入
 

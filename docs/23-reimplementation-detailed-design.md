@@ -1,9 +1,9 @@
 # 自宅音楽ライブラリ v2.7.7 再実装用詳細設計書
 
-文書版: 1.0  
-対象アプリ: 自宅音楽ライブラリ v2.7.7  
-対象DB: SQLiteスキーマ7  
-対象OS: Windows 10 / 11 x64  
+文書版: 1.0
+対象アプリ: 自宅音楽ライブラリ v2.7.7
+対象DB: SQLiteスキーマ7
+対象OS: Windows 10 / 11 x64
 作成目的: この文書と指定ソースをプログラマーへ渡し、同じ外部仕様・データ互換性・安全性を持つアプリを再実装できるようにする。
 
 ## 1. この文書の位置付け
@@ -847,7 +847,11 @@ flowchart TD
 - repeat oneはended時に同じ曲を0秒から再生する。repeat allは端で循環する。
 - shuffleは現在曲を先頭に、残りoffsetをFisher-Yatesで並べる。全体repeatで次周期を再生成し、可能なら直前曲を周期先頭にしない。
 - shuffleとrepeat modeはlocalStorage `music-library-playback-settings-v1` に保存する。
-- 再生開始に成功したロードにつき1回だけplayed APIを呼ぶ。
+- 新しくロードした曲で`HTMLMediaElement.play()`が成功した時点でplayed APIを1回だけ呼ぶ。
+- 同じロードのpause→resumeではplayed APIを再度呼ばない。
+- ended後のリプレイ、別曲への切替、同じ曲を新しくロードし直した再生は新しい再生開始として1回記録する。
+- `play()`がreject／失敗した場合はplayed APIを呼ばない。anonymousはAPI応答`recorded=false`で永続化しない。
+- 再生回数の互換契約は[再生回数記録規約](24-playback-count-policy.md)を正本とする。
 - Media Session APIがあればmetadataとplay/pause/previous/next handlerを設定する。
 - 音声／画像エラーはプレーヤー内へ表示し、画面全体を停止させない。
 
@@ -1065,6 +1069,7 @@ workflowはmanual `workflow_dispatch`、`windows-latest`、`actions/checkout`、
 - Tailscale headerの正常／重複／制御文字／不正URL。
 - anonymous/user/owner/local-ownerの全権限境界。
 - favorite/playbackの利用者分離。
+- playback count contract（新規ロード／ended後リプレイは加算、pause→resumeは非加算、play失敗は非加算、anonymousは非保存）。
 - 表示名、skin、metadata override。
 - playlist CRUD、ownership、duplicate、reorder、unavailable曲。
 - owner linkの開始、claim、確認、期限、競合、rollback。
@@ -1142,3 +1147,7 @@ workflowはmanual `workflow_dispatch`、`windows-latest`、`actions/checkout`、
 - [要件追跡](16-requirements-traceability.md)
 - [v2.7.7実装記録](21-next-update-implementation.md)
 - [v2.7.7リリース監査](22-release-audit-v2.7.7.md)
+- [再生回数記録規約](24-playback-count-policy.md)
+- [ワンバッチ開発運用](25-one-batch-workflow.md)
+- [変更内容別 必須テストマトリクス](../windows-installer/docs/TEST_MATRIX_v2.7.7.md)
+- [v2.7.7 開発基準点](../windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md)

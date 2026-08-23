@@ -1,12 +1,12 @@
-# Repository editing instructions
+# リポジトリ編集ルール
 
-## Canonical production source
+## 現行製品ソースの正本
 
-The current Windows product source of truth is `windows-installer/src/`.
+現行Windows製品のソース正本は `windows-installer/src/` です。
 
-For current product changes, edit files under `windows-installer/` and the current documentation under `docs/`. The root-level Python, HTML, batch, template, and vendor files are historical assets unless a task explicitly targets legacy behavior or history.
+現行製品を変更する場合は、`windows-installer/` 配下の実装と `docs/` 配下の現行ドキュメントを編集します。リポジトリ直下にある同名のPython、HTML、バッチ、template、vendor等は、明示的に旧版・履歴を対象とする作業を除き、現行実装として編集しません。
 
-In particular, do not use these root-level files as the implementation source for the current product:
+特に、次のリポジトリ直下ファイル・フォルダーを現行製品の実装元として使用しません。
 
 - `database.py`
 - `generate-library.py`
@@ -15,33 +15,43 @@ In particular, do not use these root-level files as the implementation source fo
 - `templates/`
 - `vendor/`
 
-Use these current equivalents instead:
+現行製品では次を使用します。
 
-- database, search, users, playlists: `windows-installer/src/database.py`
-- scan/generation: `windows-installer/src/generator.py`
+- DB、検索、利用者、プレイリスト: `windows-installer/src/database.py`
+- 走査・生成: `windows-installer/src/generator.py`
 - HTTP/API: `windows-installer/src/server.py`
-- browser UI: `windows-installer/src/music-library-search.html`
-- bundled dependencies/assets: `windows-installer/src/vendor/` and `windows-installer/src/`
-- launcher/build/release: `windows-installer/`
+- ブラウザUI: `windows-installer/src/music-library-search.html`
+- 同梱依存・静的資産: `windows-installer/src/vendor/` および `windows-installer/src/`
+- ランチャー、ビルド、リリース: `windows-installer/`
 
-If a root-level historical file and a current file disagree, the current `windows-installer/` implementation wins.
+リポジトリ直下の履歴ファイルと現行実装が食い違う場合は、`windows-installer/` 配下の現行実装を優先します。
 
-## One-batch workflow
+## ドキュメントの言語
 
-For normal user-driven repository changes, prefer the one-batch workflow in `docs/25-one-batch-workflow.md`. Avoid requiring the user to execute a long sequence of Git commands manually when the workflow can be packaged safely into one `.bat` file. Destructive or irreversible steps must still require explicit confirmation inside the batch.
+このリポジトリで新規作成・更新するプロジェクト独自ドキュメントは、原則として日本語で記述します。
 
-## v2.7.7 development baseline and test selection
+コード上の識別子、API名、製品名、コマンド、ファイル名など、原文の維持が必要なものは英語のままで構いません。また、MIT License等の第三者ライセンス原文は翻訳に置き換えず、そのまま保持します。
 
-The verified v2.7.7 comparison baseline is documented in `windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md`. Start new work from the latest clean `main`, create a dedicated `feature/`, `fix/`, `maintenance/`, or `docs/` branch, and never commit current development directly to `main`.
+## ワンバッチ開発運用
 
-Select mandatory tests from `windows-installer/docs/TEST_MATRIX_v2.7.7.md`. For normal code changes, run the affected subsystem tests and the daily regression verification before merge. Before a formal release, run `windows-installer/00_build_installer.bat`.
+通常のユーザー操作を伴うリポジトリ変更では、`docs/25-one-batch-workflow.md` のワンバッチ方式を優先します。
 
-## Before changing current behavior
+安全に1本の `.bat` へまとめられる作業について、ユーザーへ多数のGitコマンドを順番に実行させる方式は避けます。Merge、ブランチ削除等の取り消しにくい操作は、バッチ内で明示確認を取ります。
 
-1. Read `docs/23-reimplementation-detailed-design.md`.
-2. Inspect the exact current source under `windows-installer/src/`.
-3. Run the tests related to the changed subsystem.
-4. Run `windows-installer/06_verify_next_improvements.bat` for normal regression verification.
-5. Before a release, run `windows-installer/00_build_installer.bat`.
+## v2.7.7開発基準点と必須テスト
 
-Do not delete or modernize legacy root files merely to make them resemble the current source. They are retained as historical assets.
+v2.7.7の正常な比較基準点は `windows-installer/docs/DEVELOPMENT_BASELINE_v2.7.7.md` に記録しています。
+
+新しい作業は最新のcleanな `main` から開始し、`feature/`、`fix/`、`maintenance/`、`docs/` 等の専用ブランチを作成します。現行開発内容を `main` へ直接Commitしません。
+
+変更内容ごとの必須テストは `windows-installer/docs/TEST_MATRIX_v2.7.7.md` に従います。通常のコード変更では、対象領域の個別テストに加えて日常回帰確認をMerge前に実行します。正式リリース前は `windows-installer/00_build_installer.bat` を実行します。
+
+## 現行動作を変更する前の確認
+
+1. `docs/23-reimplementation-detailed-design.md` を読む。
+2. `windows-installer/src/` 配下の対象となる現行ソースを確認する。
+3. 変更対象サブシステムに対応するテストを実行する。
+4. 通常の回帰確認として `windows-installer/06_verify_next_improvements.bat` を実行する。
+5. 正式リリース前は `windows-installer/00_build_installer.bat` を実行する。
+
+現行ソースに似せる目的だけで、リポジトリ直下の旧ファイルを削除・近代化しません。これらは履歴資産として保持します。
